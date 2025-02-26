@@ -116,5 +116,5 @@ L'application propose deux options pour les polices :
    ```
 
 4. **Lancement en mode développement**
-   ```bash
+   ```bash 
    npm run dev
