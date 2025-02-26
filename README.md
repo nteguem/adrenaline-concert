@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Adrenaline Concert - Application Next.js
 
-## Getting Started
+Cette application Next.js permet aux utilisateurs de participer à l'expérience "Adrénaline Max" en s'inscrivant et en téléchargeant leur billet de concert.
 
-First, run the development server:
+## Structure du Projet
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+L'application suit une architecture moderne avec Next.js App Router:
+
+```
+adrenaline-concert/
+├── public/
+│   ├── fonts/              # Dossier pour les polices personnalisées (optionnel)
+│   │   ├── evangelion.woff2
+│   │   ├── din-regular.woff2
+│   │   └── din-bold.woff2
+│   ├── images/
+│   │   └── dnb-logo.png
+│   └── videos/
+│       └── matt-intro.mp4
+├── src/
+│   ├── app/
+│   │   ├── (frontoffice)/  # Groupe de routes pour le site public
+│   │   │   ├── page.tsx    # Page d'accueil (route: /)
+│   │   │   ├── video/
+│   │   │   │   └── page.tsx
+│   │   │   ├── registration/
+│   │   │   │   └── page.tsx
+│   │   │   └── confirmation/
+│   │   │       └── page.tsx
+│   │   ├── api/            # API endpoints
+│   │   │   └── users/
+│   │   │       ├── route.ts
+│   │   │       └── [id]/
+│   │   │           └── route.ts
+│   │   ├── layout.tsx      # Layout global
+│   │   └── favicon.ico
+│   ├── components/
+│   │   └── common/
+│   │       ├── Button.jsx
+│   │       ├── Checkbox.jsx
+│   │       ├── ErrorModals.jsx
+│   │       ├── FileUpload.jsx  # Version simplifiée avec appareil photo natif
+│   │       ├── HeartbeatLine.jsx
+│   │       ├── Input.jsx
+│   │       ├── LogoHeader.jsx
+│   │       └── PopupModal.jsx
+│   ├── styles/
+│   │   ├── animations.css
+│   │   ├── fonts.js        # Configuration des polices (Google Fonts ou locales)
+│   │   ├── globals.css
+│   │   └── theme.js
+│   ├── lib/
+│   │   └── db.ts           # Configuration de la base de données MongoDB
+│   └── models/
+│       └── User.ts         # Modèle utilisateur
+├── middleware.ts           # Middleware pour gestion de routes
+├── prisma/
+│   └── schema.prisma       # Schéma Prisma pour MongoDB
+├── .env
+├── .env.local              # Variables d'environnement locales
+├── next.config.js
+├── package.json
+└── tailwind.config.js
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Parcours Utilisateur
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+L'application suit le parcours utilisateur suivant :
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Page d'accueil** - Écran d'introduction avec le logo et le bouton pour commencer
+2. **Page vidéo** - Présentation de la vidéo de Matt
+3. **Page d'inscription** - Formulaire en plusieurs étapes :
+   - Saisie des informations personnelles
+   - Upload du billet (utilise l'appareil photo natif ou l'upload de fichier)
+   - Acceptation des conditions
+4. **Page de confirmation** - Confirmation de la participation
 
-## Learn More
+## Fonctionnalités techniques
 
-To learn more about Next.js, take a look at the following resources:
+- **Design responsive** adapté aux mobiles
+- **Animations et transitions** pour une expérience utilisateur immersive
+- **Validation de formulaire** avec gestion des erreurs
+- **Capture de photo** via l'appareil photo natif ou upload de fichier
+- **Gestion des modaux d'erreur** pour différents cas d'utilisation
+- **Structure de routes organisée** pour le frontoffice
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Options de polices
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+L'application propose deux options pour les polices :
 
-## Deploy on Vercel
+1. **Polices personnalisées** (option recommandée)
+   - Placer les fichiers `evangelion.woff2`, `din-regular.woff2` et `din-bold.woff2` dans `/src/fonts/`
+   - Ou alternativement dans `/public/fonts/` en ajustant les chemins dans `fonts.js`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Google Fonts** (option temporaire)
+   - Utilise Orbitron comme substitut pour Evangelion
+   - Utilise Inter comme substitut pour DIN
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Démarrage du projet
+
+1. **Installation des dépendances**
+   ```bash
+   npm install
+   ```
+
+2. **Configuration de la base de données**
+   - Assurez-vous d'avoir configuré le fichier `.env.local` avec votre chaîne de connexion MongoDB
+   ```
+   DATABASE_URL="mongodb+srv://username:password@your-cluster.mongodb.net/your-database?retryWrites=true&w=majority"
+   ```
+
+3. **Génération du client Prisma**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+4. **Lancement en mode développement**
+   ```bash
+   npm run dev
