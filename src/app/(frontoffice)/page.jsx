@@ -15,7 +15,7 @@ export default function HomePage() {
   };
 
   return (
-    <main 
+    <main
       className={`
         ${din.variable} 
         min-h-screen 
@@ -29,7 +29,8 @@ export default function HomePage() {
         pt-20  // Ajoutez ce padding pour compenser l'en-tête fixe
       `}
     >
-      <div className="
+      <div
+        className="
         w-full 
         max-w-xl 
         mx-auto 
@@ -38,17 +39,18 @@ export default function HomePage() {
         items-center 
         justify-center 
         text-center
-      ">
+      "
+      >
         <LogoHeader date="08.11.25" venue="AMNEVILLE" />
-        
-        <div className="w-full max-w-md mx-auto">          
+
+        <div className="w-full max-w-md mx-auto">
           <div className="mb-8">
             <p className="text-base md:text-lg text-white mb-2">
               TENTEZ DE VIVRE L'EXPERIENCE
             </p>
-            <p 
+            <p
               className={`
-                ${evangelion.className} 
+                ${din.className} 
                 text-xl md:text-2xl 
                 font-bold 
                 text-white 
@@ -58,7 +60,7 @@ export default function HomePage() {
               ADRÉNALINE MAX
             </p>
           </div>
-          
+
           <HeartbeatButton
             onClick={handleClick}
             className={`
@@ -71,7 +73,6 @@ export default function HomePage() {
           >
             08.11.25 AMNEVILLE
           </HeartbeatButton>
-          
         </div>
       </div>
     </main>

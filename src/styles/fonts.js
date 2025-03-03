@@ -1,12 +1,12 @@
-import { Orbitron } from "next/font/google";
+// import { Orbitron } from "next/font/google";
 import localFont from "next/font/local";
 
 // Utiliser Orbitron pour remplacer Evangelion (police similaire futuriste)
-export const evangelion = Orbitron({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-evangelion",
-});
+// export const evangelion = Orbitron({
+//   subsets: ["latin"],
+//   weight: ["400", "700"],
+//   variable: "--font-evangelion",
+// });
 
 // Utiliser Inter pour remplacer DIN (police moderne sans-serif)
 // export const din = Inter({
@@ -19,4 +19,15 @@ export const din = localFont({
   src: "../../fonts/DIN2.otf",
   weight: "400",
   variable: "--font-din",
+});
+
+export const evangelion = localFont({
+  src: [
+    {
+      path: "../../fonts/evangelion-regular.otf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--font-evangelion",
 });
