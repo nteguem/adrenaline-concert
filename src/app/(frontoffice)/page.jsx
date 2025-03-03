@@ -43,7 +43,7 @@ export default function HomePage() {
       >
         <LogoHeader date="08.11.25" venue="AMNEVILLE" />
 
-        <div className="w-full max-w-md mx-auto">
+        <div className="w-full max-w-md mx-auto mt-[65%]">
           <div className="mb-8">
             <p className="text-base md:text-lg text-white mb-2">
               TENTEZ DE VIVRE L'EXPERIENCE
@@ -64,7 +64,6 @@ export default function HomePage() {
           <HeartbeatButton
             onClick={handleClick}
             className={`
-              w-full 
               max-w-[300px] 
               mx-auto 
               transition-colors 
