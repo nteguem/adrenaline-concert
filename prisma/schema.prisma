@@ -16,3 +16,24 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model Tour {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String
+  startDate     DateTime
+  createdAt     DateTime @default(now())
+  endDate       DateTime
+  status        String
+
+}
+
+model Event {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  tourId        String
+  city          String
+  createdAt     DateTime @default(now())
+  venue         String
+  eventDate     DateTime
+  status        String
+}
