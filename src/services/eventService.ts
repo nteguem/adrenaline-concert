@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
-import { 
-    EventUpdateInput, 
+import {
     EventCreateInput,
   PaginationOptions
 } from '@/models/eventModel';

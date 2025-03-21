@@ -2,8 +2,7 @@ import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { 
-  TourCreateInput, 
-  TourUpdateInput,
+  TourCreateInput,
   PaginationOptions
 } from '@/models/tourModel';
 
