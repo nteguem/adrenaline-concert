@@ -1,6 +1,3 @@
-import { Event as PrismaEvent } from '@prisma/client';
-
-
 
 // Interface pour la création
 export interface EventCreateInput {
@@ -13,10 +10,9 @@ export interface EventCreateInput {
 
 // Interface pour la mise à jour
 export interface EventUpdateInput {
-    tourId: string;
-    city:   string;
-    venue:  string;
-    eventDate:  Date;
+    city?:   string;
+    venue?:  string;
+    eventDate?:  Date;
     status?: string;
 }
 

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import mongoose from "mongoose";
 
+const connection = { isConnected: 0 };
 // Types de réponse API
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -92,3 +94,37 @@ export function validateDate(dateString: string): boolean {
   const date = new Date(dateString);
   return !isNaN(date.getTime());
 }
+
+// Dans apiUtils.ts - fonction connectToDB améliorée
+export const connectToDB = async () => {
+  try {
+    // Si déjà connecté, ne rien faire
+    if (mongoose.connection.readyState === 1) {
+      return;
+    }
+    
+    // Si en train de se connecter, attendre jusqu'à 5 secondes
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (mongoose.connection.readyState === 2 && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+    
+    // Si toujours en train de se connecter après le délai, lancer une erreur
+    if (mongoose.connection.readyState === 2) {
+      throw new Error("Connexion à MongoDB toujours en cours après délai d'attente");
+    }
+    
+    // Si déconnecté ou échec, se connecter
+    if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+      const db = await mongoose.connect(process.env.DATABASE_URL as string);
+      connection.isConnected = db.connections[0].readyState;
+      console.log('Connexion à MongoDB établie');
+    }
+  } catch (error) {
+    console.error('Erreur de connexion à MongoDB:', error);
+    throw new Error((error as Error).message);
+  }
+};

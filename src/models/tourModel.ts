@@ -1,5 +1,3 @@
-import { Tour as PrismaTour } from '@prisma/client';
-
 // Interface pour la création
 export interface TourCreateInput {
     name: string;

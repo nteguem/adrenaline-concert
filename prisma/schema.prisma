@@ -15,6 +15,19 @@ model User {
   email         String   @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  isAdmin       Boolean
+  username      String
+  password      String
+}
+
+model Particiapant {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  nom           String
+  prenom        String
+  dateNaissance DateTime
+  email         String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Tour {

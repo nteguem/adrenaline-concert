@@ -5,6 +5,9 @@ export interface UserCreateInput {
   nom: string;
   prenom: string;
   email: string;
+  username: string;
+  password: string;
+  isAdmin?: boolean; 
   dateNaissance: string; // Format ISO 8601
 }
 
@@ -14,6 +17,7 @@ export interface UserUpdateInput {
   prenom?: string;
   email?: string;
   dateNaissance?: string; // Format ISO 8601
+  username?: string;
 }
 
 // Interface pour la pagination

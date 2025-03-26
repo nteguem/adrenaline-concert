@@ -2,6 +2,7 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
+import bcrypt from 'bcrypt';
 import { 
   UserCreateInput, 
   UserUpdateInput, 
@@ -105,13 +106,19 @@ export class UserService {
     if (existingUser) {
       throw new Error('Cet email est déjà utilisé');
     }
+
+    console.log('======================',data);
     
     // Créer l'utilisateur
+ 
     const newUser = await prisma.user.create({
       data: {
         nom: data.nom,
         prenom: data.prenom,
         email: data.email,
+        username: data.username,
+        password: data.password,
+        isAdmin: Boolean(data.isAdmin),
         dateNaissance: new Date(data.dateNaissance),
       },
     });
@@ -219,12 +226,17 @@ export class UserService {
       if (!validateEmail(body.email)) {
         return errorResponse('Format d\'email invalide');
       }
+
+      const hashedPassword = await bcrypt.hash(body.password, 10); 
       
       const userInput: UserCreateInput = {
         nom: body.nom,
         prenom: body.prenom,
         email: body.email,
         dateNaissance: body.dateNaissance,
+        username:body.username,
+        password: hashedPassword,
+        isAdmin: body.isAdmin
       };
       
       const user = await this.createUser(userInput);
