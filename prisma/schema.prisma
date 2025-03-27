@@ -20,7 +20,7 @@ model User {
   password      String
 }
 
-model Particiapant {
+model participant {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   nom           String
   prenom        String

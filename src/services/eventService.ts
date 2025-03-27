@@ -3,7 +3,8 @@ import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import {
     EventCreateInput,
-    PaginationOptions
+    PaginationOptions,
+    EventUpdateInput
 } from '@/models/eventModel';
 
 import { 
