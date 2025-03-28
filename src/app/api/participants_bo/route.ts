@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ParticipantService } from '@/services/participantService';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '../auth/options';
 import { errorResponse } from '@/lib/apiUtils';
 
 
