@@ -1,24 +1,29 @@
 // src/app/api/events/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { EventService } from '@/services/eventService';
+import { connectToDB } from '@/lib/apiUtils';
+import { getEventById, updateEvent, deleteEvent } from '@/services/eventService';
 
-// Plus explicite sur le type du contexte
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
+// Utilisez la signature de fonction exacte attendue par Next.js
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
   try {
-    return await EventService.handleGetEventById(request, context);
+    await connectToDB();
+    const event = await getEventById(params.id);
+    
+    if (!event) {
+      return NextResponse.json(
+        { error: "Événement non trouvé" },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(event);
   } catch (error) {
-    console.error('Error in GET /api/events/[id]:', error);
+    console.error('Erreur lors de la récupération:', error);
     return NextResponse.json(
-      { error: 'Une erreur est survenue lors de la récupération de l\'événement' },
+      { error: "Une erreur est survenue" },
       { status: 500 }
     );
   }
@@ -26,14 +31,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
   try {
-    return await EventService.handleUpdateEvent(request, context);
+    const data = await request.json();
+    await connectToDB();
+    const updated = await updateEvent(params.id, data);
+    
+    return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error in PUT /api/events/[id]:', error);
+    console.error('Erreur lors de la mise à jour:', error);
     return NextResponse.json(
-      { error: 'Une erreur est survenue lors de la mise à jour de l\'événement' },
+      { error: "Une erreur est survenue" },
       { status: 500 }
     );
   }
@@ -41,14 +50,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
   try {
-    return await EventService.handleDeleteEvent(request, context);
+    await connectToDB();
+    await deleteEvent(params.id);
+    
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in DELETE /api/events/[id]:', error);
+    console.error('Erreur lors de la suppression:', error);
     return NextResponse.json(
-      { error: 'Une erreur est survenue lors de la suppression de l\'événement' },
+      { error: "Une erreur est survenue" },
       { status: 500 }
     );
   }
