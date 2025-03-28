@@ -32,7 +32,8 @@ declare module "next-auth/jwt" {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+// Définir les options mais ne pas les exporter directement (déplacé de export const à const)
+const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
@@ -117,5 +118,10 @@ export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === 'development',
 };
 
+// Créer le handler avec les options
 const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+
+// Exporter les fonctions GET et POST
+export const GET = handler;
+export const POST = handler;
+
