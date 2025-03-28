@@ -1,13 +1,13 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 
 interface FrontOfficeLayoutProps {
   children: ReactNode;
 }
 
-export default function FrontOfficeLayout({ children }: FrontOfficeLayoutProps) {
+export default function FrontOfficeLayout({
+  children,
+}: FrontOfficeLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col">
-      {children}
-    </div>
+    <div className="min-h-screen flex flex-col justify-evenly">{children}</div>
   );
 }

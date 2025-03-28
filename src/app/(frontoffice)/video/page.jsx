@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import HeartbeatButton from "@/components/common/HeartbeatButton";
 import { din } from "@/styles/fonts";
 import useSWR from "swr";
+import LoadingObject from "@/components/common/CentralLoadingObject";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function VideoPage() {
@@ -39,14 +40,15 @@ export default function VideoPage() {
     return returnDate;
   };
 
-  if (error) return <div>Failed to load</div>;
+  if (error) return <LoadingObject text={"Failed to load"} />;
   if (hasDateEnd(data?.data[0].endDate))
-    return <div>La date de participation est passé</div>;
-  if (hasDatePassed(data?.data[0].startDate))
-    return (
-      <div>Date de participation {customdateFormat(data.data[0])} ...</div>
-    );
-  if (!data) return <div>Loading...</div>;
+    return <LoadingObject text={"La date de participation est passé"} />;
+  if (hasDatePassed(data?.data[0].startDate)) {
+    const customText =
+      "Date de participation " + customdateFormat(data.data[0]);
+    return <LoadingObject text={customText} />;
+  }
+  if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
     formattedDate = customdateFormat(data.data[0]);
   }
