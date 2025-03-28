@@ -4,10 +4,52 @@ import { useRouter } from "next/navigation";
 import LogoHeader from "@/components/common/LogoHeader";
 import HeartbeatButton from "@/components/common/HeartbeatButton";
 import { evangelion, din } from "@/styles/fonts";
+import useSWR from "swr";
 
+const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function HomePage() {
   const router = useRouter();
   const [isClicked, setIsClicked] = useState(false);
+  const { data, error } = useSWR("/api/tours", fetcher);
+  let formattedDate = null;
+
+  const hasDatePassed = (startDate) => {
+    const currentDate = new Date();
+    const tourDate = new Date(startDate);
+    // console.log("hasreached:", currentDate < tourDate);
+    return currentDate < tourDate;
+  };
+
+  const hasDateEnd = (endDate) => {
+    const currentDate = new Date();
+    const tourDate = new Date(endDate);
+    // console.log("hasreached:", currentDate > tourDate);
+    return currentDate > tourDate;
+  };
+  const customdateFormat = (passedDate) => {
+    // console.log(passedDate);
+    const date = new Date(passedDate.startDate);
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const year = date.getUTCFullYear(); // Get full year
+
+    // Format to dd.mm.yyyy
+    const returnDate = `${day}.${month}.${year}`;
+    // console.log("formatted date:", returnDate);
+    return returnDate;
+  };
+
+  if (error) return <div>Failed to load</div>;
+  if (hasDateEnd(data?.data[0].endDate))
+    return <div>La date de participation est passé</div>;
+  if (hasDatePassed(data?.data[0].startDate))
+    return (
+      <div>Date de participation {customdateFormat(data.data[0])} ...</div>
+    );
+  if (!data) return <div>Loading...</div>;
+  else {
+    formattedDate = customdateFormat(data.data[0]);
+  }
 
   const handleClick = () => {
     setIsClicked(true);
@@ -41,7 +83,7 @@ export default function HomePage() {
         text-center
       "
       >
-        <LogoHeader date="08.11.25" venue="AMNEVILLE" />
+        <LogoHeader date={formattedDate} venue={data.data[0].name} />
 
         <div className="w-full max-w-md mx-auto mt-[65%]">
           <div className="mb-8">
@@ -70,7 +112,7 @@ export default function HomePage() {
               ${isClicked ? "bg-blue-400" : ""}
             `}
           >
-            08.11.25 AMNEVILLE
+            {formattedDate} {data.data[0].name}
           </HeartbeatButton>
         </div>
       </div>
