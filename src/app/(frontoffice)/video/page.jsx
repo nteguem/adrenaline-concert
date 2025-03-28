@@ -3,10 +3,55 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import HeartbeatButton from "@/components/common/HeartbeatButton";
 import { din } from "@/styles/fonts";
+import useSWR from "swr";
+import LoadingObject from "@/components/common/CentralLoadingObject";
 
+const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function VideoPage() {
   const router = useRouter();
   const [videoEnded, setVideoEnded] = useState(false);
+
+  const { data, error } = useSWR("/api/tours", fetcher);
+  let formattedDate = null;
+
+  const hasDatePassed = (startDate) => {
+    const currentDate = new Date();
+    const tourDate = new Date(startDate);
+    // console.log("hasreached:", currentDate < tourDate);
+    return currentDate < tourDate;
+  };
+
+  const hasDateEnd = (endDate) => {
+    const currentDate = new Date();
+    const tourDate = new Date(endDate);
+    // console.log("hasreached:", currentDate > tourDate);
+    return currentDate > tourDate;
+  };
+  const customdateFormat = (passedDate) => {
+    // console.log(passedDate);
+    const date = new Date(passedDate.startDate);
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const year = date.getUTCFullYear(); // Get full year
+
+    // Format to dd.mm.yyyy
+    const returnDate = `${day}.${month}.${year}`;
+    // console.log("formatted date:", returnDate);
+    return returnDate;
+  };
+
+  if (error) return <LoadingObject text={"Failed to load"} />;
+  if (hasDateEnd(data?.data[0].endDate))
+    return <LoadingObject text={"La date de participation est passé"} />;
+  if (hasDatePassed(data?.data[0].startDate)) {
+    const customText =
+      "Date de participation " + customdateFormat(data.data[0]);
+    return <LoadingObject text={customText} />;
+  }
+  if (!data) return <LoadingObject text={"Loading ..."} />;
+  else {
+    formattedDate = customdateFormat(data.data[0]);
+  }
 
   const handleNext = () => {
     setTimeout(() => {
@@ -20,7 +65,9 @@ export default function VideoPage() {
   };
 
   return (
-    <main className={`${din.variable} min-h-screen flex flex-col items-center bg-black text-white`}>
+    <main
+      className={`${din.variable} min-h-screen flex flex-col items-center bg-black text-white`}
+    >
       <div className="flex flex-col w-full h-screen max-w-md mx-auto justify-between py-10">
         {/* Espace pour la vidéo */}
         <div className="flex-1 flex flex-col justify-center items-center">
@@ -40,10 +87,7 @@ export default function VideoPage() {
 
         {/* Bouton SUIVANT */}
         <div className="w-full mt-auto">
-          <HeartbeatButton
-            onClick={handleNext}
-            horizontal={true}
-          >
+          <HeartbeatButton onClick={handleNext} horizontal={true}>
             SUIVANT
           </HeartbeatButton>
         </div>
