@@ -1,45 +1,45 @@
 "use client";
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import LogoHeader from '@/components/common/LogoHeader';
-import Input from '@/components/common/Input';
-import Checkbox from '@/components/common/Checkbox';
-import FileUpload from '@/components/common/FileUpload';
-import Button from '@/components/common/Button';
-import PopupModal from '@/components/common/PopupModal';
-import { din } from '@/styles/fonts';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import LogoHeader from "@/components/common/LogoHeader";
+import Input from "@/components/common/Input";
+import Checkbox from "@/components/common/Checkbox";
+import FileUpload from "@/components/common/FileUpload";
+import Button from "@/components/common/Button";
+import PopupModal from "@/components/common/PopupModal";
+import { din } from "@/styles/fonts";
 
 export default function RegistrationPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    nom: '',
-    prenom: '',
-    dateNaissance: '',
-    email: '',
+    nom: "",
+    prenom: "",
+    dateNaissance: "",
+    email: "",
     confirmePresence: false,
     age: false,
     santéOk: false,
-    cgu: false
+    cgu: false,
   });
   const [formStep, setFormStep] = useState(1);
   const [ticketImage, setTicketImage] = useState(null);
-  const [ticketFileName, setTicketFileName] = useState('');
+  const [ticketFileName, setTicketFileName] = useState("");
   const [errorModal, setErrorModal] = useState({
     isOpen: false,
-    title: '',
-    message: '',
-    type: 'error'
+    title: "",
+    message: "",
+    type: "error",
   });
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
-  const handleFileSelect = (dataUrl, fileName = '') => {
+  const handleFileSelect = (dataUrl, fileName = "") => {
     // Le composant FileUpload nous renvoie déjà un dataURL
     setTicketImage(dataUrl);
     if (fileName) {
@@ -49,12 +49,17 @@ export default function RegistrationPage() {
 
   const validateForm = () => {
     // Vérifier si tous les champs sont remplis
-    if (!formData.nom || !formData.prenom || !formData.dateNaissance || !formData.email) {
+    if (
+      !formData.nom ||
+      !formData.prenom ||
+      !formData.dateNaissance ||
+      !formData.email
+    ) {
       setErrorModal({
         isOpen: true,
-        title: 'Formulaire incomplet',
-        message: 'Veuillez remplir tous les champs du formulaire.',
-        type: 'error'
+        title: "Formulaire incomplet",
+        message: "Veuillez remplir tous les champs du formulaire.",
+        type: "error",
       });
       return false;
     }
@@ -64,9 +69,9 @@ export default function RegistrationPage() {
     if (!emailRegex.test(formData.email)) {
       setErrorModal({
         isOpen: true,
-        title: 'Email invalide',
-        message: 'Veuillez entrer une adresse email valide.',
-        type: 'error'
+        title: "Email invalide",
+        message: "Veuillez entrer une adresse email valide.",
+        type: "error",
       });
       return false;
     }
@@ -75,9 +80,9 @@ export default function RegistrationPage() {
     if (!ticketImage) {
       setErrorModal({
         isOpen: true,
-        title: 'Billet manquant',
-        message: 'Veuillez importer votre billet de concert.',
-        type: 'error'
+        title: "Billet manquant",
+        message: "Veuillez importer votre billet de concert.",
+        type: "error",
       });
       return false;
     }
@@ -93,23 +98,39 @@ export default function RegistrationPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Vérifier que toutes les conditions sont acceptées
     if (!formData.age || !formData.santéOk || !formData.cgu) {
       setErrorModal({
         isOpen: true,
-        title: 'Conditions non acceptées',
-        message: 'Veuillez accepter toutes les conditions pour continuer.',
-        type: 'error'
+        title: "Conditions non acceptées",
+        message: "Veuillez accepter toutes les conditions pour continuer.",
+        type: "error",
       });
       return;
+    } else {
+      const postBody = {
+        nom: formData.nom,
+        prenom: formData.prenom,
+        dateNaissance: formData.dateNaissance,
+        email: formData.email,
+      };
+      console.log("data before post:", postBody);
+      const response = await fetch("/api/participants_fo", {
+        method: "POST",
+        body: JSON.stringify(postBody),
+      });
+
+      // Handle response if necessary
+      const data = await response.json();
+      console.log("response from push participant", data);
     }
-    
+
     if (formStep === 2) {
       // Toutes les conditions sont acceptées, rediriger vers la page de confirmation
-      router.push('/confirmation');
+      router.push("/confirmation");
     }
   };
 
@@ -120,20 +141,22 @@ export default function RegistrationPage() {
   // Solution: Créer un composant d'aperçu de ticket personnalisé qui utilise directement ticketImage
   const TicketPreview = () => {
     if (!ticketImage) return null;
-    
+
     return (
       <div className="border-2 border-blue-500 bg-blue-100 rounded overflow-hidden mb-6">
         <div className="flex items-center p-2">
           <div className="w-16 h-16 mr-4 bg-white rounded overflow-hidden flex-shrink-0">
-            <img 
-              src={ticketImage} 
-              alt="Billet importé" 
+            <img
+              src={ticketImage}
+              alt="Billet importé"
               className="w-full h-full object-contain"
             />
           </div>
-          
+
           <div className="flex-grow">
-            <p className="font-medium text-blue-800 truncate">{ticketFileName || "Billet"}</p>
+            <p className="font-medium text-blue-800 truncate">
+              {ticketFileName || "Billet"}
+            </p>
             <p className="text-sm text-blue-600 flex items-center">
               Billet importé
             </p>
@@ -148,7 +171,12 @@ export default function RegistrationPage() {
       case 1:
         return (
           // Étape 1: Formulaire d'inscription avec upload de billet intégré
-          <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleNextStep();
+            }}
+          >
             <Input
               placeholder="NOM"
               name="nom"
@@ -182,12 +210,16 @@ export default function RegistrationPage() {
               onChange={handleInputChange}
               name="confirmePresence"
             />
-            
+
             <div className="mt-6 mb-4">
-              <p className="text-green-400 text-center mb-2">Veuillez importer votre billet de concert</p>
+              <p className="text-green-400 text-center mb-2">
+                Veuillez importer votre billet de concert
+              </p>
               {!ticketImage ? (
-                <FileUpload 
-                  onFileSelect={(dataUrl, fileName) => handleFileSelect(dataUrl, fileName)} 
+                <FileUpload
+                  onFileSelect={(dataUrl, fileName) =>
+                    handleFileSelect(dataUrl, fileName)
+                  }
                   initialPreview={ticketImage}
                   initialFileName={ticketFileName}
                 />
@@ -196,8 +228,8 @@ export default function RegistrationPage() {
               )}
               {ticketImage && (
                 <div className="flex justify-center mt-2">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setTicketImage(null)}
                     className="text-sm text-blue-500 hover:text-blue-700"
                   >
@@ -206,7 +238,7 @@ export default function RegistrationPage() {
                 </div>
               )}
             </div>
-            
+
             <div className="mt-4 flex justify-center">
               <Button type="submit">CONTINUER</Button>
             </div>
@@ -225,33 +257,35 @@ export default function RegistrationPage() {
                 <p>PLACE</p>
               </div>
             </div>
-            
+
             <div className="space-y-3 mb-6">
-              <Checkbox 
-                label="Je certifie avoir plus de 18 ans" 
-                name="age" 
-                onChange={handleInputChange} 
-                checked={formData.age || false} 
+              <Checkbox
+                label="Je certifie avoir plus de 18 ans"
+                name="age"
+                onChange={handleInputChange}
+                checked={formData.age || false}
                 className="w-full"
               />
-              <Checkbox 
-                label="Je certifie ne présenter aucune contre indication médicale pour participer à l'Adrénaline MAX" 
-                name="santéOk" 
-                onChange={handleInputChange} 
-                checked={formData.santéOk || false} 
+              <Checkbox
+                label="Je certifie ne présenter aucune contre indication médicale pour participer à l'Adrénaline MAX"
+                name="santéOk"
+                onChange={handleInputChange}
+                checked={formData.santéOk || false}
                 className="w-full"
               />
-              <Checkbox 
-                label="J'accepte les conditions générales" 
-                name="cgu" 
-                onChange={handleInputChange} 
-                checked={formData.cgu || false} 
+              <Checkbox
+                label="J'accepte les conditions générales"
+                name="cgu"
+                onChange={handleInputChange}
+                checked={formData.cgu || false}
                 className="w-full"
               />
             </div>
-            
+
             <div className="mt-8 flex justify-between items-center">
-              <Button onClick={() => setFormStep(1)} variant="secondary">RETOUR</Button>
+              <Button onClick={() => setFormStep(1)} variant="secondary">
+                RETOUR
+              </Button>
               <Button type="submit">JE TENTE MA CHANCE</Button>
             </div>
           </form>
@@ -262,7 +296,8 @@ export default function RegistrationPage() {
   };
 
   return (
-    <main className={`
+    <main
+      className={`
       ${din.variable} 
       flex 
       min-h-screen 
@@ -273,15 +308,14 @@ export default function RegistrationPage() {
       bg-black 
       dnb-bg
       pt-24
-    `}>
+    `}
+    >
       <div className="w-full max-w-md mx-auto">
         <div className="mb-12">
           <LogoHeader date="08.11.25" venue="AMNEVILLE" />
         </div>
-        
-        <div className="w-full">
-          {renderFormStep()}
-        </div>
+
+        <div className="w-full">{renderFormStep()}</div>
       </div>
 
       <PopupModal
