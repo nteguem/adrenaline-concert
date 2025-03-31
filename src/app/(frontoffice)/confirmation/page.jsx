@@ -5,6 +5,7 @@ import { evangelion, din } from "@/styles/fonts";
 import LogoHeader from "@/components/common/LogoHeader";
 import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
+import Countdown from "@/components/common/CountDown";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function ConfirmationPage() {
@@ -49,9 +50,7 @@ export default function ConfirmationPage() {
   if (hasDateEnd(data?.data[0].endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
   if (hasDatePassed(data?.data[0].startDate)) {
-    const customText =
-      "Date de participation " + customdateFormat(data.data[0]);
-    return <LoadingObject text={customText} />;
+    return <Countdown startDate={data?.data[0].startDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
