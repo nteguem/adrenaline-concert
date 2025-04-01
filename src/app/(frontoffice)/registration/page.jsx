@@ -233,6 +233,7 @@ export default function RegistrationPage() {
               name="prenom"
               value={formData.prenom}
               onChange={handleInputChange}
+              className="mb-0"
             />
             <Input
               type="date"
