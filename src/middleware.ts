@@ -1,4 +1,3 @@
-// adrenaline-concert/src/middleware.ts
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
@@ -19,32 +18,50 @@ const publicRoutes = [
 ];
 
 export async function middleware(request: NextRequest) {
+  // Handle CORS preflight requests
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Origin': '*', // Or specify your allowed origins
+        'Access-Control-Max-Age': '86400', // 24 hours
+      },
+    });
+  }
+
+  // Add CORS headers to all responses
+  const response = await handleRequest(request);
+  response.headers.set('Access-Control-Allow-Origin', '*'); // Or specify your allowed origins
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  return response;
+}
+
+// Move the main request handling logic to a separate function
+async function handleRequest(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Vérifier si la route doit être protégée
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
   );
   
-  // Vérifier si la route est publique
   const isPublicRoute = publicRoutes.some(route => 
     pathname.startsWith(route)
   );
   
-  // Si la route n'est pas protégée ou est publique, continuer
   if (!isProtectedRoute || isPublicRoute) {
     return NextResponse.next();
   }
   
-  // Pour les routes protégées, vérifier l'authentification
   const token = await getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET
   });
   
-  // Si pas de token, rediriger vers la page de connexion
   if (!token) {
-    // Pour les requêtes API, retourner une erreur 401
     if (pathname.startsWith('/api/')) {
       return new NextResponse(
         JSON.stringify({ success: false, error: 'Non autorisé' }),
@@ -55,15 +72,12 @@ export async function middleware(request: NextRequest) {
       );
     }
     
-    // Pour les pages web, rediriger vers login
     const url = new URL('/login', request.url);
     url.searchParams.set('callbackUrl', encodeURI(request.url));
     return NextResponse.redirect(url);
   }
   
-  // Vérifier les permissions spécifiques (exemple: admin pour certaines routes)
   if (pathname.includes('/admin') && !token.isAdmin) {
-    // Si la route est admin mais l'utilisateur n'est pas admin
     if (pathname.startsWith('/api/')) {
       return new NextResponse(
         JSON.stringify({ success: false, error: 'Accès refusé' }),
@@ -74,11 +88,9 @@ export async function middleware(request: NextRequest) {
       );
     }
     
-    // Rediriger vers la page d'accueil
     return NextResponse.redirect(new URL('/', request.url));
   }
   
-  // L'utilisateur est authentifié et autorisé
   return NextResponse.next();
 }
 
