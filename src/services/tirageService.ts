@@ -116,6 +116,8 @@ export class TirageService {
           orderBy: { rang: 'asc' }
         });
 
+        console.log(vainqueursComplets)
+
         return {
           tirage: nouveauTirage,
           vainqueurs: vainqueursComplets
