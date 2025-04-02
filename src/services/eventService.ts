@@ -33,9 +33,10 @@ export class EventService {
       const newEvent = await prisma.event.create({
         data: {
           tourId: tour.id, // Utiliser l'ID de la tour récupérée          
-          city: data.city,  
+          city: data.city, 
           venue: data.venue,    
           eventDate: new Date(data.eventDate),       
+          endDate: new Date(data.endDate),       
           status: data.status,
         },
       });
@@ -58,7 +59,7 @@ export class EventService {
       const body = await request.json();
       
       // Validation des champs requis (sans tourId car il sera récupéré automatiquement)
-      const requiredFields: (keyof Omit<EventCreateInput, 'tourId'>)[] = ['city', 'venue', 'eventDate', 'status'];
+      const requiredFields: (keyof Omit<EventCreateInput, 'tourId'>)[] = ['city', 'venue', 'eventId','eventDate', 'status','endDate'];
       const missingFields = requiredFields.filter(field => !body[field]);
       
       if (missingFields.length > 0) {
@@ -69,6 +70,7 @@ export class EventService {
         city: body.city,
         venue: body.venue,
         eventDate: body.eventDate,
+        endDate: body.endDate,
         status: body.status,
       };
       
@@ -119,13 +121,14 @@ export class EventService {
           skip,
           take: limit,
           orderBy: {
-            eventDate: 'desc',
+            eventDate: 'asc',
           },
           select: {
             id: true,
             city: true,
             venue: true,
             eventDate: true,
+            endDate: true,
             status: true,
           }
         }),
@@ -228,6 +231,7 @@ export class EventService {
           city: true,
           venue: true,
           eventDate: true,
+          endDate: true,
           status: true
         }
       });
@@ -287,6 +291,7 @@ export class EventService {
           city: true,
           venue: true,
           eventDate: true,
+          endDate: true,
           status: true
         }
       });

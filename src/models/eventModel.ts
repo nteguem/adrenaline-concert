@@ -5,6 +5,7 @@ export interface EventCreateInput {
     city:   string;
     venue:  string;
     eventDate:  Date;
+    endDate: Date;
     status: string;
 }
 
@@ -13,6 +14,7 @@ export interface EventUpdateInput {
     city?:   string;
     venue?:  string;
     eventDate?:  Date;
+    endDate?:   Date;
     status?: string;
 }
 
