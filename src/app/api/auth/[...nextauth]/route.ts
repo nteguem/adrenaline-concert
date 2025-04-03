@@ -1,4 +1,3 @@
-// adrenaline-concert/src/app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDB } from "@/lib/apiUtils";
@@ -33,7 +32,7 @@ declare module "next-auth/jwt" {
 }
 
 // Définir les options mais ne pas les exporter directement (déplacé de export const à const)
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
