@@ -4,7 +4,7 @@ export interface VainqCreateInput {
     tirageid?: string;
     participantId: string;
     rang: number;
-    emai: string;
+    email: string;
     nom_participant: string;
     prenom_participant: string;
 }
