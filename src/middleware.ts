@@ -5,6 +5,7 @@ import { getToken } from 'next-auth/jwt';
 // Configuration des routes à protéger
 const protectedRoutes = [
   '/api/events',
+  '/api/tirage',
   '/api/users',
   '/api/participants_bo',
   // Ajoutez d'autres routes à protéger
