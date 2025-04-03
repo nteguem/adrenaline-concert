@@ -26,7 +26,8 @@ export class ParticipantService {
             const newParticipant = await prisma.participant.create({
                 data: {
                     nom: data.nom,          
-                    prenom: data.prenom,  
+                    prenom: data.prenom, 
+                    eventId: data.eventId, 
                     email: data.email,    
                     dateNaissance: new Date(data.dateNaissance),
                 },
@@ -63,6 +64,7 @@ export class ParticipantService {
             // Préparation des données du participant
             const participantInput: ParticipantCreateInput = {
                 nom: body.nom,
+                eventId: body.eventId,
                 prenom: body.prenom,
                 email: body.email,
                 dateNaissance: body.dateNaissance,
@@ -205,6 +207,7 @@ export class ParticipantService {
                     nom: true,
                     prenom: true,
                     email: true,
+                    eventId: true,
                     dateNaissance: true
                 }
             });
@@ -236,7 +239,7 @@ export class ParticipantService {
             const body = await request.json();
             
             // Validation de base - au moins un champ à mettre à jour doit être présent
-            const updateFields = ['nom', 'prenom', 'email', 'dateNaissance'];
+            const updateFields = ['nom', 'prenom', 'email', 'dateNaissance','eventId'];
             const hasUpdateFields = updateFields.some(field => body[field] !== undefined);
             
             if (!hasUpdateFields) {
@@ -272,6 +275,7 @@ export class ParticipantService {
                     id: true,
                     nom: true,
                     prenom: true,
+                    eventId: true,
                     email: true,
                     dateNaissance: true
                 }

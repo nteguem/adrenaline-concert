@@ -4,6 +4,7 @@ export interface ParticipantCreateInput {
     prenom: string;
     dateNaissance: Date;
     email: string;
+    eventId: string;
 }
 
 
@@ -13,6 +14,7 @@ export interface ParticipantUpdateInput {
     prenom?: string;
     dateNaissance?: Date;
     email?: Date;
+    eventId?: string;
 }
 
 export interface PaginationOptions {

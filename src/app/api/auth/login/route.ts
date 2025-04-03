@@ -1,63 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { encode } from 'next-auth/jwt';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcrypt';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // 1. Récupérer les identifiants depuis le corps JSON
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const { email, password } = body;
 
-    // 2. Validation des données
     if (!email || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Email et mot de passe requis' },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        code: 400,
+        message: "Email et mot de passe requis"
+      }, { status: 400 });
     }
 
-    // 3. Rechercher l'utilisateur dans la base de données
+    // Find user in database
     const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-        isAdmin: true,
-      },
+      where: { email }
     });
 
-    // 4. Vérifier si l'utilisateur existe
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Identifiants invalides' },
-        { status: 401 }
-      );
+      return NextResponse.json({
+        success: false,
+        code: 401,
+        message: "Utilisateur non trouvé"
+      }, { status: 401 });
     }
 
-    // 5. Vérifier le mot de passe avec bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { success: false, error: 'Identifiants invalides' },
-        { status: 401 }
-      );
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return NextResponse.json({
+        success: false,
+        code: 401,
+        message: "Mot de passe incorrect"
+      }, { status: 401 });
     }
 
-    // 6. Authentification réussie
-    return NextResponse.json({
-      success: true,
-      message: 'Connexion réussie',
-      user: {
+    // Get the JWT token
+    const token = await encode({
+      token: {
         id: user.id,
         email: user.email,
         isAdmin: user.isAdmin,
+        username: user.username,
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
       },
+      secret: process.env.NEXTAUTH_SECRET || '',
     });
+
+    return NextResponse.json({
+      success: true,
+      code: 200,
+      message: 'Authentification réussie',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: `${user.prenom} ${user.nom}`,
+        isAdmin: user.isAdmin,
+        username: user.username
+      },
+      accessToken: token,
+      expiresIn: 24 * 60 * 60
+    }, { status: 200 });
+
   } catch (error) {
-    console.error('Erreur lors de la connexion:', error);
-    return NextResponse.json(
-      { success: false, error: 'Erreur interne du serveur' },
-      { status: 500 }
-    );
+    console.error('Erreur de connexion:', error);
+    return NextResponse.json({
+      success: false,
+      code: 500,
+      message: 'Erreur interne du serveur'
+    }, { status: 500 });
   }
 }
