@@ -43,13 +43,16 @@ export async function POST(request: Request) {
     // Get the JWT token
     const token = await encode({
       token: {
-        id: user.id,
+        id: user.id,  // Required by NextAuth JWT type
+        jti: crypto.randomUUID(),
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+        sub: user.id,
         email: user.email,
         isAdmin: user.isAdmin,
-        username: user.username,
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
+        username: user.username
       },
-      secret: process.env.NEXTAUTH_SECRET || '',
+      secret: process.env.NEXTAUTH_SECRET || 'your-fallback-secret-key-min-32-chars',
     });
 
     return NextResponse.json({
