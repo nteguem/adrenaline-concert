@@ -194,6 +194,67 @@ export class TourService {
     }
   }
 
+  static async getToursWithEvents() {
+    try {
+      const tours = await prisma.tour.findMany({
+        orderBy: {
+          startDate: 'desc'
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          startDate: true,
+          endDate: true,
+          status: true
+        }
+      });
+
+      // Get events for each tour and sort them
+      const toursWithEvents = await Promise.all(
+        tours.map(async (tour) => {
+          const events = await prisma.event.findMany({
+            where: {
+              tourId: tour.id,
+              eventDate: {
+                gte: new Date() // Only future events
+              }
+            },
+            orderBy: {
+              eventDate: 'asc' // Closest dates first
+            },
+            select: {
+              id: true,
+              city: true,
+              venue: true,
+              eventDate: true,
+              endDate: true,
+              status: true
+            }
+          });
+
+          return {
+            ...tour,
+            events
+          };
+        })
+      );
+
+      // Filter out tours with no upcoming events if needed
+      const toursWithUpcomingEvents = toursWithEvents.filter(tour => tour.events.length > 0);
+
+      return successResponse({
+        message: `${toursWithUpcomingEvents.length} tours trouvés`,
+        tours: toursWithUpcomingEvents
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des tours:", error);
+      return apiErrorHandler(error);
+    }
+  }
+
+
   // Récupérer toutes les tournées avec pagination et recherche
   static async getTours(options: PaginationOptions = {}): Promise<{
     tours: any[];
