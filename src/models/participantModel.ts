@@ -13,7 +13,7 @@ export interface ParticipantUpdateInput {
     nom?: string;
     prenom?: string;
     dateNaissance?: Date;
-    email?: Date;
+    email?: string;
     eventId?: string;
 }
 

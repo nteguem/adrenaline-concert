@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-const protectedRoutes = ['/api/events', '/api/tirage', '/api/users', '/api/participants_bo','/api/tirage'];
+const protectedRoutes = ['/api/events', '/api/tirage', '/api/users', '/api/participants_bo','/api/vainqueurs'];
 const publicRoutes = ['/api/auth', '/login', '/register','/api/tours','/api/participants_fo'];
 
 export async function middleware(request: NextRequest) {

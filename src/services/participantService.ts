@@ -172,6 +172,44 @@ export class ParticipantService {
         }
     }
 
+   
+
+
+  static async getParticipantsByEventId(eventId: string) {
+    try {
+      const participants = await prisma.participant.findMany({
+        where: {
+          eventId: eventId
+        },
+        select: {
+          id: true,
+          nom: true,
+          prenom: true,
+          email: true,
+          eventId: true,
+          dateNaissance: true,
+          createdAt: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      if (!participants.length) {
+        return errorResponse('Aucun participant trouvé pour cet événement', 404);
+      }
+
+      return successResponse({
+        message: `${participants.length} participants trouvés`,
+        participants: participants
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des participants:", error);
+      return apiErrorHandler(error);
+    }
+  }
+
     /**
      * Mettre à jour un participant existant
      * @param id Identifiant du participant à mettre à jour
@@ -190,7 +228,7 @@ export class ParticipantService {
             }
             
             // Préparer les données à mettre à jour
-            const updateData: Prisma.participantWhereInput = {};
+            const updateData: Prisma.participantUpdateInput = {};
             
             // Ajouter uniquement les champs qui sont définis
             if (data.nom !== undefined) updateData.nom = data.nom;
