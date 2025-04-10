@@ -40,13 +40,23 @@ export async function POST(request: Request) {
       }, { status: 401 });
     }
 
-    // Get the JWT token
+
+
+    const currentDate = new Date();
+
+// 2. Ajouter 2 minutes
+    currentDate.setMinutes(currentDate.getMinutes() + 720);
+
+    // 3. Afficher la nouvelle date et la convertir en minutes
+    const expirationInMinutes = Math.floor(currentDate.getTime() / 60000); 
+
     const token = await encode({
       token: {
         id: user.id,  // Required by NextAuth JWT type
         jti: crypto.randomUUID(),
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+        exp: expirationInMinutes,
+        expiration: expirationInMinutes,
         sub: user.id,
         email: user.email,
         isAdmin: user.isAdmin,
@@ -67,7 +77,7 @@ export async function POST(request: Request) {
         username: user.username
       },
       accessToken: token,
-      expiresIn: 24 * 60 * 60
+      expiresIn: expirationInMinutes
     }, { status: 200 });
 
   } catch (error) {
