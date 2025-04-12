@@ -4,13 +4,18 @@ import { errorResponse } from '@/lib/apiUtils';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const eventId = params.id;
-  
-  if (!eventId) {
-    return errorResponse('Event ID is required', 400);
-  }
+  try {
+    const params = await context.params;
 
-  return TirageService.getWinnersByEventId(eventId);
+    if (!params?.id) {
+      return errorResponse('Invalid event ID', 400);
+    }
+
+    return await TirageService.getWinnersByEventId(params.id);
+  } catch (error) {
+    console.error('Error in GET winners:', error);
+    return errorResponse('Internal server error', 500);
+  }
 }

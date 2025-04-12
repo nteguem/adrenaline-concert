@@ -4,13 +4,15 @@ import { errorResponse } from '@/lib/apiUtils';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+
+  const params = await context.params;
+
+    if (!params?.id) {
+      return errorResponse('Tirage ID is required', 400);
+    }
   const tirageId = params.id;
-  
-  if (!tirageId) {
-    return errorResponse('Tirage ID is required', 400);
-  }
 
   return TirageService.getWinnersByTirageId(tirageId);
 }

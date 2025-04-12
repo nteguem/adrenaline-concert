@@ -42,6 +42,8 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
+  console.log('Decoded Token:', token);
+
   if (!token) {
     return NextResponse.json({
       success: false,
@@ -50,6 +52,24 @@ export async function middleware(request: NextRequest) {
     }, { status: 401 });
   }
 
+  // Check token expiration with proper type checking
+  const currentDate = new Date();
+
+  currentDate.setMinutes(currentDate.getMinutes());
+  const currenDate = Math.floor(currentDate.getTime() / 60000); 
+    const expTime = token.expiration as number | undefined;
+  
+  if (expTime) {
+    const timeLeft = expTime - currenDate;
+    if(timeLeft<0){
+      return NextResponse.json({
+        success: false,
+        code: 401,
+        message: 'Token expiré'
+      }, { status: 401 });
+    }
+  }
+  
   if (pathname.includes('/admin') && !token.isAdmin) {
     return NextResponse.json({
       success: false,

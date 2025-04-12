@@ -5,6 +5,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  
   return TourService.handleGetTourById(request, { params });
 }
 
