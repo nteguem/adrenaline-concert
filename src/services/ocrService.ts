@@ -1,7 +1,4 @@
-import { prisma } from '@/lib/db';
-import { NextRequest } from 'next/server';
 import axios from 'axios';
-import fs from 'fs';
 import path from 'path';
 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
