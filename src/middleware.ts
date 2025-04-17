@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { cookies } from 'next/headers';
+// import { cookies } from 'next/headers';
 
 const protectedRoutes = ['/api/events', '/api/tirage', '/api/users', '/api/participants_bo','/api/vainqueurs'];
 const publicRoutes = ['/api/auth', '/login', '/register','/api/tours','/api/participants_fo'];
@@ -24,14 +24,14 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
-  const cookie = (await cookies()).get("session")?.value;
-  // const session = { userId: cookie };
-  // console.log("session cookie:", cookie);
+  // const cookie = (await cookies()).get("session")?.value;
+  // // const session = { userId: cookie };
+  // // console.log("session cookie:", cookie);
 
-  if (isProtectedRoute && !cookie) {
-    console.log("session cook:", cookie);
-    return NextResponse.redirect(new URL("/login", request.nextUrl));
-  }
+  // if (isProtectedRoute && !cookie) {
+  //   console.log("session cook:", cookie);
+  //   return NextResponse.redirect(new URL("/login", request.nextUrl));
+  // }
   
   if (!isProtectedRoute || isPublicRoute) {
     return NextResponse.next();
