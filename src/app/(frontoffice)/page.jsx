@@ -12,7 +12,7 @@ const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function HomePage() {
   const router = useRouter();
   const [isClicked, setIsClicked] = useState(false);
-  const { data, error } = useSWR("/api/tours", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
   const hasDatePassed = (startDate) => {
@@ -40,20 +40,17 @@ export default function HomePage() {
     // console.log("formatted date:", returnDate);
     return returnDate;
   };
-  if (data) {
-    console.log("got data:", data);
-  }
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data[0].endDate))
+  if (hasDateEnd(data?.data.tours[0].endDate))
     return <LoadingObject text={"le formulaire est clôturé"} />;
-  if (hasDatePassed(data?.data[0].startDate)) {
-    return <Countdown startDate={data?.data[0].startDate} />;
+  if (hasDatePassed(data?.data.tours[0].startDate)) {
+    return <Countdown startDate={data?.data.tours[0].startDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data[0]);
+    formattedDate = customdateFormat(data.data.tours[0]);
   }
 
   const handleClick = () => {
@@ -88,7 +85,7 @@ export default function HomePage() {
         text-center
       "
       >
-        <LogoHeader date={formattedDate} venue={data.data[0].name} />
+        <LogoHeader date={formattedDate} venue={data.data.tours[0].name} />
 
         <div className="w-full max-w-md mx-auto mt-[65%]">
           <div className="mb-8">

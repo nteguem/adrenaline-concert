@@ -29,13 +29,14 @@ export default function RegistrationPage() {
   const [formStep, setFormStep] = useState(1);
   const [ticketImage, setTicketImage] = useState(null);
   const [ticketFileName, setTicketFileName] = useState("");
+  // const [eventId, setEventId] = useState(null);
   const [errorModal, setErrorModal] = useState({
     isOpen: false,
     title: "",
     message: "",
     type: "error",
   });
-  const { data, error } = useSWR("/api/tours", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
   const hasDatePassed = (startDate) => {
@@ -63,17 +64,21 @@ export default function RegistrationPage() {
     // console.log("formatted date:", returnDate);
     return returnDate;
   };
+  let eventId = null;
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data[0]?.endDate))
+  if (data) {
+    eventId = data.data.tours[0].id;
+  }
+  if (hasDateEnd(data?.data.tours[0]?.endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data[0].startDate)) {
-    return <Countdown startDate={data?.data[0].startDate} />;
+  if (hasDatePassed(data?.data.tours[0].startDate)) {
+    return <Countdown startDate={data?.data.tours[0].startDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data[0]);
+    formattedDate = customdateFormat(data.data.tours[0]);
   }
 
   const handleInputChange = (e) => {
@@ -161,8 +166,9 @@ export default function RegistrationPage() {
         prenom: formData.prenom,
         dateNaissance: formData.dateNaissance,
         email: formData.email,
+        eventId: eventId,
+        bloc: "A",
       };
-      // console.log("data before post:", postBody);
       const response = await fetch("/api/participants_fo", {
         method: "POST",
         body: JSON.stringify(postBody),
@@ -358,7 +364,7 @@ export default function RegistrationPage() {
     >
       <div className="w-full max-w-md mx-auto">
         <div className="mb-12">
-          <LogoHeader date={formattedDate} venue={data?.data[0].name} />
+          <LogoHeader date={formattedDate} venue={data?.data.tours[0].name} />
         </div>
 
         <div className="w-full">{renderFormStep()}</div>

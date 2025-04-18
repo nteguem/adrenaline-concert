@@ -12,7 +12,7 @@ export default function VideoPage() {
   const router = useRouter();
   const [videoEnded, setVideoEnded] = useState(false);
 
-  const { data, error } = useSWR("/api/tours", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
   const hasDatePassed = (startDate) => {
@@ -42,14 +42,16 @@ export default function VideoPage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data[0]?.endDate))
+
+  if (hasDateEnd(data?.data.tours[0]?.endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data[0].startDate)) {
-    return <Countdown startDate={data?.data[0].startDate} />;
+  if (hasDatePassed(data?.data.tours[0].startDate)) {
+    return <Countdown startDate={data?.data.tours[0].startDate} />;
   }
+
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data[0]);
+    formattedDate = customdateFormat(data.data.tours[0]);
   }
 
   const handleNext = () => {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const Checkbox = ({ label, checked, onChange, name }) => {
   return (
@@ -9,7 +9,7 @@ const Checkbox = ({ label, checked, onChange, name }) => {
         onChange={onChange}
         name={name}
         id={name}
-        className="w-5 h-5 text-blue-600 rounded focus:ring-0 focus:ring-offset-0 border-blue-300"
+        className="w-6 h-5 text-blue-600 rounded focus:ring-0 focus:ring-offset-0 border-blue-300"
       />
       <label htmlFor={name} className="ml-2 text-sm text-white">
         {label}

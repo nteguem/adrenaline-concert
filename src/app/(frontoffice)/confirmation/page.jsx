@@ -17,7 +17,7 @@ export default function ConfirmationPage() {
 
     return () => clearTimeout(timer);
   }, []);
-  const { data, error } = useSWR("/api/tours", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
   const hasDatePassed = (startDate) => {
@@ -47,15 +47,15 @@ export default function ConfirmationPage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data[0]?.endDate))
+  if (hasDateEnd(data?.data.tours[0]?.endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data[0].startDate)) {
-    return <Countdown startDate={data?.data[0].startDate} />;
+  if (hasDatePassed(data?.data.tours[0].startDate)) {
+    return <Countdown startDate={data?.data.tours[0].startDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data[0]);
+    formattedDate = customdateFormat(data.data.tours[0]);
   }
   // Effet pour simuler la confetti ou animation de succès
 
@@ -75,7 +75,7 @@ export default function ConfirmationPage() {
       `}
     >
       <div className="max-w-md w-full mx-auto flex flex-col items-center justify-center text-center">
-        <LogoHeader date={formattedDate} venue={data.data[0].name} />
+        <LogoHeader date={formattedDate} venue={data.data.tours[0].name} />
 
         <div className="w-full mb-8">
           <h2 className={`font-din text-2xl font-bold mb-6`}>
