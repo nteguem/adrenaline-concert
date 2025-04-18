@@ -33,7 +33,8 @@ export class ParticipantService {
                     eventId: data.eventId, 
                     email: data.email,
                     rang: data.rang ?? 0,
-                    place: data.place ?? 0,    
+                    place: data.place ?? 0,   
+                    bloc: data.bloc ?? 0,   
                     dateNaissance: new Date(data.dateNaissance),
                 },
             });
@@ -54,61 +55,95 @@ export class ParticipantService {
      * @param request Requête entrante
      * @returns Réponse avec le participant créé ou message d'erreur
      */
-    static async handleCreateParticipant(formData: FormData) {
+    static async handleCreateParticipant(request: NextRequest) {
         try {
+            const body = await request.json();
+            
             // Validation des champs requis pour un participant
-            const requiredFields: (keyof ParticipantCreateInput)[] = ['nom', 'prenom', 'email', 'dateNaissance', 'eventId'];
-            const missingFields = requiredFields.filter(field => !formData.get(field));
-
+            const requiredFields: (keyof ParticipantCreateInput)[] = ['nom', 'prenom', 'email', 'dateNaissance'];
+            const missingFields = requiredFields.filter(field => !body[field]);
+            
             if (missingFields.length > 0) {
                 return errorResponse(`Champs manquants : ${missingFields.join(', ')}`);
             }
 
-            // Get the file
-            const file = formData.get('file') as File | null;
-            if (!file) {
-                return errorResponse('Fichier de billet requis');
-            }
-
-            // Analyze ticket
-            console.log('fichier ================> '+JSON.stringify(file));
-            const ticketAnalysis = await OcrService.analyzeTicket(file);
-            if(!ticketAnalysis.success) {
-                console.log('response==> '+JSON.stringify(ticketAnalysis));
-                return errorResponse(ticketAnalysis.message || 'Erreur lors de l\'analyse du billet', 400);
-            }
-
-            console.log('response ====> ' +JSON.stringify(ticketAnalysis));
-            console.log('rang ====> ' +ticketAnalysis.data?.rang);
-
-            // Convert dateNaissance string to proper date format
-            const dateNaissanceStr = formData.get('dateNaissance') as string;
-            if (!dateNaissanceStr) {
-                return errorResponse('Date de naissance invalide');
-            }
-
             // Préparation des données du participant
             const participantInput: ParticipantCreateInput = {
-                nom: formData.get('nom') as string,
-                eventId: formData.get('eventId') as string,
-                prenom: formData.get('prenom') as string,
-                email: formData.get('email') as string,
-                dateNaissance: new Date(dateNaissanceStr),
-                rang: ticketAnalysis.data?.rang ? parseInt(ticketAnalysis.data.rang) : undefined,
-                place: ticketAnalysis.data?.place ? parseInt(ticketAnalysis.data.place) : undefined
+                nom: body.nom,
+                eventId: body.eventId,
+                prenom: body.prenom,
+                email: body.email,
+                rang: body.rang ?? 0,
+                place: body.place ?? 0,
+                bloc: body.bloc ?? 0,
+                dateNaissance: body.dateNaissance,
             };
             
             // Création du participant
             const participant = await this.createParticipant(participantInput);
-            
-            return successResponse({
-                ...participant,
-            }, undefined, 201);
+            return successResponse(participant, undefined, 201);
         } catch (error) {
-            console.error('Error in handleCreateParticipant:', error);
             return apiErrorHandler(error);
         }
     }
+
+
+
+    // static async handleCreateParticipant(formData: FormData) {
+    //     try {
+    //         // Validation des champs requis pour un participant
+    //         const requiredFields: (keyof ParticipantCreateInput)[] = ['nom', 'prenom', 'email', 'dateNaissance', 'eventId'];
+    //         const missingFields = requiredFields.filter(field => !formData.get(field));
+
+    //         if (missingFields.length > 0) {
+    //             return errorResponse(`Champs manquants : ${missingFields.join(', ')}`);
+    //         }
+
+    //         // Get the file
+    //         const file = formData.get('file') as File | null;
+    //         if (!file) {
+    //             return errorResponse('Fichier de billet requis');
+    //         }
+
+    //         // Analyze ticket
+    //         console.log('fichier ================> '+JSON.stringify(file));
+    //         const ticketAnalysis = await OcrService.analyzeTicket(file);
+    //         if(!ticketAnalysis.success) {
+    //             console.log('response==> '+JSON.stringify(ticketAnalysis));
+    //             return errorResponse(ticketAnalysis.message || 'Erreur lors de l\'analyse du billet', 400);
+    //         }
+
+    //         console.log('response ====> ' +JSON.stringify(ticketAnalysis));
+    //         console.log('rang ====> ' +ticketAnalysis.data?.rang);
+
+    //         // Convert dateNaissance string to proper date format
+    //         const dateNaissanceStr = formData.get('dateNaissance') as string;
+    //         if (!dateNaissanceStr) {
+    //             return errorResponse('Date de naissance invalide');
+    //         }
+
+    //         // Préparation des données du participant
+    //         const participantInput: ParticipantCreateInput = {
+    //             nom: formData.get('nom') as string,
+    //             eventId: formData.get('eventId') as string,
+    //             prenom: formData.get('prenom') as string,
+    //             email: formData.get('email') as string,
+    //             dateNaissance: new Date(dateNaissanceStr),
+    //             rang: ticketAnalysis.data?.rang ? parseInt(ticketAnalysis.data.rang) : undefined,
+    //             place: ticketAnalysis.data?.place ? parseInt(ticketAnalysis.data.place) : undefined
+    //         };
+            
+    //         // Création du participant
+    //         const participant = await this.createParticipant(participantInput);
+            
+    //         return successResponse({
+    //             ...participant,
+    //         }, undefined, 201);
+    //     } catch (error) {
+    //         console.error('Error in handleCreateParticipant:', error);
+    //         return apiErrorHandler(error);
+    //     }
+    // }
 
     /**
      * Récupérer tous les participants avec pagination et recherche

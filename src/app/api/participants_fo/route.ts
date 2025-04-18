@@ -70,11 +70,5 @@ export async function GET(request: NextRequest) {
 //     }
 // }
 export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    return ParticipantService.handleCreateParticipant(formData);
-  } catch (error) {
-    console.error('Error in POST:', error);
-    return new Response(JSON.stringify({ error: 'Failed to process request' }), { status: 400 });
-  }
+  return ParticipantService.handleCreateParticipant(request);
 }
