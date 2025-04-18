@@ -1,11 +1,11 @@
 "use client";
 import React, { useState } from 'react';
 
-const HeartbeatButton = ({ 
-  children = "SUIVANT", 
-  onClick, 
-  className = "", 
-  speed = 2 
+const HeartbeatButton = ({
+  children = "SUIVANT",
+  onClick,
+  className = "",
+  speed = 2
 }) => {
   const [isClicked, setIsClicked] = useState(false);
   
@@ -19,17 +19,6 @@ const HeartbeatButton = ({
       {/* Animation ECG qui se dessine progressivement */}
       <div className="absolute inset-0 flex items-center pointer-events-none">
         <div className="relative w-full h-full flex items-center">
-          {/* Ligne de base - toujours visible */}
-          <svg className="absolute w-full" viewBox="0 0 1000 100" preserveAspectRatio="none">
-            <path
-              d="M0,50 L1000,50"
-              stroke="white"
-              strokeWidth="1"
-              strokeOpacity="0.3"
-              fill="none"
-            />
-          </svg>
-          
           {/* Ligne ECG qui se dessine progressivement - avec zone de dessin limitée */}
           <svg className="absolute w-full" viewBox="0 0 1000 100" preserveAspectRatio="none">
             <defs>
@@ -41,34 +30,32 @@ const HeartbeatButton = ({
             
             <g clipPath="url(#button-area)">
               <path
-                d="M0,50 
-                   L50,50 
-                   L70,20 
-                   L90,80 
-                   L110,50 
-                   L200,50
-                   L220,10
-                   L240,90 
-                   L260,50 
-                   L350,50
-                   L370,20
-                   L390,80 
-                   L410,50 
-                   L500,50
-                   L520,5
-                   L540,95 
-                   L560,50 
-                   L650,50
-                   L670,20
-                   L690,80 
-                   L710,50 
-                   L800,50
-                   L820,10
-                   L840,90 
-                   L860,50 
-                   L950,50
-                   L980,50 
-                   L1000,50"
+                d="M0,20 
+                    L40,80 
+                    L80,20 
+                    L120,80
+                    L160,20
+                    L200,80
+                    L240,20 
+                    L280,80 
+                    L320,20
+                    L360,80
+                    L400,20 
+                    L440,80 
+                    L480,20
+                    L520,80
+                    L560,20 
+                    L600,80 
+                    L640,20
+                    L680,80
+                    L720,20 
+                    L760,80 
+                    L800,20
+                    L840,80
+                    L880,20 
+                    L920,80 
+                    L960,20
+                    L1000,80"
                 stroke="white"
                 strokeWidth="2"
                 fill="none"
