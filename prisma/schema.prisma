@@ -52,6 +52,7 @@ model participant {
   updatedAt     DateTime @updatedAt
   rang          Int
   place         Int
+  bloc          String
 }
 
 model Tour {

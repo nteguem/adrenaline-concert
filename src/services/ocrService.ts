@@ -7,7 +7,7 @@ export class OcrService {
     static async analyzeTicket(file: File): Promise<{
         success: boolean;
         message?: string;
-        data?: { rang: string; place: string };
+        data?: { rang: string; place: string; bloc: string; };
         errorType?: string;
         details?: string | any;
     }> {
@@ -39,13 +39,13 @@ export class OcrService {
                 data: {
                     model: "claude-3-opus-20240229",
                     max_tokens: 1024,
-                    system: "Tu es un expert en analyse de billets de concert du Stade de France. Sur ces billets, le rang et la place sont toujours les deux derniers nombres à droite du billet, après les sections comme 'EST', 'BASSE', etc. Le rang est l'avant-dernier nombre et la place est le dernier nombre. Ignore complètement les lettres comme 'D' ou 'D2' qui sont des indicateurs de section et non des numéros de rang.",
+                    system: "Tu es un expert en analyse de billets de concert du Stade de France. Tu dois identifier le bloc (comme 'EST', 'BASSE', etc.), le rang (avant-dernier nombre) et la place (dernier nombre).",
                     messages: [{
                         role: "user",
                         content: [
                             {
                                 type: "text",
-                                text: "Regarde à droite du billet et identifie uniquement les deux derniers nombres. L'avant-dernier nombre est le rang, le dernier nombre est la place. Par exemple si tu vois à droite '13 06', le rang est '13' et la place est '06'. Ignore toutes les lettres. Réponds uniquement avec un objet JSON contenant les champs 'rang' et 'place'. N'ajoute rien d'autre dans ta réponse."
+                                text:"Analyse ce billet et extrait: 1) Le bloc (EST, BASSE, etc.) 2) Le rang (avant-dernier nombre) 3) La place (dernier nombre). Réponds uniquement avec un objet JSON contenant les champs 'bloc', 'rang' et 'place'. Par exemple: {'bloc': 'EST', 'rang': '13', 'place': '06'}."
                             },
                             {
                                 type: "image",
@@ -66,7 +66,10 @@ export class OcrService {
             // Parse response
             let ticketInfo;
             try {
-                const cleanedText = assistantMessage.text.trim().replace(/\n/g, '');
+                const cleanedText = assistantMessage.text
+                .trim()
+                .replace(/\n/g, '')
+                .replace(/'/g, '"');
                 console.log('Cleaned text:', cleanedText);
                 ticketInfo = JSON.parse(cleanedText);
                 
@@ -89,13 +92,13 @@ export class OcrService {
             }
 
             // Validate numbers
-            if (!/^\d+$/.test(ticketInfo.rang) || !/^\d+$/.test(ticketInfo.place)) {
-                return {
-                    success: false,
-                    message: "Les valeurs extraites ne sont pas des nombres valides",
-                    errorType: 'INVALID_NUMBER_FORMAT'
-                };
-            }
+            // if (!/^\d+$/.test(ticketInfo.rang) || !/^\d+$/.test(ticketInfo.place) ) {
+            //     return {
+            //         success: false,
+            //         message: "Les valeurs extraites ne sont pas des nombres valides",
+            //         errorType: 'INVALID_NUMBER_FORMAT'
+            //     };
+            // }
 
             const formattedPlace = ticketInfo.place.padStart(2, '0');
 
@@ -103,7 +106,8 @@ export class OcrService {
                 success: true,
                 data: {
                     rang: ticketInfo.rang,
-                    place: formattedPlace
+                    place: formattedPlace,
+                    bloc: ticketInfo.bloc
                 }
             };
 

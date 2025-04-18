@@ -7,6 +7,7 @@ export interface ParticipantCreateInput {
     eventId: string;
     rang ?: number;
     place ?: number;
+    bloc ?: string;
 }
 
 
