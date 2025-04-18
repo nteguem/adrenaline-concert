@@ -8,6 +8,7 @@ function CentralLoadingObject({ text }) {
         alignSelf: "center",
         flexDirection: "column",
         justifyContent: "space-between",
+        textTransform: "uppercase",
       }}
     >
       {text}

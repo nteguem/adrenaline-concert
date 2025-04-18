@@ -84,9 +84,7 @@ export default function ConfirmationPage() {
             PRISE EN COMPTE
           </h2>
           <div className="text-lg">
-            <p className="mb-2">
-              Nous vous contacterons si vous êtes sélectionné!
-            </p>
+            <p className="mb-2">TIRAGE AU SORT CE SOIR PENDANT LE SHOW</p>
             <p className="text-blue-400">Bonne chance!</p>
           </div>
         </div>

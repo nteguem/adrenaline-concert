@@ -126,7 +126,7 @@ export default function RegistrationPage() {
       setErrorModal({
         isOpen: true,
         title: "Billet manquant",
-        message: "Veuillez importer votre billet de concert.",
+        message: "",
         type: "error",
       });
       return false;
@@ -258,9 +258,9 @@ export default function RegistrationPage() {
             />
 
             <div className="mt-6 mb-4">
-              <p className="text-green-400 text-center mb-2">
+              {/* <p className="text-green-400 text-center mb-2">
                 Veuillez importer votre billet de concert
-              </p>
+              </p> */}
               {!ticketImage ? (
                 <FileUpload
                   onFileSelect={(dataUrl, fileName) =>
@@ -328,12 +328,12 @@ export default function RegistrationPage() {
               />
             </div>
 
-            <div className="mt-8 flex justify-between items-center">
-              <Button onClick={() => setFormStep(1)} variant="secondary">
-                RETOUR
-              </Button>
+            <div className="mt-8 flex justify-center items-center">
               <Button type="submit">JE TENTE MA CHANCE</Button>
             </div>
+            <Button onClick={() => setFormStep(1)} variant="secondary">
+              RETOUR
+            </Button>
           </form>
         );
       default:

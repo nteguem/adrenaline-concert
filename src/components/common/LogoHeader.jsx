@@ -7,11 +7,11 @@ const LogoHeader = ({ venue, date }) => {
       <h1
         className={`${evangelion.className} text-6xl text-white mb-1 space-x-0`}
       >
-        ADRENALINE
+        ADRENALINE TOUR
       </h1>
-      <span className={`${evangelion.className} text-3xl mb-2 tracking-wide`}>
+      {/* <span className={`${evangelion.className} text-3xl mb-2 tracking-wide`}>
         TOUR
-      </span>
+      </span> */}
       {(venue || date) && (
         <div className="text-center text-lg">
           {date && venue ? `${date} | ${venue}` : date || venue}

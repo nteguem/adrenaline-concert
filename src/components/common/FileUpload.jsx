@@ -1,12 +1,15 @@
 "use client";
-import React, { useRef, useState } from 'react';
-import { Download, Check, X, FileText, Image as ImageIcon } from 'lucide-react';
+import React, { useRef, useState } from "react";
+import { Download, Check, X, FileText, Image as ImageIcon } from "lucide-react";
 
-const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
+const FileUpload = ({
+  onFileSelect,
+  label = "IMPORTEZ VOTRE BILLET DE CONCERT",
+}) => {
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState('');
+  const [fileName, setFileName] = useState("");
+  const [fileType, setFileType] = useState("");
 
   const handleButtonClick = () => {
     fileInputRef.current.click();
@@ -17,7 +20,7 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
     if (file) {
       setFileName(file.name);
       setFileType(file.type);
-      
+
       const reader = new FileReader();
       reader.onload = (event) => {
         setPreview(event.target.result);
@@ -30,22 +33,22 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
   const clearFile = (e) => {
     e.stopPropagation();
     setPreview(null);
-    setFileName('');
-    setFileType('');
-    fileInputRef.current.value = '';
+    setFileName("");
+    setFileType("");
+    fileInputRef.current.value = "";
     onFileSelect(null);
   };
 
   const renderPreviewContent = () => {
-    if (fileType.startsWith('image/')) {
+    if (fileType.startsWith("image/")) {
       return (
-        <img 
-          src={preview} 
-          alt="Aperçu" 
+        <img
+          src={preview}
+          alt="Aperçu"
           className="w-full h-full object-cover"
         />
       );
-    } else if (fileType === 'application/pdf') {
+    } else if (fileType === "application/pdf") {
       return (
         <div className="w-full h-full flex items-center justify-center bg-blue-50">
           <FileText className="h-10 w-10 text-blue-500" />
@@ -61,9 +64,9 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
   };
 
   const getFileIcon = () => {
-    if (fileType.startsWith('image/')) {
+    if (fileType.startsWith("image/")) {
       return <ImageIcon className="h-4 w-4 mr-1" />;
-    } else if (fileType === 'application/pdf') {
+    } else if (fileType === "application/pdf") {
       return <FileText className="h-4 w-4 mr-1" />;
     } else {
       return <FileText className="h-4 w-4 mr-1" />;
@@ -84,7 +87,7 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
         </button>
       ) : (
         // Aperçu du fichier après sélection
-        <div 
+        <div
           className="w-full rounded overflow-hidden border-2 border-blue-500 bg-blue-100 cursor-pointer"
           onClick={handleButtonClick}
         >
@@ -94,7 +97,7 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
               <div className="w-16 h-16 mr-4 bg-white rounded overflow-hidden flex-shrink-0">
                 {renderPreviewContent()}
               </div>
-              
+
               <div className="flex-grow">
                 <p className="font-medium text-blue-800 truncate">{fileName}</p>
                 <p className="text-sm text-blue-600 flex items-center">
@@ -102,7 +105,7 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
                   Billet importé
                 </p>
               </div>
-              
+
               <button
                 onClick={clearFile}
                 className="p-1 rounded-full bg-blue-500 text-white hover:bg-blue-600"
@@ -113,7 +116,7 @@ const FileUpload = ({ onFileSelect, label = "IMPORTEZ VOTRE BILLET" }) => {
           </div>
         </div>
       )}
-      
+
       <input
         type="file"
         ref={fileInputRef}

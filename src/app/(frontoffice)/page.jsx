@@ -40,10 +40,13 @@ export default function HomePage() {
     // console.log("formatted date:", returnDate);
     return returnDate;
   };
+  if (data) {
+    console.log("got data:", data);
+  }
 
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (hasDateEnd(data?.data[0].endDate))
-    return <LoadingObject text={"La date de participation est passé"} />;
+    return <LoadingObject text={"le formulaire est clôturé"} />;
   if (hasDatePassed(data?.data[0].startDate)) {
     return <Countdown startDate={data?.data[0].startDate} />;
   }
@@ -114,7 +117,8 @@ export default function HomePage() {
               ${isClicked ? "bg-blue-400" : ""}
             `}
           >
-            {formattedDate} {data.data[0].name}
+            {/* {formattedDate} {data.data[0].name} */}
+            {"ENTREZ"}
           </HeartbeatButton>
         </div>
       </div>
