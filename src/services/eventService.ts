@@ -36,7 +36,7 @@ export class EventService {
           city: data.city, 
           venue: data.venue,    
           eventDate: new Date(data.eventDate),       
-          endDate: new Date(data.endDate),       
+          endDate: new Date(data?.endDate),       
           status: data.status,
         },
       });
@@ -70,7 +70,7 @@ export class EventService {
         city: body.city,
         venue: body.venue,
         eventDate: body.eventDate,
-        endDate: body.endDate,
+        endDate: body?.endDate,
         status: body.status,
       };
       

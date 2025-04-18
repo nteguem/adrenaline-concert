@@ -47,7 +47,7 @@ export default function ConfirmationPage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data[0].endDate))
+  if (hasDateEnd(data?.data[0]?.endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
   if (hasDatePassed(data?.data[0].startDate)) {
     return <Countdown startDate={data?.data[0].startDate} />;

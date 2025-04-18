@@ -23,7 +23,7 @@ export class TourService {
           name: data.name,         
           description: data.description,  
           startDate: new Date(data.startDate),    
-          endDate: new Date(data.endDate),       
+          endDate: new Date(data?.endDate),       
           status: data.status,
         },
       });
@@ -55,8 +55,8 @@ export class TourService {
         name: body.name,
         description: body.description,
         startDate: body.startDate,
-        endDate: body.endDate,
-        status: body.status,
+        endDate: body?.endDate,
+        status: body?.status,
       };
       
       const tour = await this.createTour(tourInput);
