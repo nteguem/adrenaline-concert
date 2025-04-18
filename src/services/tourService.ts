@@ -218,7 +218,7 @@ export class TourService {
             where: {
               tourId: tour.id,
               eventDate: {
-                gte: new Date() // Only future events
+                gte: new Date(new Date().setHours(0, 0, 0, 0))// Only future events
               }
             },
             orderBy: {
