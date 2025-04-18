@@ -54,7 +54,7 @@ export default function RegistrationPage() {
   };
   const customdateFormat = (passedDate) => {
     // console.log(passedDate);
-    const date = new Date(passedDate.startDate);
+    const date = new Date(passedDate.eventDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const year = date.getUTCFullYear(); // Get full year
@@ -68,17 +68,17 @@ export default function RegistrationPage() {
 
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (data) {
-    eventId = data.data.tours[0].id;
+    eventId = data.data.tours[0].nextEvent.id;
   }
-  if (hasDateEnd(data?.data.tours[0]?.endDate))
+  if (hasDateEnd(data?.data.tours[0]?.nextEvent?.endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data.tours[0].startDate)) {
-    return <Countdown startDate={data?.data.tours[0].startDate} />;
+  if (hasDatePassed(data?.data.tours[0].nextEvent.eventDate)) {
+    return <Countdown startDate={data?.data.tours[0].nextEvent.eventDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data.tours[0]);
+    formattedDate = customdateFormat(data.data.tours[0].nextEvent);
   }
 
   const handleInputChange = (e) => {

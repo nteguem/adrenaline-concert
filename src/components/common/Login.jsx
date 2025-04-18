@@ -1,14 +1,11 @@
-import { getSession, login } from "@/lib/lib";
 import React from "react";
 
-export default async function Page() {
-  const session = await getSession();
+export default async function Login() {
   return (
     <section>
       <form
         action={async (formData) => {
-          "use server";
-          await login(formData);
+          //   await login(formData);
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "50px" }}>

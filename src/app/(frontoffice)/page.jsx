@@ -7,11 +7,13 @@ import { evangelion, din } from "@/styles/fonts";
 import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
+import Login from "../../components/common/Login";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function HomePage() {
   const router = useRouter();
   const [isClicked, setIsClicked] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
@@ -30,7 +32,7 @@ export default function HomePage() {
   };
   const customdateFormat = (passedDate) => {
     // console.log(passedDate);
-    const date = new Date(passedDate.startDate);
+    const date = new Date(passedDate.eventDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const year = date.getUTCFullYear(); // Get full year
@@ -42,15 +44,15 @@ export default function HomePage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data.tours[0].endDate))
+  if (hasDateEnd(data?.data.tours[0].nextEvent.endDate))
     return <LoadingObject text={"le formulaire est clôturé"} />;
-  if (hasDatePassed(data?.data.tours[0].startDate)) {
-    return <Countdown startDate={data?.data.tours[0].startDate} />;
+  if (hasDatePassed(data?.data.tours[0].nextEvent.eventDate)) {
+    return <Countdown startDate={data?.data.tours[0].nextEvent.eventDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data.tours[0]);
+    formattedDate = customdateFormat(data.data.tours[0].nextEvent);
   }
 
   const handleClick = () => {
@@ -85,39 +87,44 @@ export default function HomePage() {
         text-center
       "
       >
-        <LogoHeader date={formattedDate} venue={data.data.tours[0].name} />
+        {!isLoggedIn ? (
+          <Login />
+        ) : (
+          <>
+            <LogoHeader date={formattedDate} venue={data.data.tours[0].name} />
+            <div className="w-full max-w-md mx-auto mt-[65%]">
+              <div className="mb-8">
+                <p className="text-base md:text-lg text-white mb-2">
+                  TENTEZ DE VIVRE L'EXPERIENCE
+                </p>
+                <p
+                  className={`
+        ${din.className} 
+        text-xl md:text-2xl 
+        font-bold 
+        text-white 
+        mb-6
+      `}
+                >
+                  ADRÉNALINE MAX
+                </p>
+              </div>
 
-        <div className="w-full max-w-md mx-auto mt-[65%]">
-          <div className="mb-8">
-            <p className="text-base md:text-lg text-white mb-2">
-              TENTEZ DE VIVRE L'EXPERIENCE
-            </p>
-            <p
-              className={`
-                ${din.className} 
-                text-xl md:text-2xl 
-                font-bold 
-                text-white 
-                mb-6
-              `}
-            >
-              ADRÉNALINE MAX
-            </p>
-          </div>
-
-          <HeartbeatButton
-            onClick={handleClick}
-            className={`
-              max-w-[300px] 
-              mx-auto 
-              transition-colors 
-              ${isClicked ? "bg-blue-400" : ""}
-            `}
-          >
-            {/* {formattedDate} {data.data[0].name} */}
-            {"ENTREZ"}
-          </HeartbeatButton>
-        </div>
+              <HeartbeatButton
+                onClick={handleClick}
+                className={`
+      max-w-[300px] 
+      mx-auto 
+      transition-colors 
+      ${isClicked ? "bg-blue-400" : ""}
+    `}
+              >
+                {/* {formattedDate} {data.data[0].name} */}
+                {"ENTREZ"}
+              </HeartbeatButton>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );
