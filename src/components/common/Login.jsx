@@ -1,13 +1,29 @@
-import React from "react";
+// "use client";
+import React, { useState } from "react";
 
-export default async function Login() {
+export default function Login({ handle }) {
+  const [email, setEmail] = useState(null);
+  const [pass, setPass] = useState(null);
+  const getData = (e) => {
+    const { name, value } = e.target;
+    if (name === "email") {
+      setEmail(value);
+    } else if (name === "password") {
+      setPass(value);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (email === "teste.dupont@gmail.com" && pass === "tested") {
+      handle(true);
+    }
+
+    // You can add your login logic here.
+  };
   return (
     <section>
-      <form
-        action={async (formData) => {
-          //   await login(formData);
-        }}
-      >
+      <form onSubmit={handleSubmit}>
         <div style={{ display: "flex", flexDirection: "column", gap: "50px" }}>
           <div
             style={{
@@ -33,7 +49,7 @@ export default async function Login() {
               name="email"
               autoComplete="email"
               placeholder="example@gmail.com"
-              //   onChange={getData}
+              onChange={getData}
               style={{
                 width: "fit-content",
                 padding: "5px",
@@ -46,6 +62,7 @@ export default async function Login() {
               name="password"
               type="password"
               placeholder="********"
+              onChange={getData}
               id="password"
               autoComplete="current-password"
               style={{
