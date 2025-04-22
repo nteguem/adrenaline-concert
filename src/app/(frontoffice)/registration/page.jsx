@@ -29,13 +29,14 @@ export default function RegistrationPage() {
   const [formStep, setFormStep] = useState(1);
   const [ticketImage, setTicketImage] = useState(null);
   const [ticketFileName, setTicketFileName] = useState("");
-  // const [eventId, setEventId] = useState(null);
+  const [ocrData, setOcrData] = useState(null);
   const [errorModal, setErrorModal] = useState({
     isOpen: false,
     title: "",
     message: "",
     type: "error",
   });
+  const [ocrLoad, setOcrLoad] = useState(false);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
@@ -89,11 +90,45 @@ export default function RegistrationPage() {
     });
   };
 
-  const handleFileSelect = (dataUrl, fileName = "") => {
+  const handleFileSelect = async (dataUrl, fileName = "") => {
     // Le composant FileUpload nous renvoie déjà un dataURL
     setTicketImage(dataUrl);
     if (fileName) {
       setTicketFileName(fileName);
+    }
+    setOcrLoad(true);
+    try {
+      // Create a FormData object
+      const formData = new FormData();
+
+      // Convert dataUrl to a Blob
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+
+      // Append the Blob to the FormData object
+      formData.append("file", blob, fileName || "uploaded-image.png");
+
+      // Make the API request
+      const apiResponse = await fetch("/api/ocr", {
+        method: "POST",
+        body: formData,
+      });
+
+      // Check for a successful response
+      if (!apiResponse.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      // Parse the JSON response
+      const result = await apiResponse.json();
+
+      if (result?.success === true) {
+        setOcrData(result?.data);
+        setOcrLoad(false);
+      }
+      // Handle the result as needed
+    } catch (error) {
+      console.error("Error fetching OCR:", error);
     }
   };
 
@@ -167,7 +202,9 @@ export default function RegistrationPage() {
         dateNaissance: formData.dateNaissance,
         email: formData.email,
         eventId: eventId,
-        bloc: "A",
+        bloc: ocrData?.bloc,
+        rang: ocrData?.rang,
+        place: ocrData?.place,
       };
       const response = await fetch("/api/participants_fo", {
         method: "POST",
@@ -278,6 +315,7 @@ export default function RegistrationPage() {
               ) : (
                 <TicketPreview />
               )}
+
               {ticketImage && (
                 <div className="flex justify-center mt-2">
                   <button
@@ -292,7 +330,11 @@ export default function RegistrationPage() {
             </div>
 
             <div className="mt-4 flex justify-center">
-              <Button type="submit">CONTINUER</Button>
+              {ocrLoad ? (
+                <div>chargement des infos du billet ...</div>
+              ) : (
+                <Button type="submit">CONTINUER</Button>
+              )}
             </div>
           </form>
         );
@@ -304,9 +346,9 @@ export default function RegistrationPage() {
               <TicketPreview />
               <div className="text-center text-sm mb-4">
                 <p className="font-bold">DATE - VILLE</p>
-                <p>BLOC</p>
-                <p>RANG</p>
-                <p>PLACE</p>
+                <p>BLOC {ocrData?.bloc}</p>
+                <p>RANG {ocrData?.rang}</p>
+                <p>PLACE {ocrData?.place}</p>
               </div>
             </div>
 
