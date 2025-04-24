@@ -50,6 +50,7 @@ export default function RegistrationPage() {
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
+    tourDate.setHours(18, 0, 0, 0);
     // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
@@ -203,8 +204,8 @@ export default function RegistrationPage() {
         email: formData.email,
         eventId: eventId,
         bloc: ocrData?.bloc,
-        rang: ocrData?.rang,
-        place: ocrData?.place,
+        rang: parseInt(ocrData?.rang, 0),
+        place: parseInt(ocrData?.place, 0),
       };
       const response = await fetch("/api/participants_fo", {
         method: "POST",

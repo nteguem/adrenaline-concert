@@ -20,6 +20,7 @@ export default function HomePage() {
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
+    // tourDate.setHours(18, 0, 0, 0);
     // console.log("hasreached:", currentDate < tourDate);
     return currentDate < tourDate;
   };
@@ -27,7 +28,9 @@ export default function HomePage() {
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
-    // console.log("hasreached:", currentDate > tourDate);
+    tourDate.setHours(18, 0, 0, 0);
+    console.log("hasreached:", currentDate, " : ", tourDate);
+    console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
   const customdateFormat = (passedDate) => {

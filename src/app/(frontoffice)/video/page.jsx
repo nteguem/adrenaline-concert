@@ -25,6 +25,7 @@ export default function VideoPage() {
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
+    tourDate.setHours(18, 0, 0, 0);
     // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
