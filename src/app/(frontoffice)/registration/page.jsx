@@ -37,6 +37,7 @@ export default function RegistrationPage() {
     type: "error",
   });
   const [ocrLoad, setOcrLoad] = useState(false);
+  const [ocrErrorMessage, setOcrErrorMessage] = useState("");
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
 
@@ -56,7 +57,7 @@ export default function RegistrationPage() {
   };
   const customdateFormat = (passedDate) => {
     // console.log(passedDate);
-    const date = new Date(passedDate.eventDate);
+    const date = new Date(passedDate?.eventDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const year = date.getUTCFullYear(); // Get full year
@@ -70,17 +71,17 @@ export default function RegistrationPage() {
 
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (data) {
-    eventId = data.data.tours[0].nextEvent.id;
+    eventId = data.data?.tours[0]?.nextEvent.id;
   }
-  if (hasDateEnd(data?.data.tours[0]?.nextEvent?.endDate))
+  if (hasDateEnd(data?.data?.tours[0]?.nextEvent?.endDate))
     return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data.tours[0].nextEvent.eventDate)) {
-    return <Countdown startDate={data?.data.tours[0].nextEvent.eventDate} />;
+  if (hasDatePassed(data?.data?.tours[0].nextEvent?.eventDate)) {
+    return <Countdown startDate={data?.data?.tours[0]?.nextEvent?.eventDate} />;
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    formattedDate = customdateFormat(data.data.tours[0].nextEvent);
+    formattedDate = customdateFormat(data.data?.tours[0]?.nextEvent);
   }
 
   const handleInputChange = (e) => {
@@ -98,6 +99,7 @@ export default function RegistrationPage() {
       setTicketFileName(fileName);
     }
     setOcrLoad(true);
+    setOcrErrorMessage("")
     try {
       // Create a FormData object
       const formData = new FormData();
@@ -117,12 +119,12 @@ export default function RegistrationPage() {
 
       // Check for a successful response
       if (!apiResponse.ok) {
+        setOcrErrorMessage("Erreur lors de l'analyse du billet")
         throw new Error("Network response was not ok");
       }
 
       // Parse the JSON response
       const result = await apiResponse.json();
-
       if (result?.success === true) {
         setOcrData(result?.data);
         setOcrLoad(false);
@@ -295,7 +297,7 @@ export default function RegistrationPage() {
               onChange={handleInputChange}
             />
             <Checkbox
-              label="JE CONFIRME MA PRESENCE AU CONCERT"
+              label="JE CONFIRME MA PRESENCE AU CONCERT DE CE SOIR"
               checked={formData.confirmePresence}
               onChange={handleInputChange}
               name="confirmePresence"
@@ -332,9 +334,15 @@ export default function RegistrationPage() {
 
             <div className="mt-4 flex justify-center">
               {ocrLoad ? (
-                <div>chargement des infos du billet ...</div>
+                <>
+                  {ocrErrorMessage ? (
+                    <div className="text-danger">{ocrErrorMessage}</div>
+                  ) : (
+                    <div>chargement des infos du billet ...</div>
+                  )}
+                </>
               ) : (
-                <Button type="submit">CONTINUER</Button>
+                <Button type="submit">CONTINUEZ</Button>
               )}
             </div>
           </form>
@@ -366,7 +374,7 @@ export default function RegistrationPage() {
                 name="santéOk"
                 onChange={handleInputChange}
                 checked={formData.santéOk || false}
-                className="w-full"
+                className="w-full "
               />
               <Checkbox
                 label="J'accepte les conditions générales"
@@ -407,7 +415,7 @@ export default function RegistrationPage() {
     >
       <div className="w-full max-w-md mx-auto">
         <div className="mb-12">
-          <LogoHeader date={formattedDate} venue={data?.data.tours[0].name} />
+          <LogoHeader date={formattedDate} venue={data?.data?.tours[0].name} />
         </div>
 
         <div className="w-full">{renderFormStep()}</div>

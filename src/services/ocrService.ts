@@ -58,15 +58,15 @@ export class OcrService {
                         ]
                     }]
                 }
-            });
+            })
 
-            const assistantMessage = response.data.content[0];
+            const assistantMessage = response?.data?.content[0];
             console.log('Réponse Claude:', assistantMessage);
 
             // Parse response
             let ticketInfo;
             try {
-                const cleanedText = assistantMessage.text
+                const cleanedText = assistantMessage?.text
                 .trim()
                 .replace(/\n/g, '')
                 .replace(/'/g, '"');

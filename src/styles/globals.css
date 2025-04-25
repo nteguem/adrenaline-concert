@@ -16,14 +16,14 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow-x: hidden !important;
 
 }
 
 @layer base {
   h1, h2, h3 {
-    font-family: var(--font-evangelion);
+    font-family: var(--font-din);
     text-transform: uppercase;
   }
   
@@ -233,6 +233,10 @@ body {
   animation: success-pulse 2s infinite;
 }
 
+.text-danger {
+  color: #f55 !important
+}
+
 @keyframes success-pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(0, 186, 255, 0.7);
@@ -242,5 +246,11 @@ body {
   }
   100% {
     box-shadow: 0 0 0 0 rgba(0, 186, 255, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .dnb-bg {
+    background-size: 100%;
   }
 }
