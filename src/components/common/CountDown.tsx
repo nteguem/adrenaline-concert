@@ -22,11 +22,11 @@ const Countdown: React.FC<CountdownProps> = ({ startDate }) => {
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-      if (distance < 0) {
-        clearInterval(interval);
-        setCountdown("The event has started!");
-        return;
-      }
+      // if (distance < 0) {
+      //   clearInterval(interval);
+      //   setCountdown("The event has started!");
+      //   return;
+      // }
 
       // Build the countdown string based on non-zero values
       const timeParts = [];
@@ -44,6 +44,7 @@ const Countdown: React.FC<CountdownProps> = ({ startDate }) => {
 
   return (
     <div
+      className="dnb-bg"
       style={{
         display: "flex",
         alignSelf: "center",

@@ -44,7 +44,7 @@ export default function RegistrationPage() {
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
-    // console.log("hasreached:", currentDate < tourDate);
+    tourDate.setHours(8, 0, 0, 0);
     return currentDate < tourDate;
   };
 
@@ -71,12 +71,21 @@ export default function RegistrationPage() {
 
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (data) {
+    // console.log("data length", data?.data?.tours.length);
     eventId = data.data?.tours[0]?.nextEvent.id;
-  }
-  if (hasDateEnd(data?.data?.tours[0]?.nextEvent?.endDate))
-    return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data?.tours[0].nextEvent?.eventDate)) {
-    return <Countdown startDate={data?.data?.tours[0]?.nextEvent?.eventDate} />;
+    if (data?.data?.tours.length > 0) {
+      if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
+        return <LoadingObject text={"le formulaire est clôturé"} />;
+      if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
+        const tourDate = new Date(data?.data?.tours[0]?.nextEvent.eventDate);
+        tourDate.setHours(8, 0, 0, 0);
+        return <Countdown startDate={tourDate} />;
+      }
+    } else if (data?.data?.tours.length === 0) {
+      return <LoadingObject text={"le formulaire est clôturé"} />;
+    } else {
+      return <LoadingObject text={"le formulaire est clôturé"} />;
+    }
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
@@ -99,7 +108,7 @@ export default function RegistrationPage() {
       setTicketFileName(fileName);
     }
     setOcrLoad(true);
-    setOcrErrorMessage("")
+    setOcrErrorMessage("");
     try {
       // Create a FormData object
       const formData = new FormData();
@@ -119,7 +128,7 @@ export default function RegistrationPage() {
 
       // Check for a successful response
       if (!apiResponse.ok) {
-        setOcrErrorMessage("Erreur lors de l'analyse du billet")
+        setOcrErrorMessage("Erreur lors de l'analyse du billet");
         throw new Error("Network response was not ok");
       }
 

@@ -18,7 +18,7 @@ export default function VideoPage() {
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
-    // console.log("hasreached:", currentDate < tourDate);
+    tourDate.setHours(8, 0, 0, 0);
     return currentDate < tourDate;
   };
 
@@ -26,7 +26,6 @@ export default function VideoPage() {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
     tourDate.setHours(18, 0, 0, 0);
-    // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
   const customdateFormat = (passedDate) => {
@@ -38,16 +37,31 @@ export default function VideoPage() {
 
     // Format to dd.mm.yyyy
     const returnDate = `${day}.${month}.${year}`;
-    // console.log("formatted date:", returnDate);
     return returnDate;
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
 
-  if (hasDateEnd(data?.data?.tours[0]?.nextEvent?.endDate))
-    return <LoadingObject text={"La date de participation est passé"} />;
-  if (hasDatePassed(data?.data?.tours[0]?.nextEvent?.eventDate)) {
-    return <Countdown startDate={data?.data?.tours[0]?.eventDate} />;
+  // if (hasDateEnd(data?.data?.tours[0]?.nextEvent?.endDate))
+  //   return <LoadingObject text={"La date de participation est passé"} />;
+  // if (hasDatePassed(data?.data?.tours[0]?.nextEvent?.eventDate)) {
+  //   return <Countdown startDate={data?.data?.tours[0]?.eventDate} />;
+  // }
+  if (data) {
+    // console.log("data length", data?.data?.tours.length);
+    if (data?.data?.tours.length > 0) {
+      if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
+        return <LoadingObject text={"le formulaire est clôturé"} />;
+      if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
+        const tourDate = new Date(data?.data?.tours[0]?.nextEvent.eventDate);
+        tourDate.setHours(8, 0, 0, 0);
+        return <Countdown startDate={tourDate} />;
+      }
+    } else if (data?.data?.tours.length === 0) {
+      return <LoadingObject text={"le formulaire est clôturé"} />;
+    } else {
+      return <LoadingObject text={"le formulaire est clôturé"} />;
+    }
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;

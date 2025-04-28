@@ -229,7 +229,7 @@ export class TourService {
               city: true,
               venue: true,
               eventDate: true,
-              // endDate: true,
+              endDate: true,
               status: true
             }
           });

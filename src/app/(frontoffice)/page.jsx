@@ -20,7 +20,7 @@ export default function HomePage() {
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
-    // tourDate.setHours(18, 0, 0, 0);
+    tourDate.setHours(8, 0, 0, 0);
     console.log("hasPassed:", currentDate < tourDate);
     return currentDate < tourDate;
   };
@@ -29,7 +29,7 @@ export default function HomePage() {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
     tourDate.setHours(18, 0, 0, 0);
-    // console.log("hasreached:", currentDate, " : ", tourDate);
+    console.log("hasreached:", currentDate, " : ", tourDate);
     console.log("tourDate:", tourDate);
     console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
@@ -55,9 +55,9 @@ export default function HomePage() {
       if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
         return <LoadingObject text={"le formulaire est clôturé"} />;
       if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
-        return (
-          <Countdown startDate={data?.data?.tours[0]?.nextEvent.eventDate} />
-        );
+        const tourDate = new Date(data?.data?.tours[0]?.nextEvent.eventDate);
+        tourDate.setHours(8, 0, 0, 0);
+        return <Countdown startDate={tourDate} />;
       }
     } else if (data?.data?.tours.length === 0) {
       return <LoadingObject text={"le formulaire est clôturé"} />;
