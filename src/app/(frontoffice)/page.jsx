@@ -21,7 +21,7 @@ export default function HomePage() {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
     // tourDate.setHours(18, 0, 0, 0);
-    // console.log("hasreached:", currentDate < tourDate);
+    console.log("hasPassed:", currentDate < tourDate);
     return currentDate < tourDate;
   };
 
@@ -29,7 +29,8 @@ export default function HomePage() {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
     tourDate.setHours(18, 0, 0, 0);
-    console.log("hasreached:", currentDate, " : ", tourDate);
+    // console.log("hasreached:", currentDate, " : ", tourDate);
+    console.log("tourDate:", tourDate);
     console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
@@ -47,10 +48,22 @@ export default function HomePage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
-    return <LoadingObject text={"le formulaire est clôturé"} />;
-  if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
-    return <Countdown startDate={data?.data?.tours[0]?.nextEvent.eventDate} />;
+  if (data) {
+    // console.log("data length", data?.data?.tours.length);
+    if (data?.data?.tours.length > 0) {
+      console.log("reading date:", data?.data?.tours[0]?.nextEvent.endDate);
+      if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
+        return <LoadingObject text={"le formulaire est clôturé"} />;
+      if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
+        return (
+          <Countdown startDate={data?.data?.tours[0]?.nextEvent.eventDate} />
+        );
+      }
+    } else if (data?.data?.tours.length === 0) {
+      return <LoadingObject text={"le formulaire est clôturé"} />;
+    } else {
+      return <LoadingObject text={"le formulaire est clôturé"} />;
+    }
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
