@@ -213,7 +213,7 @@ export default function RegistrationPage() {
         email: formData.email,
         eventId: eventId,
         bloc: ocrData?.bloc,
-        rang: parseInt(ocrData?.rang, 0),
+        rang: ocrData?.rang,
         place: parseInt(ocrData?.place, 0),
       };
       const response = await fetch("/api/participants_fo", {

@@ -50,7 +50,7 @@ model participant {
   email         String   @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  rang          Int
+  rang          String
   place         Int
   bloc          String
 }
