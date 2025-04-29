@@ -394,6 +394,9 @@ export class EventService {
   static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
     try {
       const events = await prisma.event.findMany({
+        orderBy: {
+          eventDate: 'asc'  // Order by most recent events first
+        },
         select: {
           id: true,
           tourId: true,
