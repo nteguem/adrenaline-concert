@@ -34,7 +34,7 @@ export class ParticipantService {
                     email: data.email,
                     rang: data.rang ?? 0,
                     place: data.place ?? 0,   
-                    bloc: data.bloc ?? 0,   
+                    bloc: data.bloc ?? '0',   
                     dateNaissance: new Date(data.dateNaissance),
                 },
             });
@@ -67,6 +67,20 @@ export class ParticipantService {
                 return errorResponse(`Champs manquants : ${missingFields.join(', ')}`);
             }
 
+            // Check if participant already exists for this event
+            const existingParticipant = await prisma.participant.findFirst({
+                where: {
+                    AND: [
+                        { email: body.email },
+                        { eventId: body.eventId }
+                    ]
+                }
+            });
+
+            if (existingParticipant) {
+                return errorResponse('Un participant avec cet email est déjà enregistré pour cet événement');
+            }
+
             // Préparation des données du participant
             const participantInput: ParticipantCreateInput = {
                 nom: body.nom,
@@ -75,7 +89,7 @@ export class ParticipantService {
                 email: body.email,
                 rang: body.rang ?? 0,
                 place: body.place ?? 0,
-                bloc: body.bloc ?? 0,
+                bloc: body.bloc ?? '0',
                 dateNaissance: body.dateNaissance,
             };
             
