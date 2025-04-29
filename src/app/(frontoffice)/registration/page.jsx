@@ -125,15 +125,13 @@ export default function RegistrationPage() {
         method: "POST",
         body: formData,
       });
-
+      const result = await apiResponse.json();
       // Check for a successful response
       if (!apiResponse.ok) {
-        setOcrErrorMessage("Erreur lors de l'analyse du billet");
+        setOcrErrorMessage(result?.message ||"Erreur lors de l'analyse du billet");
         throw new Error("Network response was not ok");
       }
 
-      // Parse the JSON response
-      const result = await apiResponse.json();
       if (result?.success === true) {
         setOcrData(result?.data);
         setOcrLoad(false);
@@ -345,7 +343,7 @@ export default function RegistrationPage() {
               {ocrLoad ? (
                 <>
                   {ocrErrorMessage ? (
-                    <div className="text-danger">{ocrErrorMessage}</div>
+                    <p className="text-danger">{ocrErrorMessage}</p>
                   ) : (
                     <div>chargement des infos du billet ...</div>
                   )}
@@ -395,7 +393,7 @@ export default function RegistrationPage() {
             </div>
 
             <div className="mt-8 flex justify-center items-center">
-              <Button type="submit">JE TENTE MA CHANCE</Button>
+              <Button type="submit" desabled>JE TENTE MA CHANCE</Button>
             </div>
             <Button onClick={() => setFormStep(1)} variant="secondary">
               RETOUR
