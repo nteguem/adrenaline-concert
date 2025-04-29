@@ -59,7 +59,7 @@ export class EventService {
       const body = await request.json();
       
       // Validation des champs requis (sans tourId car il sera récupéré automatiquement)
-      const requiredFields: (keyof Omit<EventCreateInput, 'tourId'>)[] = ['city', 'venue', 'eventId','eventDate', 'status','endDate'];
+      const requiredFields: (keyof Omit<EventCreateInput, 'tourId'>)[] = ['city', 'venue','eventDate', 'status','endDate'];
       const missingFields = requiredFields.filter(field => !body[field]);
       
       if (missingFields.length > 0) {
@@ -390,4 +390,55 @@ export class EventService {
       return apiErrorHandler(error);
     }
   }
+
+  static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
+    try {
+      const events = await prisma.event.findMany({
+        select: {
+          id: true,
+          tourId: true,
+          city: true,
+          venue: true,
+          eventDate: true,
+          endDate: true,
+          status: true,
+          createdAt: true,
+        }
+      });
+
+      // Get participant counts for each event
+      const eventsWithCounts = await Promise.all(
+        events.map(async (event) => {
+          const count = await prisma.participant.count({
+            where: {
+              eventId: event.id
+            }
+          });
+          
+          return {
+            ...event,
+            participantCount: count
+          };
+        })
+      );
+
+      return {
+        events: eventsWithCounts,
+        message: 'Events retrieved successfully'
+      };
+    } catch (error) {
+      console.error('Error fetching events with participants:', error);
+      throw error;
+    }
+  }
+
+  static async handleGetEventsWithParticipants(request: NextRequest) {
+    try {
+      const result = await this.getEventsWithParticipants();
+      return successResponse(result);
+    } catch (error) {
+      return apiErrorHandler(error);
+    }
+  }
+  
 }
