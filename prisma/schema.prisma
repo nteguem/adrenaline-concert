@@ -47,7 +47,7 @@ model participant {
   prenom        String
   eventId       String
   dateNaissance DateTime
-  email         String   @unique
+  email         String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   rang          Int
