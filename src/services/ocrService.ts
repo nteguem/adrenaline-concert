@@ -16,7 +16,8 @@ export class OcrService {
                 return {
                     success: false,
                     message: 'Aucun fichier uploadé ou format non supporté',
-                    errorType: 'NO_FILE'
+                    errorType: 'NO_FILE',
+                    details: 'Aucun fichier n\'a été fourni pour l\'analyse'
                 };
             }
 
@@ -34,16 +35,16 @@ export class OcrService {
                     'x-api-key': CLAUDE_API_KEY,
                     'anthropic-version': '2023-06-01'
                 },
-                data: {
+                               data: {
                     model: "claude-3-opus-20240229",
                     max_tokens: 1024,
-                    system: "Tu es un expert en analyse de billets de concert du Capitole en Champagne. Tu dois vérifier si l'image est un billet de concert valide. Si oui, identifie exactement ce qui est écrit sur le billet pour le bloc, le rang, et la place. Chaque valeur peut être une lettre, un chiffre ou une combinaison des deux. Ne fais absolument aucune interprétation ou conversion des valeurs - copie exactement ce qui est écrit.",
+                    system: "Tu es un expert en analyse de billets de concert. RÈGLES STRICTES:\n\n1. Pour un billet de concert valide:\n   - EXIGER la présence EXPLICITE des labels suivants:\n     * 'Bloc' ou 'Block' ou 'Secteur' suivi d'une valeur\n     * 'Rang' ou 'Rij' suivi d'une valeur\n     * 'Place' ou 'Plaats' suivi d'une valeur\n   - Ces labels DOIVENT être clairement imprimés sur le billet\n   - NE JAMAIS interpréter:\n     * Prix (ex: '800 Fr', '50€')\n     * Dates\n     * Numéros de série\n     * Codes-barres\n     * Numéros sans label explicite\n\n2. Réponses:\n   - Billet valide avec tous les labels: UNIQUEMENT format JSON {'bloc': 'X', 'rang': 'Y', 'place': 'Z'}\n   - Labels manquants: 'INVALID_TICKET: Billet de concert [artiste/date], mais absence des labels [liste des labels manquants]'\n   - Photo de personne: 'PHOTO_PERSONNE: [description]'\n   - Autre document: 'NOT_TICKET: [description]'\n   - Autre type de billet: 'NOT_CONCERT_TICKET: [description]'",
                     messages: [{
                         role: "user",
                         content: [
                             {
                                 type: "text",
-                                text: "Analyse ce billet et extrait exactement ce qui est écrit pour: 1) Le bloc 2) Le rang 3) La place. Copie les valeurs telles qu'elles apparaissent, qu'elles soient des lettres, des chiffres ou une combinaison. Si ce n'est pas un billet ou si les informations ne sont pas clairement visibles, réponds uniquement 'null'. Sinon, réponds avec un objet JSON. Exemple: {'bloc': 'I2', 'rang': 'F12', 'place': '39'}."
+                                text: "Analyse cette image. IMPORTANT: Ne considère que les informations avec des labels explicites (Bloc/Rang/Place). Ignore TOTALEMENT les prix et autres numéros sans label."
                             },
                             {
                                 type: "image",
@@ -65,35 +66,79 @@ export class OcrService {
                 return {
                     success: false,
                     message: "Pas de réponse de l'IA",
-                    errorType: 'NO_AI_RESPONSE'
+                    errorType: 'NO_AI_RESPONSE',
+                    details: "L'API n'a pas retourné de texte analysable"
                 };
             }
 
-            const cleanedText = assistantMessage.text.trim().replace(/\n/g, '').replace(/'/g, '"');
+            const cleanedText = assistantMessage.text.trim();
             console.log('Cleaned text:', cleanedText);
 
-            if (cleanedText.toLowerCase() === 'null') {
+            // Vérification stricte du format de réponse
+            if (!cleanedText.startsWith('PHOTO_PERSONNE:') && 
+                !cleanedText.startsWith('NOT_TICKET:') && 
+                !cleanedText.startsWith('NOT_CONCERT_TICKET:') && 
+                !cleanedText.startsWith('INVALID_TICKET:') && 
+                !cleanedText.startsWith('{')) {
                 return {
                     success: false,
-                    message: "Image non reconnue comme un billet de concert valide",
-                    errorType: 'INVALID_TICKET'
+                    message: "Format de réponse non reconnu",
+                    errorType: 'INVALID_RESPONSE_FORMAT',
+                    details: `Format de réponse inattendu: ${cleanedText.substring(0, 50)}...`
                 };
             }
 
+            if (cleanedText.startsWith('PHOTO_PERSONNE:')) {
+                const description = cleanedText.split('PHOTO_PERSONNE:')[1].trim();
+                return {
+                    success: false,
+                    message: "L'image uploadée est une photo de personne. Veuillez fournir une photo de billet.",
+                    errorType: 'PHOTO_PERSONNE',
+                    details: description || "Photo de personne détectée"
+                };
+            }
+
+            if (cleanedText.startsWith('NOT_TICKET:')) {
+                const description = cleanedText.split('NOT_TICKET:')[1].trim();
+                return {
+                    success: false,
+                    message: "L'image n'est pas un billet. Veuillez fournir une photo de billet valide.",
+                    errorType: 'NOT_TICKET',
+                    details: description || "Document non reconnu comme billet"
+                };
+            }
+
+            if (cleanedText.startsWith('NOT_CONCERT_TICKET:')) {
+                const description = cleanedText.split('NOT_CONCERT_TICKET:')[1].trim();
+                return {
+                    success: false,
+                    message: "L'image est un billet mais pas un billet de concert. Veuillez fournir un billet de concert valide.",
+                    errorType: 'NOT_CONCERT_TICKET',
+                    details: description || "Billet non reconnu comme billet de concert"
+                };
+            }
+
+            if (cleanedText.startsWith('INVALID_TICKET:')) {
+                const description = cleanedText.split('INVALID_TICKET:')[1].trim();
+                return {
+                    success: false,
+                    message: "Le billet ne contient pas clairement les informations de placement requises",
+                    errorType: 'INVALID_TICKET',
+                    details: description || "Informations de placement manquantes ou non explicites"
+                };
+            }
+
+            const jsonText = cleanedText.replace(/\n/g, '').replace(/'/g, '"');
             let ticketInfo;
             try {
-                const cleanedText = assistantMessage?.text
-                .trim()
-                .replace(/\n/g, '')
-                .replace(/'/g, '"');
-                console.log('Cleaned text:', cleanedText);
-                ticketInfo = JSON.parse(cleanedText);
+                ticketInfo = JSON.parse(jsonText);
             } catch (error) {
                 console.error('Erreur parsing JSON:', error);
                 return {
                     success: false,
                     message: "Format de réponse invalide de l'IA",
-                    errorType: 'INVALID_AI_RESPONSE'
+                    errorType: 'INVALID_AI_RESPONSE',
+                    details: `Erreur de parsing JSON: ${error instanceof Error ? error.message : 'Format invalide'}`
                 };
             }
 
@@ -101,26 +146,34 @@ export class OcrService {
                 return {
                     success: false,
                     message: "Format de réponse invalide",
-                    errorType: 'INVALID_RESPONSE_FORMAT'
+                    errorType: 'INVALID_RESPONSE_FORMAT',
+                    details: "La réponse n'est pas un objet JSON valide"
                 };
             }
 
             if (!ticketInfo.bloc || !ticketInfo.rang || !ticketInfo.place) {
+                const missingFields = [
+                    !ticketInfo.bloc ? 'bloc' : null,
+                    !ticketInfo.rang ? 'rang' : null,
+                    !ticketInfo.place ? 'place' : null
+                ].filter(Boolean).join(', ');
+                
                 return {
                     success: false,
                     message: "Informations manquantes sur le billet",
-                    errorType: 'MISSING_INFORMATION'
+                    errorType: 'MISSING_INFORMATION',
+                    details: `Champs manquants: ${missingFields}`
                 };
             }
 
-            // Validate all fields can contain letters and numbers
             if (!/^[A-Za-z0-9]+$/.test(String(ticketInfo.rang)) || 
                 !/^[A-Za-z0-9]+$/.test(String(ticketInfo.place)) ||
                 !/^[A-Za-z0-9]+$/.test(String(ticketInfo.bloc))) {
                 return {
                     success: false,
                     message: "Les valeurs doivent contenir uniquement des lettres et/ou des chiffres",
-                    errorType: 'INVALID_FORMAT'
+                    errorType: 'INVALID_FORMAT',
+                    details: "Les valeurs de bloc, rang ou place contiennent des caractères non autorisés"
                 };
             }
 
@@ -135,11 +188,13 @@ export class OcrService {
 
         } catch (error: unknown) {
             console.error('Erreur complète:', error);
+            const errorMessage = error instanceof Error ? error.message : 
+                (error as { response?: { data: any } })?.response?.data || 'Erreur inconnue';
+            
             return {
                 success: false,
                 message: "Erreur lors de l'analyse du billet",
-                details: error instanceof Error ? error.message : 
-                    (error as { response?: { data: any } })?.response?.data || 'Unknown error',
+                details: `Erreur technique: ${errorMessage}`,
                 errorType: 'AI_ANALYSIS_ERROR'
             };
         }
