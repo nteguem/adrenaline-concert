@@ -239,6 +239,9 @@ body {
 input.h-50 {
   height: 50px !important;
 }
+.react-datepicker-wrapper {
+  width: 100% !important;
+}
 
 @keyframes success-pulse {
   0% {
