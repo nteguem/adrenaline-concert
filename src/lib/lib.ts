@@ -27,7 +27,6 @@ export async function decrypt(input: string): Promise<any> {
 
 export async function apiLogin(formData: FormData) {
     try {
-        console.log("calling api");
         const postdata = {email: formData.get("email"), password: formData.get("password")}
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/auth/login`,
@@ -40,7 +39,6 @@ export async function apiLogin(formData: FormData) {
           }
         );
         const data = await response.json(); // Parse the response data
-        console.log("auth response:", data);
         return data;
     }catch (err) {
         console.error("Error during login:", err);

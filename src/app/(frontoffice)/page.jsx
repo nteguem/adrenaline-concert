@@ -21,7 +21,6 @@ export default function HomePage() {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
     tourDate.setHours(8, 0, 0, 0);
-    console.log("hasPassed:", currentDate < tourDate);
     return currentDate < tourDate;
   };
 
@@ -29,9 +28,6 @@ export default function HomePage() {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
     tourDate.setHours(18, 0, 0, 0);
-    console.log("hasreached:", currentDate, " : ", tourDate);
-    console.log("tourDate:", tourDate);
-    console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
   const customdateFormat = (passedDate) => {
@@ -51,7 +47,6 @@ export default function HomePage() {
   if (data) {
     // console.log("data length", data?.data?.tours.length);
     if (data?.data?.tours.length > 0) {
-      console.log("reading date:", data?.data?.tours[0]?.nextEvent.endDate);
       if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
         return <LoadingObject text={"le formulaire est clôturé"} />;
       if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
