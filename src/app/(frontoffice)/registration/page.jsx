@@ -128,7 +128,9 @@ export default function RegistrationPage() {
       const result = await apiResponse.json();
       // Check for a successful response
       if (!apiResponse.ok) {
-        setOcrErrorMessage(result?.message ||"Erreur lors de l'analyse du billet");
+        setOcrErrorMessage(
+          result?.message || "Erreur lors de l'analyse du billet"
+        );
         throw new Error("Network response was not ok");
       }
 
@@ -280,13 +282,14 @@ export default function RegistrationPage() {
               name="nom"
               value={formData.nom}
               onChange={handleInputChange}
+              className="h-50"
             />
             <Input
               placeholder="PRENOM"
               name="prenom"
               value={formData.prenom}
               onChange={handleInputChange}
-              className="mb-0"
+              className="mb-0 h-50"
             />
             <Input
               type="date"
@@ -294,7 +297,7 @@ export default function RegistrationPage() {
               name="dateNaissance"
               value={formData.dateNaissance}
               onChange={handleInputChange}
-              className="text-white"
+              className="text-white h-50"
             />
             <Input
               type="email"
@@ -302,6 +305,7 @@ export default function RegistrationPage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
+              className="h-50"
             />
             <Checkbox
               label="JE CONFIRME MA PRESENCE AU CONCERT DE CE SOIR"
@@ -393,7 +397,9 @@ export default function RegistrationPage() {
             </div>
 
             <div className="mt-8 flex justify-center items-center">
-              <Button type="submit" desabled>JE TENTE MA CHANCE</Button>
+              <Button type="submit" desabled>
+                JE TENTE MA CHANCE
+              </Button>
             </div>
             <Button onClick={() => setFormStep(1)} variant="secondary">
               RETOUR

@@ -236,6 +236,9 @@ body {
 .text-danger {
   color: #f55 !important
 }
+input.h-50 {
+  height: 50px !important;
+}
 
 @keyframes success-pulse {
   0% {
