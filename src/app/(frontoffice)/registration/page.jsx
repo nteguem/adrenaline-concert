@@ -11,6 +11,8 @@ import { din } from "@/styles/fonts";
 import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
@@ -195,6 +197,10 @@ export default function RegistrationPage() {
     }
   };
 
+  const formatDate = (date) => {
+    return date.toISOString().split("T")[0]; // retourne 'yyyy-MM-dd'
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -211,7 +217,7 @@ export default function RegistrationPage() {
       const postBody = {
         nom: formData.nom,
         prenom: formData.prenom,
-        dateNaissance: formData.dateNaissance,
+        dateNaissance: formatDate(formData.dateNaissance),
         email: formData.email,
         eventId: eventId,
         bloc: ocrData?.bloc,
@@ -233,6 +239,7 @@ export default function RegistrationPage() {
       router.push("/confirmation");
     }
   };
+
 
   const closeModal = () => {
     setErrorModal({ ...errorModal, isOpen: false });
@@ -291,14 +298,26 @@ export default function RegistrationPage() {
               onChange={handleInputChange}
               className="mb-0 h-50"
             />
-            <Input
+            {/* <Input
               type="date"
               placeholder="DATE DE NAISSANCE"
               name="dateNaissance"
               value={formData.dateNaissance}
               onChange={handleInputChange}
-              className="text-white h-50"
-            />
+              className="text-white h-50 w-full"
+            /> */}
+            <div className="w-full">
+              <DatePicker
+                selected={formData.dateNaissance}
+                onChange={(date) =>
+                  setFormData({ ...formData, dateNaissance: date })
+                }
+                placeholderText="DATE DE NAISSANCE"
+                name="dateNaissance"
+                dateFormat={"dd/MM/yyyy"}
+                className="text-white h-50 bg-blue-600 text-white w-full rounded p-3 mb-3 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
             <Input
               type="email"
               placeholder="ADRESSE MAIL"

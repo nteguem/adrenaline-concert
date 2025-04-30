@@ -21,6 +21,7 @@
     "next-auth": "^4.24.11",
     "prisma": "^6.6.0",
     "react": "^19.0.0",
+    "react-datepicker": "^8.3.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "swr": "^2.3.3",
