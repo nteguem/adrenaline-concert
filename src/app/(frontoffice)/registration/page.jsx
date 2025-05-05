@@ -13,6 +13,7 @@ import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { getYear, getMonth } from "date-fns";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
@@ -49,7 +50,29 @@ export default function RegistrationPage() {
     tourDate.setHours(8, 0, 0, 0);
     return currentDate < tourDate;
   };
-
+  const range = (start, end, step = 1) => {
+    const output = [];
+    for (let i = start; i < end; i += step) {
+      output.push(i);
+    }
+    return output;
+  }
+  const years = range(1990, getYear(new Date()) + 1, 1);
+  const months = [
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
+  ];
+  
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
@@ -315,6 +338,55 @@ export default function RegistrationPage() {
                 placeholderText="DATE DE NAISSANCE"
                 name="dateNaissance"
                 dateFormat={"dd/MM/yyyy"}
+                renderCustomHeader={({
+                  date,
+                  changeYear,
+                  changeMonth,
+                  decreaseMonth,
+                  increaseMonth,
+                  prevMonthButtonDisabled,
+                  nextMonthButtonDisabled,
+                }) => (
+                  <div
+                    style={{
+                      margin: 10,
+                      display: "flex",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <button type="button" className="mr-10" onClick={decreaseMonth} disabled={prevMonthButtonDisabled}>
+                      {"<"}
+                    </button>
+                    <select
+                      value={getYear(date)}
+                      onChange={({ target: { value } }) => changeYear(value)}
+                    >
+                      {years.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+          
+                    <select
+                      value={months[getMonth(date)]}
+                      className="ml-2"
+                      onChange={({ target: { value } }) =>
+                        changeMonth(months.indexOf(value))
+                      }
+                    >
+                      {months.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+          
+                    <button type="button" className="ml-10"  onClick={increaseMonth} disabled={nextMonthButtonDisabled}>
+                      {">"}
+                    </button>
+                  </div>
+                )}
                 className="text-white h-50 bg-blue-600 text-white w-full rounded p-3 mb-3 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
