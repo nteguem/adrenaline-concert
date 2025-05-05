@@ -5,9 +5,9 @@ export interface ParticipantCreateInput {
     dateNaissance: Date;
     email: string;
     eventId: string;
-    rang ?: number;
-    place ?: number;
-    bloc ?: string;
+    rang ?: string;
+    place ?: string;
+    porte ?: string;
 }
 
 

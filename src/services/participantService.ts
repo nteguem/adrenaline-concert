@@ -32,9 +32,9 @@ export class ParticipantService {
                     prenom: data.prenom, 
                     eventId: data.eventId, 
                     email: data.email,
-                    rang: data.rang ?? 0,
-                    place: data.place ?? 0,   
-                    bloc: data.bloc ?? '0',   
+                    rang: data.rang ?? '',
+                    place: data.place ?? '',   
+                    porte: data.porte ?? '',   
                     dateNaissance: new Date(data.dateNaissance),
                 },
             });
@@ -87,9 +87,9 @@ export class ParticipantService {
                 eventId: body.eventId,
                 prenom: body.prenom,
                 email: body.email,
-                rang: body.rang ?? 0,
-                place: body.place ?? 0,
-                bloc: body.bloc ?? '0',
+                rang: body.rang ?? '',
+                place: body.place ?? '',
+                porte: body.porte ?? '',
                 dateNaissance: body.dateNaissance,
             };
             
