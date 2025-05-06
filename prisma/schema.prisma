@@ -51,8 +51,8 @@ model participant {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   rang          String
-  place         Int
-  bloc          String
+  place         String
+  porte         String
 }
 
 model Tour {

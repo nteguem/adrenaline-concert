@@ -7,7 +7,7 @@ export class OcrService {
     static async analyzeTicket(file: File): Promise<{
         success: boolean;
         message?: string;
-        data?: { rang: string; place: string; bloc: string; };
+        data?: { rang: string; place: string; porte: string; };
         errorType?: string;
         details?: string | any;
     }> {
@@ -35,16 +35,16 @@ export class OcrService {
                     'x-api-key': CLAUDE_API_KEY,
                     'anthropic-version': '2023-06-01'
                 },
-                               data: {
+                data: {
                     model: "claude-3-opus-20240229",
                     max_tokens: 1024,
-                    system: "Tu es un expert en analyse de billets de concert. RÈGLES STRICTES:\n\n1. Pour un billet de concert valide:\n   - EXIGER la présence EXPLICITE des labels suivants:\n     * 'Bloc' ou 'Block' ou 'Secteur' suivi d'une valeur\n     * 'Rang' ou 'Rij' suivi d'une valeur\n     * 'Place' ou 'Plaats' suivi d'une valeur\n   - Ces labels DOIVENT être clairement imprimés sur le billet\n   - NE JAMAIS interpréter:\n     * Prix (ex: '800 Fr', '50€')\n     * Dates\n     * Numéros de série\n     * Codes-barres\n     * Numéros sans label explicite\n\n2. Réponses:\n   - Billet valide avec tous les labels: UNIQUEMENT format JSON {'bloc': 'X', 'rang': 'Y', 'place': 'Z'}\n   - Labels manquants: 'INVALID_TICKET: Billet de concert [artiste/date], mais absence des labels [liste des labels manquants]'\n   - Photo de personne: 'PHOTO_PERSONNE: [description]'\n   - Autre document: 'NOT_TICKET: [description]'\n   - Autre type de billet: 'NOT_CONCERT_TICKET: [description]'",
+                    system: "Tu es un expert en analyse de billets du Zénith. RÈGLES TRÈS STRICTES:\n\n1. VALIDATION DU TYPE D'IMAGE:\n   - Si c'est un logo ou une image d'entreprise: RÉPONDRE UNIQUEMENT 'NOT_TICKET: Logo détecté'\n   - Si c'est une photo de personne: RÉPONDRE UNIQUEMENT 'PHOTO_PERSONNE: [description]'\n   - Si ce n'est pas un billet: RÉPONDRE UNIQUEMENT 'NOT_TICKET: [description]'\n\n2. ANALYSE DES INFORMATIONS DE PLACEMENT:\n   Format Type 1 (standard):\n   - Numéro après PORTE/TRIBUNE/GRADIN = porte (extraire UNIQUEMENT le numéro)\n   - Rang P ou lettre seule = rang (extraire UNIQUEMENT la lettre)\n   - Numéro après le rang = place (extraire UNIQUEMENT le numéro)\n\n   Format Type 2 (format alternatif):\n   - Si format 'PORTE X Y Z':\n     * X = numéro de porte (UNIQUEMENT le numéro)\n     * Y = rang (UNIQUEMENT la lettre/numéro)\n     * Z = place (UNIQUEMENT le numéro)\n\n   Format Type 3 (explicite):\n   - Labels explicites: extraire UNIQUEMENT les valeurs sans les labels\n\n3. RÈGLES D'EXTRACTION:\n   - NE PAS inclure les mots PORTE, TRIBUNE, GRADIN\n   - NE PAS inclure les labels Rang, Place\n   - Extraire UNIQUEMENT les valeurs numériques ou lettres\n\n4. RÉPONSE:\n   - Billet valide: RÉPONDRE UNIQUEMENT {'porte': 'numéro', 'rang': 'lettre', 'place': 'numéro'}\n   - Informations manquantes: RÉPONDRE UNIQUEMENT 'INVALID_TICKET: [détails]'\n\nATTENTION: UNIQUEMENT LES VALEURS, PAS DE LABELS.",
                     messages: [{
                         role: "user",
                         content: [
                             {
                                 type: "text",
-                                text: "Analyse cette image. IMPORTANT: Ne considère que les informations avec des labels explicites (Bloc/Rang/Place). Ignore TOTALEMENT les prix et autres numéros sans label."
+                                text: "Analyse cette image et renvoie UNIQUEMENT le format de réponse spécifié, sans aucun texte explicatif."
                             },
                             {
                                 type: "image",
@@ -73,20 +73,6 @@ export class OcrService {
 
             const cleanedText = assistantMessage.text.trim();
             console.log('Cleaned text:', cleanedText);
-
-            // Vérification stricte du format de réponse
-            if (!cleanedText.startsWith('PHOTO_PERSONNE:') && 
-                !cleanedText.startsWith('NOT_TICKET:') && 
-                !cleanedText.startsWith('NOT_CONCERT_TICKET:') && 
-                !cleanedText.startsWith('INVALID_TICKET:') && 
-                !cleanedText.startsWith('{')) {
-                return {
-                    success: false,
-                    message: "Format de réponse non reconnu",
-                    errorType: 'INVALID_RESPONSE_FORMAT',
-                    details: `Format de réponse inattendu: ${cleanedText.substring(0, 50)}...`
-                };
-            }
 
             if (cleanedText.startsWith('PHOTO_PERSONNE:')) {
                 const description = cleanedText.split('PHOTO_PERSONNE:')[1].trim();
@@ -128,6 +114,15 @@ export class OcrService {
                 };
             }
 
+            if (!cleanedText.startsWith('{')) {
+                return {
+                    success: false,
+                    message: "Format de réponse non reconnu",
+                    errorType: 'INVALID_RESPONSE_FORMAT',
+                    details: `Format de réponse inattendu: ${cleanedText.substring(0, 50)}...`
+                };
+            }
+
             const jsonText = cleanedText.replace(/\n/g, '').replace(/'/g, '"');
             let ticketInfo;
             try {
@@ -151,9 +146,9 @@ export class OcrService {
                 };
             }
 
-            if (!ticketInfo.bloc || !ticketInfo.rang || !ticketInfo.place) {
+            if (!ticketInfo.porte || !ticketInfo.rang || !ticketInfo.place) {
                 const missingFields = [
-                    !ticketInfo.bloc ? 'bloc' : null,
+                    !ticketInfo.porte ? 'porte' : null,
                     !ticketInfo.rang ? 'rang' : null,
                     !ticketInfo.place ? 'place' : null
                 ].filter(Boolean).join(', ');
@@ -166,23 +161,17 @@ export class OcrService {
                 };
             }
 
-            if (!/^[A-Za-z0-9]+$/.test(String(ticketInfo.rang)) || 
-                !/^[A-Za-z0-9]+$/.test(String(ticketInfo.place)) ||
-                !/^[A-Za-z0-9]+$/.test(String(ticketInfo.bloc))) {
-                return {
-                    success: false,
-                    message: "Les valeurs doivent contenir uniquement des lettres et/ou des chiffres",
-                    errorType: 'INVALID_FORMAT',
-                    details: "Les valeurs de bloc, rang ou place contiennent des caractères non autorisés"
-                };
-            }
+            const extractNumber = (value: string) => {
+                const matches = value.match(/\d+/);
+                return matches ? matches[0] : value;
+            };
 
             return {
                 success: true,
                 data: {
-                    rang: String(ticketInfo.rang),
-                    place: String(ticketInfo.place),
-                    bloc: String(ticketInfo.bloc)
+                    porte: extractNumber(String(ticketInfo.porte)),
+                    rang: String(ticketInfo.rang).replace(/Rang\s*/i, '').trim(),
+                    place: extractNumber(String(ticketInfo.place))
                 }
             };
 
