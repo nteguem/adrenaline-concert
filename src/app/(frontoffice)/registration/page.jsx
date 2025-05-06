@@ -56,7 +56,7 @@ export default function RegistrationPage() {
       output.push(i);
     }
     return output;
-  }
+  };
   const years = range(1990, getYear(new Date()) + 1, 1);
   const months = [
     "Janvier",
@@ -72,7 +72,7 @@ export default function RegistrationPage() {
     "Novembre",
     "Décembre",
   ];
-  
+
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
@@ -243,9 +243,9 @@ export default function RegistrationPage() {
         dateNaissance: formatDate(formData.dateNaissance),
         email: formData.email,
         eventId: eventId,
-        bloc: ocrData?.bloc,
+        porte: ocrData?.porte,
         rang: ocrData?.rang,
-        place: parseInt(ocrData?.place, 0),
+        place: ocrData?.place,
       };
       const response = await fetch("/api/participants_fo", {
         method: "POST",
@@ -262,7 +262,6 @@ export default function RegistrationPage() {
       router.push("/confirmation");
     }
   };
-
 
   const closeModal = () => {
     setErrorModal({ ...errorModal, isOpen: false });
@@ -354,7 +353,12 @@ export default function RegistrationPage() {
                       justifyContent: "center",
                     }}
                   >
-                    <button type="button" className="mr-10" onClick={decreaseMonth} disabled={prevMonthButtonDisabled}>
+                    <button
+                      type="button"
+                      className="mr-10"
+                      onClick={decreaseMonth}
+                      disabled={prevMonthButtonDisabled}
+                    >
                       {"<"}
                     </button>
                     <select
@@ -367,7 +371,7 @@ export default function RegistrationPage() {
                         </option>
                       ))}
                     </select>
-          
+
                     <select
                       value={months[getMonth(date)]}
                       className="ml-2"
@@ -381,8 +385,13 @@ export default function RegistrationPage() {
                         </option>
                       ))}
                     </select>
-          
-                    <button type="button" className="ml-10"  onClick={increaseMonth} disabled={nextMonthButtonDisabled}>
+
+                    <button
+                      type="button"
+                      className="ml-10"
+                      onClick={increaseMonth}
+                      disabled={nextMonthButtonDisabled}
+                    >
                       {">"}
                     </button>
                   </div>
@@ -457,7 +466,7 @@ export default function RegistrationPage() {
               <TicketPreview />
               <div className="text-center text-sm mb-4">
                 <p className="font-bold">DATE - VILLE</p>
-                <p>BLOC {ocrData?.bloc}</p>
+                <p>PORTE {ocrData?.porte}</p>
                 <p>RANG {ocrData?.rang}</p>
                 <p>PLACE {ocrData?.place}</p>
               </div>
