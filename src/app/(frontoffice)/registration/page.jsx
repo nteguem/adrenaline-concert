@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LogoHeader from "@/components/common/LogoHeader";
 import Input from "@/components/common/Input";
@@ -28,6 +28,9 @@ export default function RegistrationPage() {
     age: false,
     santéOk: false,
     cgu: false,
+    porte: "",
+    place: "",
+    rang: "",
   });
   const [formStep, setFormStep] = useState(1);
   const [ticketImage, setTicketImage] = useState(null);
@@ -41,8 +44,19 @@ export default function RegistrationPage() {
   });
   const [ocrLoad, setOcrLoad] = useState(false);
   const [ocrErrorMessage, setOcrErrorMessage] = useState("");
+  const [isManual, setIsManual] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
   let formattedDate = null;
+
+  useEffect(() => {
+    const increment = () => {
+      if (errorCount >= 2) {
+        setIsManual(true);
+      }
+    };
+    increment();
+  }, [errorCount]);
 
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
@@ -153,6 +167,7 @@ export default function RegistrationPage() {
       const result = await apiResponse.json();
       // Check for a successful response
       if (!apiResponse.ok) {
+        setErrorCount(errorCount + 1);
         setOcrErrorMessage(
           result?.message || "Erreur lors de l'analyse du billet"
         );
@@ -184,6 +199,17 @@ export default function RegistrationPage() {
         type: "error",
       });
       return false;
+    }
+    if (isManual) {
+      if (!formData.place || !formData.porte || !formData.rang) {
+        setErrorModal({
+          isOpen: true,
+          title: "Formulaire incomplet",
+          message: "Veuillez remplir tous les champs du formulaire.",
+          type: "error",
+        });
+        return false;
+      }
     }
 
     // Vérifier le format de l'email
@@ -243,9 +269,9 @@ export default function RegistrationPage() {
         dateNaissance: formatDate(formData.dateNaissance),
         email: formData.email,
         eventId: eventId,
-        porte: ocrData?.porte,
-        rang: ocrData?.rang,
-        place: ocrData?.place,
+        porte: isManual ? formData.porte : ocrData?.porte,
+        rang: isManual ? formData.rang : ocrData?.rang,
+        place: isManual ? formData.place : ocrData?.place,
       };
       const response = await fetch("/api/participants_fo", {
         method: "POST",
@@ -407,6 +433,34 @@ export default function RegistrationPage() {
               onChange={handleInputChange}
               className="h-50"
             />
+            {isManual && (
+              <p>Veillez remplir les information du billet manuelement svp!</p>
+            )}
+            {isManual && (
+              <>
+                <Input
+                  placeholder="PORTE"
+                  name="porte"
+                  value={formData.porte}
+                  onChange={handleInputChange}
+                  className="mb-0 h-50"
+                />
+                <Input
+                  placeholder="RANG"
+                  name="rang"
+                  value={formData.rang}
+                  onChange={handleInputChange}
+                  className="mb-0 h-50"
+                />
+                <Input
+                  placeholder="PLACE"
+                  name="place"
+                  value={formData.place}
+                  onChange={handleInputChange}
+                  className="mb-0 h-50"
+                />
+              </>
+            )}
             <Checkbox
               label="JE CONFIRME MA PRESENCE AU CONCERT DE CE SOIR"
               checked={formData.confirmePresence}
@@ -427,10 +481,10 @@ export default function RegistrationPage() {
                   initialFileName={ticketFileName}
                 />
               ) : (
-                <TicketPreview />
+                !isManual && <TicketPreview />
               )}
 
-              {ticketImage && (
+              {ticketImage && !isManual && (
                 <div className="flex justify-center mt-2">
                   <button
                     type="button"
@@ -446,15 +500,16 @@ export default function RegistrationPage() {
             <div className="mt-4 flex justify-center">
               {ocrLoad ? (
                 <>
-                  {ocrErrorMessage ? (
+                  {ocrErrorMessage && !isManual ? (
                     <p className="text-danger">{ocrErrorMessage}</p>
                   ) : (
-                    <div>chargement des infos du billet ...</div>
+                    !isManual && <div>chargement des infos du billet ...</div>
                   )}
                 </>
               ) : (
                 <Button type="submit">CONTINUEZ</Button>
               )}
+              {isManual && <Button type="submit">CONTINUEZ</Button>}
             </div>
           </form>
         );
@@ -466,9 +521,9 @@ export default function RegistrationPage() {
               <TicketPreview />
               <div className="text-center text-sm mb-4">
                 <p className="font-bold">DATE - VILLE</p>
-                <p>PORTE {ocrData?.porte}</p>
-                <p>RANG {ocrData?.rang}</p>
-                <p>PLACE {ocrData?.place}</p>
+                <p>PORTE {isManual ? formData.porte : ocrData?.porte}</p>
+                <p>RANG {isManual ? formData.rang : ocrData?.rang}</p>
+                <p>PLACE {isManual ? formData.place : ocrData?.place}</p>
               </div>
             </div>
 
