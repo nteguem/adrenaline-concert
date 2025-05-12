@@ -36,6 +36,15 @@ export class ParticipantService {
                     place: data.place ?? '',   
                     porte: data.porte ?? '',   
                     dateNaissance: new Date(data.dateNaissance),
+                    bloc:  data.bloc ?? '', 
+                    tribune:  data.tribune ?? '', 
+                    gradin:  data.gradin?? '',
+                    chaise:  data.chaise?? '',
+                    siege:   data.siege?? '',
+                    entree:   data.entree?? '',
+                    niveau:   data.niveau?? '',
+                    parterre:  data.parterre?? '',
+                    ticketUrl: data.ticketUrl?? '',
                 },
             });
 
@@ -91,6 +100,15 @@ export class ParticipantService {
                 place: body.place ?? '',
                 porte: body.porte ?? '',
                 dateNaissance: body.dateNaissance,
+                bloc:  body.bloc ?? '', 
+                tribune:  body.tribune ?? '', 
+                gradin:  body.gradin?? '',
+                chaise:  body.chaise?? '',
+                siege:   body.siege?? '',
+                entree:   body.entree?? '',
+                niveau:   body.niveau?? '',
+                parterre:  body.parterre?? '',
+                ticketUrl: body.ticketUrl?? '',
             };
             
             // Création du participant
@@ -205,6 +223,7 @@ export class ParticipantService {
                     select: {
                         id: true,
                         nom: true,
+                        ticketUrl: true,
                         prenom: true,
                         email: true,
                         dateNaissance: true,

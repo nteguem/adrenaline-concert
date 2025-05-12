@@ -50,9 +50,18 @@ model participant {
   email         String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  rang          String
-  place         String
-  porte         String
+  rang          String?
+  place         String?
+  porte         String?
+  bloc          String?
+  gradin        String?
+  chaise        String?
+  siege         String?
+  entree        String?
+  niveau        String?
+  parterre      String?
+  tribune       String?
+  ticketUrl     String?
 }
 
 model Tour {
