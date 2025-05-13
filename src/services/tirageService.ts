@@ -121,7 +121,11 @@ export class TirageService {
           prenom_participant: participant.prenom,
           nom_participant: participant.nom,
           tirageid: nouveauTirage.id,
-          rang: index + 1
+          rang: index + 1,
+          porte: participant.porte?? '',
+          place: participant.place?? '', 
+          ticketUrl: participant.ticketUrl?? '',    
+          ticketInfo: participant.textInfo?? '',   
         }));
 
         // Créer les vainqueurs en base de données
@@ -137,7 +141,11 @@ export class TirageService {
             prenom_participant: true,
             nom_participant: true,
             email: true,
-            rang: true
+            rang: true,
+            ticketUrl: true,
+            ticketInfo: true,
+            porte: true,
+            place: true,
           },
           orderBy: { rang: 'asc' }
         });
@@ -240,7 +248,11 @@ static async getAllTiragesWithWinners() {
                 prenom_participant: true,
                 nom_participant: true,
                 email: true,
-                rang: true
+                rang: true,
+                ticketUrl: true,
+                ticketInfo: true,
+                porte: true,
+                place: true,
               },
               orderBy: {
                 rang: 'asc'
@@ -305,7 +317,11 @@ static async getWinnersByEventId(eventId: string) {
         prenom_participant: true,
         nom_participant: true,
         email: true,
-        rang: true
+        rang: true,
+        ticketUrl: true,
+        ticketInfo: true,
+        porte: true,
+        place: true,
       },
       orderBy: {
         rang: 'asc'
@@ -335,7 +351,11 @@ static async getWinnersByTirageId(tirageId: string) {
         prenom_participant: true,
         nom_participant: true,
         email: true,
-        rang: true
+        rang: true,
+        ticketUrl: true,
+        ticketInfo: true,
+        porte: true,
+        place: true,
       },
       orderBy: {
         rang: 'asc'
