@@ -8,6 +8,15 @@ export interface ParticipantCreateInput {
     rang ?: string;
     place ?: string;
     porte ?: string;
+    bloc ?:  string
+    gradin ?: string
+    chaise ?:  string
+    siege  ?:  string
+    entree ?:  string
+    niveau ?:  string
+    parterre ?: string
+    ticketUrl  ?: string
+    tribune?: string
 }
 
 
