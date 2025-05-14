@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { prisma } from '@/lib/db';
+import { format, parse, isValid, isSameDay } from 'date-fns';
+import { fr } from 'date-fns/locale'; 
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
 import { PDFDocument } from 'pdf-lib';
@@ -30,6 +33,21 @@ export class OcrService {
                 };
             }
 
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to start of day
+            
+            const latestEvent = await prisma.event.findFirst({
+                where: {
+                    status: 'Actif',
+                    eventDate: {
+                        gte: today // Get events from start of current day
+                    }
+                },
+                orderBy: {
+                    eventDate: 'asc' // Order by ascending to get the closest date
+                }
+            });
+
             const fileExt = path.extname(file.name).toLowerCase().slice(1);
             let base64Image: string;
             let mimeType: string;
@@ -54,7 +72,7 @@ export class OcrService {
                  uploadResult = await new Promise((resolve, reject) => {
                     const uploadStream = cloudinary.uploader.upload_stream(
                         {
-                            folder: 'concert-tickets-adrenaline',
+                            folder: `concert-tickets/${latestEvent?.city || 'unknown'}`,
                             format: 'png',
                             resource_type: 'auto',
                         },
@@ -136,7 +154,9 @@ export class OcrService {
                     max_tokens: 1024,
                     system: "Tu es un expert en analyse de billets du Zénith. RÈGLES TRÈS STRICTES:\n\n1. VALIDATION DU TYPE D'IMAGE:\n   - Si c'est un logo ou une image d'entreprise: RÉPONDRE UNIQUEMENT 'NOT_TICKET: Logo détecté'\n"
                            + "- Si c'est une photo de personne: RÉPONDRE UNIQUEMENT 'PHOTO_PERSONNE: [description]'\n   - Si ce n'est pas un billet: RÉPONDRE UNIQUEMENT 'NOT_TICKET: [description]'\n\n2. ANALYSE DES INFORMATIONS DE PLACEMENT:\n"
-                           + "- Format du billet:\n   * Après 'Porte:' extraire comme porte\n   * Après 'Niveau:' extraire comme niveau\n   * Après 'Rang:' extraire comme rang\n   * Après 'Place:' extraire comme place\n"
+                           + "- Format du billet:\n"
+                           + " * La date de l'événement (format exact trouvé) extraire comme date\n "   
+                           +"* Après 'Porte:' extraire comme porte\n   * Après 'Niveau:' extraire comme niveau\n   * Après 'Rang:' extraire comme rang\n   * Après 'Place:' extraire comme place\n"
                            + "* Après 'Parterre:' extraire comme parterre\n   * Après 'Entree:' ou 'Accès:' extraire comme entree\n"
                            + "* Après 'Tribune:' ou 'TRIBUNE' extraire comme tribune\n   * Après 'Siege:' extraire comme siege\n"
                            + "* Après 'Chaise:' extraire comme chaise\n   * Après 'Gradin:' ou 'GRADINS' extraire comme gradin\n   * Après 'Bloc:' extraire comme bloc\n\n"
@@ -272,6 +292,7 @@ export class OcrService {
             // };
 
             const ticketData: Record<string, string> = {};
+           
             // Add available fields dynamically
             if (ticketInfo.porte && ticketInfo.porte.trim()) {
                 ticketData.porte = String(ticketInfo.porte).trim();
@@ -310,6 +331,62 @@ export class OcrService {
                 ticketData.tribune = String(ticketInfo.tribune).trim();
             }
 
+
+            // Add date parsing logic before adding to ticketData
+            if (ticketInfo.date && ticketInfo.date.trim()) {
+                const dateStr = ticketInfo.date.trim()
+                    .replace(/ [AÀ] \d{1,2}[H]\d{0,2}/i, '')  // Remove time part if exists
+                    .replace(/^(LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)\s*/i, ''); // Remove day name if exists
+                let parsedDate: Date | null = null;
+
+                // Try different date formats
+                const dateFormats = [
+                    'dd/MM/yyyy',
+                    'dd-MM-yyyy',
+                    'd MMMM yyyy',      // For "8 MARS 2026"
+                    'dd MMMM yyyy'      // For "08 MARS 2026"
+                ];
+
+                for (const format of dateFormats) {
+                    try {
+                        const attemptedParse = parse(dateStr, format, new Date(), { locale: fr });
+                        console.log('Attempting format:', format, 'with date:', dateStr);
+                        if (isValid(attemptedParse)) {
+                            parsedDate = attemptedParse;
+                            console.log('Successfully parsed date:', parsedDate);
+                            break;
+                        }
+                    } catch (error) {
+                        continue;
+                    }
+                }
+
+                if (parsedDate) {
+                    // Get the most recent event
+                    // Get the closest event (including today)
+                   
+
+                    console.log('teste ===>  ' +JSON.stringify(latestEvent));
+                   
+                        if(latestEvent){
+                            console.log('event date ==>', format(new Date(latestEvent.eventDate), 'yyyy-MM-dd HH:mm:ss'));
+                            console.log('parsed date ==>', format(parsedDate, 'yyyy-MM-dd HH:mm:ss'));
+                        }
+
+                    if (latestEvent && isSameDay(parsedDate, new Date(latestEvent.eventDate))) {
+
+                        ticketData.date = format(parsedDate, 'yyyy-MM-dd');
+                        ticketData.eventId = latestEvent.id;
+                    } else {
+                        return {
+                            success: false,
+                            message: "Il semble que la date de concert mentionnée sur votre billet ne correspond pas à celle du formulaire actuellement ouvert ",
+                            errorType: 'INVALID_DATE',
+                            details: "Veuillez vérifier que le billet correspond à l'événement en cours"
+                        };
+                    }
+                }
+            }
 
              // Check if we have at least some basic information
              if (Object.keys(ticketData).length === 0) {
