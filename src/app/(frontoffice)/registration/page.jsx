@@ -173,7 +173,7 @@ export default function RegistrationPage() {
         body: formData,
       });
       const result = await apiResponse.json();
-      console.log("ticketUrl:", result);
+      // console.log("ticketUrl:", result);
       // Check for a successful response
       if (!apiResponse.ok) {
         setErrorCount(errorCount + 1);
@@ -281,8 +281,16 @@ export default function RegistrationPage() {
         porte: ocrData?.porte,
         rang: ocrData?.rang,
         place: ocrData?.place,
+        bloc: ocrData?.bloc,
+        gradin: ocrData?.gradin,
+        chaise: ocrData?.chaise,
+        siege: ocrData?.siege,
+        entree: ocrData?.entree,
+        niveau: ocrData?.niveau,
+        parterre: ocrData?.parterre,
+        tribune: ocrData?.tribune,
         ticketUrl: ocrData?.ticketUrl,
-        textInfo: isManual && formData.textInfo,
+        textInfo: isManual ? formData.textInfo : "",
       };
       const response = await fetch("/api/participants_fo", {
         method: "POST",
