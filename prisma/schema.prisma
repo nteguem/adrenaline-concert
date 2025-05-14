@@ -67,7 +67,8 @@ model participant {
   parterre      String?
   tribune       String?
   ticketUrl     String?
-  textInfo    String?
+  textInfo      String?
+  zone          String?
 }
 
 model Tour {

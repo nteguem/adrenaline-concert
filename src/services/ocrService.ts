@@ -152,18 +152,44 @@ export class OcrService {
                 data: {
                     model: "claude-3-opus-20240229",
                     max_tokens: 1024,
-                    system: "Tu es un expert en analyse de billets du Zénith. RÈGLES TRÈS STRICTES:\n\n1. VALIDATION DU TYPE D'IMAGE:\n   - Si c'est un logo ou une image d'entreprise: RÉPONDRE UNIQUEMENT 'NOT_TICKET: Logo détecté'\n"
-                           + "- Si c'est une photo de personne: RÉPONDRE UNIQUEMENT 'PHOTO_PERSONNE: [description]'\n   - Si ce n'est pas un billet: RÉPONDRE UNIQUEMENT 'NOT_TICKET: [description]'\n\n2. ANALYSE DES INFORMATIONS DE PLACEMENT:\n"
-                           + "- Format du billet:\n"
-                           + " * La date de l'événement (format exact trouvé) extraire comme date\n "   
-                           +"* Après 'Porte:' extraire comme porte\n   * Après 'Niveau:' extraire comme niveau\n   * Après 'Rang:' extraire comme rang\n   * Après 'Place:' extraire comme place\n"
-                           + "* Après 'Parterre:' extraire comme parterre\n   * Après 'Entree:' ou 'Accès:' extraire comme entree\n"
-                           + "* Après 'Tribune:' ou 'TRIBUNE' extraire comme tribune\n   * Après 'Siege:' extraire comme siege\n"
-                           + "* Après 'Chaise:' extraire comme chaise\n   * Après 'Gradin:' ou 'GRADINS' extraire comme gradin\n   * Après 'Bloc:' extraire comme bloc\n\n"
-                           + "3. RÈGLES D'EXTRACTION:\n   - Extraire EXACTEMENT les valeurs trouvées\n   - Conserver la casse et le format exact\n   - Si un champ n'a pas de valeur, NE PAS l'inclure\n\n"
-                           + "4. RÉPONSE:\n   - Billet valide: RÉPONDRE UNIQUEMENT un objet JSON avec les champs trouvés\n"
-                           + "- Informations manquantes: RÉPONDRE UNIQUEMENT 'INVALID_TICKET: [détails]'\n\nATTENTION: EXTRAIRE LES VALEURS EXACTES.",
-                    // system: "Tu es un expert en analyse de billets du Zénith. RÈGLES TRÈS STRICTES:\n\n1. VALIDATION DU TYPE D'IMAGE:\n   - Si c'est un logo ou une image d'entreprise: RÉPONDRE UNIQUEMENT 'NOT_TICKET: Logo détecté'\n   - Si c'est une photo de personne: RÉPONDRE UNIQUEMENT 'PHOTO_PERSONNE: [description]'\n   - Si ce n'est pas un billet: RÉPONDRE UNIQUEMENT 'NOT_TICKET: [description]'\n\n2. ANALYSE DES INFORMATIONS DE PLACEMENT:\n   Format Type 1 (standard):\n   - Numéro après PORTE/TRIBUNE/GRADIN = porte (extraire UNIQUEMENT le numéro)\n   - Rang P ou lettre seule = rang (extraire UNIQUEMENT la lettre)\n   - Numéro après le rang = place (extraire UNIQUEMENT le numéro)\n\n   Format Type 2 (format alternatif):\n   - Si format 'PORTE X Y Z':\n     * X = numéro de porte (UNIQUEMENT le numéro)\n     * Y = rang (UNIQUEMENT la lettre/numéro)\n     * Z = place (UNIQUEMENT le numéro)\n\n   Format Type 3 (explicite):\n   - Labels explicites: extraire UNIQUEMENT les valeurs sans les labels\n\n3. RÈGLES D'EXTRACTION:\n   - NE PAS inclure les mots PORTE, TRIBUNE, GRADIN\n   - NE PAS inclure les labels Rang, Place\n   - Extraire UNIQUEMENT les valeurs numériques ou lettres\n\n4. RÉPONSE:\n   - Billet valide: RÉPONDRE UNIQUEMENT {'porte': 'numéro', 'rang': 'lettre', 'place': 'numéro'}\n   - Informations manquantes: RÉPONDRE UNIQUEMENT 'INVALID_TICKET: [détails]'\n\nATTENTION: UNIQUEMENT LES VALEURS, PAS DE LABELS.",
+                                        system: "Tu es un expert en analyse de billets de concert. RÈGLES TRÈS STRICTES:\n\n"
+                           + "1. VALIDATION DU TYPE D'IMAGE:\n"
+                           + "   - Si c'est un logo/image d'entreprise: RÉPONDRE 'NOT_TICKET: Logo détecté'\n"
+                           + "   - Si c'est une photo de personne: RÉPONDRE 'PHOTO_PERSONNE: [description]'\n"
+                           + "   - Si ce n'est pas un billet: RÉPONDRE 'NOT_TICKET: [description]'\n\n"
+                           + "2. ANALYSE DES INFORMATIONS DE PLACEMENT:\n"
+                           + "   Format standard:\n"
+                           + "   * Date: extraire la date exacte (format JJ/MM/YYYY, DD.MM.YYYY, ou 'DD mois YYYY')\n"
+                           + "   * Formats de placement possibles (extraire tous les éléments présents):\n"
+                           + "     - TRIBUNE: 'TRIBUNE [type] [valeur]' (ex: TRIBUNE PORTE 1)\n"
+                           + "     - PARTERRE: 'PARTERRE IMPAIR OU PARTERRE [valeur] (ex: PARTERRE F2)'\n"
+                           + "     - GRADIN: 'GRADIN [numero] PORTE [valeur]'\n"
+                           + "     - ENTREE: 'ENTREE GRAND HALL'\n"
+                           + "     - NIVEAU: 'NIVEAU [valeur]'\n"
+                           + "     - BLOC: 'BLOC [valeur]'\n"
+                           + "     - ZONE: 'ZONE [valeur]'\n"
+                           + "     - CATEGORIE: 'CATEGORIE [Or/1/2/etc]' ou 'CAT [valeur]'\n"
+                           + "   * Pour le rang et la place:\n"
+                           + "     - Format standard: 'Rang [X] - Place [Y]'\n"
+                           + "     - Format simple: '[RANG] [PLACE]'\n"
+                           + "     - Format lettre/chiffre: accepter les deux\n"
+                           + "   * Extraire séparément:\n"
+                           + "     - tribune (si présent)\n"
+                           + "     - gradin (si présent)\n"
+                           + "     - niveau (si présent)\n"
+                           + "     - bloc (si présent)\n"
+                           + "     - categorie (si présent)\n"
+                           + "     - rang\n"
+                           + "     - place\n\n"
+                           + "3. RÈGLES D'EXTRACTION:\n"
+                           + "   - Extraire les valeurs EXACTES trouvées\n"
+                           + "   - Conserver la casse d'origine\n"
+                           + "   - Ne pas inclure les labels (Rang, Place, etc.)\n"
+                           + "   - Si un champ n'est pas présent, NE PAS l'inclure\n\n"
+                           + "4. RÉPONSE:\n"
+                           + "   - Billet valide: UNIQUEMENT objet JSON avec champs trouvés\n"
+                           + "   - Si informations manquantes: 'INVALID_TICKET: [détails]'\n\n"
+                           + "ATTENTION: EXTRAIRE UNIQUEMENT LES VALEURS, PAS LES LABELS.",
                     messages: [{
                         role: "user",
                         content: [
@@ -325,10 +351,23 @@ export class OcrService {
                 ticketData.entree = String(ticketInfo.entree).trim();
             }
             if (ticketInfo.parterre && ticketInfo.parterre.trim()) {
-                ticketData.parterre = String(ticketInfo.parterre).trim();
+
+                const parterreValue = String(ticketInfo.parterre).trim();
+
+                if (parterreValue.toLowerCase().startsWith('bloc')) {
+                    const blocMatch = parterreValue.match(/bloc\s+([A-Z0-9]+)/i);
+                    if (blocMatch) {
+                        ticketData.bloc = blocMatch[1];
+                    }
+                } else {
+                    ticketData.parterre = parterreValue;
+                }
             }
             if (ticketInfo.tribune && ticketInfo.tribune.trim()) {
                 ticketData.tribune = String(ticketInfo.tribune).trim();
+            }
+            if (ticketInfo.zone && ticketInfo.zone.trim()) {
+                ticketData.zone = String(ticketInfo.zone).trim();
             }
 
 
@@ -343,6 +382,7 @@ export class OcrService {
                 const dateFormats = [
                     'dd/MM/yyyy',
                     'dd-MM-yyyy',
+                    'dd.MM.yyyy',      // Added dot format
                     'd MMMM yyyy',      // For "8 MARS 2026"
                     'dd MMMM yyyy'      // For "08 MARS 2026"
                 ];
