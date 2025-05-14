@@ -31,6 +31,7 @@ export default function RegistrationPage() {
     porte: "",
     place: "",
     rang: "",
+    textInfo: "",
   });
   const [formStep, setFormStep] = useState(1);
   const [ticketImage, setTicketImage] = useState(null);
@@ -47,12 +48,19 @@ export default function RegistrationPage() {
   const [isManual, setIsManual] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
+  const [ticketUrl, setTicketUrl] = useState(null);
   let formattedDate = null;
 
   useEffect(() => {
     const increment = () => {
-      if (errorCount >= 2) {
+      if (errorCount >= 1) {
         setIsManual(true);
+        setErrorModal({
+          isOpen: true,
+          title: "Lecture billet impossible",
+          message: "Veuillez remplir les champs du billet manuellement.",
+          type: "error",
+        });
       }
     };
     increment();
@@ -165,6 +173,7 @@ export default function RegistrationPage() {
         body: formData,
       });
       const result = await apiResponse.json();
+      console.log("ticketUrl:", result);
       // Check for a successful response
       if (!apiResponse.ok) {
         setErrorCount(errorCount + 1);
@@ -201,7 +210,7 @@ export default function RegistrationPage() {
       return false;
     }
     if (isManual) {
-      if (!formData.place || !formData.porte || !formData.rang) {
+      if (!formData.textInfo) {
         setErrorModal({
           isOpen: true,
           title: "Formulaire incomplet",
@@ -269,9 +278,11 @@ export default function RegistrationPage() {
         dateNaissance: formatDate(formData.dateNaissance),
         email: formData.email,
         eventId: eventId,
-        porte: isManual ? formData.porte : ocrData?.porte,
-        rang: isManual ? formData.rang : ocrData?.rang,
-        place: isManual ? formData.place : ocrData?.place,
+        porte: ocrData?.porte,
+        rang: ocrData?.rang,
+        place: ocrData?.place,
+        ticketUrl: ocrData?.ticketUrl,
+        textInfo: isManual && formData.textInfo,
       };
       const response = await fetch("/api/participants_fo", {
         method: "POST",
@@ -434,28 +445,18 @@ export default function RegistrationPage() {
               className="h-50"
             />
             {isManual && (
-              <p>Veillez remplir les information du billet manuelement svp!</p>
+              <p>
+                Merci de remplir ci-dessous les informations de placement qui se
+                trouvent sur votre billet: (porte, gradin, tribbune, plateforme,
+                parterre, bloc, rang, place ...)
+              </p>
             )}
             {isManual && (
               <>
                 <Input
-                  placeholder="PORTE"
-                  name="porte"
-                  value={formData.porte}
-                  onChange={handleInputChange}
-                  className="mb-0 h-50"
-                />
-                <Input
-                  placeholder="RANG"
-                  name="rang"
-                  value={formData.rang}
-                  onChange={handleInputChange}
-                  className="mb-0 h-50"
-                />
-                <Input
-                  placeholder="PLACE"
-                  name="place"
-                  value={formData.place}
+                  placeholder="porte, gradin, tribune, plateforme, parterre, bloc, rang, place"
+                  name="textInfo"
+                  value={formData.textInfo}
                   onChange={handleInputChange}
                   className="mb-0 h-50"
                 />
