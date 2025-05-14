@@ -37,8 +37,13 @@ model vainqueur {
   prenom_participant String
   email         String @unique
   rang          Int
+  porte         String
+  place         String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  ticketUrl     String
+  ticketInfo    String
+
 }
 
 model participant {
@@ -62,6 +67,7 @@ model participant {
   parterre      String?
   tribune       String?
   ticketUrl     String?
+  textInfo    String?
 }
 
 model Tour {

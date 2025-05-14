@@ -7,6 +7,10 @@ export interface VainqCreateInput {
     email: string;
     nom_participant: string;
     prenom_participant: string;
+    ticketUrl?:     string
+    ticketInfo?:    string
+    porte?:         string
+    place?:         string
 }
 
 
