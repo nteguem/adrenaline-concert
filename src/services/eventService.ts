@@ -184,7 +184,7 @@ export class EventService {
   static async handleGetAllEvent(request: NextRequest) {
     try {
       const { searchParams } = new URL(request.url);
-      const limit = parseInt(searchParams.get('limit') || '10');
+      const limit = parseInt(searchParams.get('limit') || '100');
       const page = parseInt(searchParams.get('page') || '1');
       const search = searchParams.get('search') || '';
       
