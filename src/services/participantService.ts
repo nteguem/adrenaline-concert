@@ -45,7 +45,8 @@ export class ParticipantService {
                     niveau:   data.niveau?? '',
                     parterre:  data.parterre?? '',
                     ticketUrl: data.ticketUrl?? '',
-                    textInfo: data.textInfo?? ''
+                    textInfo: data.textInfo?? '',
+                    zone: data.zone?? ''
                 },
             });
 
@@ -110,7 +111,8 @@ export class ParticipantService {
                 niveau:   body.niveau?? '',
                 parterre:  body.parterre?? '',
                 ticketUrl: body.ticketUrl?? '',
-                textInfo: body.textInfo?? ''
+                textInfo: body.textInfo?? '',
+                zone:     body.zone?? ''
             };
             
             // Création du participant
@@ -235,6 +237,7 @@ export class ParticipantService {
                         place: true,
                         porte: true,
                         bloc: true,
+                        zone: true,
                     }
                 }),
                 prisma.participant.count({
@@ -303,6 +306,7 @@ export class ParticipantService {
           place: true,
           porte: true,
           bloc: true,
+          zone: true,
         },
         orderBy: {
           createdAt: 'desc'

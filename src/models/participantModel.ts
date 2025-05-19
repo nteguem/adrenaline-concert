@@ -17,7 +17,8 @@ export interface ParticipantCreateInput {
     parterre ?: string
     ticketUrl  ?: string
     tribune?: string,
-    textInfo?:  string
+    textInfo?:  string,
+    zone?: string
 }
 
 
