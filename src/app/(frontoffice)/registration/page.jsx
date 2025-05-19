@@ -53,7 +53,7 @@ export default function RegistrationPage() {
 
   useEffect(() => {
     const increment = () => {
-      if (errorCount >= 1) {
+      if (errorCount >= 2) {
         setIsManual(true);
         setErrorModal({
           isOpen: true,
