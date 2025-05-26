@@ -221,6 +221,7 @@ export class EventService {
       if (data.venue !== undefined) updateData.venue = data.venue;
       if (data.status !== undefined) updateData.status = data.status;
       if (data.eventDate !== undefined) updateData.eventDate = new Date(data.eventDate);
+      if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
       
       // Mettre à jour l'événement
       const updatedEvent = await prisma.event.update({
@@ -258,7 +259,7 @@ export class EventService {
       const body = await request.json();
       
       // Validation de base - au moins un champ à mettre à jour doit être présent
-      const updateFields = ['city', 'venue', 'eventDate', 'status'];
+      const updateFields = ['city', 'venue', 'eventDate', 'status','endDate'];
       const hasUpdateFields = updateFields.some(field => body[field] !== undefined);
       
       if (!hasUpdateFields) {
@@ -272,6 +273,7 @@ export class EventService {
       if (body.venue !== undefined) updateInput.venue = body.venue;
       if (body.eventDate !== undefined) updateInput.eventDate = body.eventDate;
       if (body.status !== undefined) updateInput.status = body.status;
+      if (body.endDate !== undefined) updateInput.endDate = body.endDate;
       
       const updatedEvent = await this.updateEvent(id, updateInput);
       
