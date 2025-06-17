@@ -86,7 +86,10 @@ export default function VideoPage() {
     >
       <div className="flex flex-col w-full h-screen max-w-md mx-auto justify-between py-10">
         {/* Espace pour la vidéo */}
-        <div className="flex-1 flex flex-col justify-center items-center">
+        <div className="flex-1 flex flex-col justify-center items-center gap-[10%]">
+          <div className="flex justify-center p-7 bg-blue-600 rounded-md w-[90%]">
+            VIDEO MATT QUI TEASE SUR L’EXPERIENCE
+          </div>
           <div className="w-full aspect-video bg-black relative">
             <iframe
               width="100%"

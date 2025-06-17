@@ -4,7 +4,7 @@ import { Download, Check, X, FileText, Image as ImageIcon } from "lucide-react";
 
 const FileUpload = ({
   onFileSelect,
-  label = "IMPORTEZ VOTRE BILLET DE CONCERT",
+  label = "J'IMPORTE MON BILLET OU JE LE PRENDS EN PHOTO",
 }) => {
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
@@ -80,7 +80,7 @@ const FileUpload = ({
         <button
           type="button"
           onClick={handleButtonClick}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded w-full flex items-center justify-between"
+          className="bg-white hover:bg-blue-500 text-gray-700 font-bold py-3 px-6 rounded w-full flex items-center justify-between"
         >
           <span>{label}</span>
           <Download className="h-5 w-5" />

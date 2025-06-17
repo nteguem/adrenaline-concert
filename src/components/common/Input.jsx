@@ -9,7 +9,7 @@ const Input = ({
   className = "",
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  
+
   // Gérer le cas spécial des champs de type date
   if (type === "date") {
     return (
@@ -22,12 +22,12 @@ const Input = ({
           name={name}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`bg-blue-600 text-white w-full rounded p-3 mb-3 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
+          className={` text-gray-700 w-full rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
         />
       </div>
     );
   }
-  
+
   // Pour les autres types d'input
   return (
     <input
@@ -36,7 +36,7 @@ const Input = ({
       value={value}
       onChange={onChange}
       name={name}
-      className={`bg-blue-600 text-white w-full rounded p-3 mb-3 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
+      className={` text-gray-700 w-full rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
     />
   );
 };

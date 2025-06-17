@@ -28,6 +28,7 @@ export default function RegistrationPage() {
     age: false,
     santéOk: false,
     cgu: false,
+    acc: false,
     porte: "",
     place: "",
     rang: "",
@@ -263,7 +264,7 @@ export default function RegistrationPage() {
     e.preventDefault();
 
     // Vérifier que toutes les conditions sont acceptées
-    if (!formData.age || !formData.santéOk || !formData.cgu) {
+    if (!formData.age || !formData.santéOk || !formData.cgu || !formData.acc) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
@@ -441,7 +442,7 @@ export default function RegistrationPage() {
                     </button>
                   </div>
                 )}
-                className="text-white h-50 bg-blue-600 text-white w-full rounded p-3 mb-3 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="text-gray-700 h-50 w-full rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
             <Input
@@ -471,7 +472,7 @@ export default function RegistrationPage() {
               </>
             )}
             <Checkbox
-              label="JE CONFIRME MA PRESENCE AU CONCERT DE CE SOIR"
+              label="J'ACCEPTE DE RECEVOIR DES INFORMATIONS CONCERNANT ADRENALINE TOUR"
               checked={formData.confirmePresence}
               onChange={handleInputChange}
               name="confirmePresence"
@@ -556,6 +557,13 @@ export default function RegistrationPage() {
                 name="cgu"
                 onChange={handleInputChange}
                 checked={formData.cgu || false}
+                className="w-full"
+              />
+              <Checkbox
+                label="MES INFORMATIONS SONT CORRECTES"
+                name="acc"
+                onChange={handleInputChange}
+                checked={formData.acc || false}
                 className="w-full"
               />
             </div>
