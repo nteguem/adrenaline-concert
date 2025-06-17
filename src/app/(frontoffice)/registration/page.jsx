@@ -539,15 +539,17 @@ export default function RegistrationPage() {
 
             <div className="space-y-3 mb-6">
               <Checkbox
-                label="Je certifie avoir plus de 18 ans"
+                label="Je certifie avoir + de 18 ans pour participer au concours"
                 name="age"
                 onChange={handleInputChange}
                 checked={formData.age || false}
                 className="w-full"
               />
               <Checkbox
-                label="Je certifie ne présenter aucune contre indication médicale pour participer à l'Adrénaline MAX"
+                label="J'atteste ne pas avoir de contre indication médicale pour participer à l'Adrénaline MAX"
                 name="santéOk"
+                subLabel=" ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)"
+                linkText="voir les conditions"
                 onChange={handleInputChange}
                 checked={formData.santéOk || false}
                 className="w-full "
@@ -555,6 +557,7 @@ export default function RegistrationPage() {
               <Checkbox
                 label="J'accepte les conditions générales"
                 name="cgu"
+                linkText="voir conditions et règlement"
                 onChange={handleInputChange}
                 checked={formData.cgu || false}
                 className="w-full"
