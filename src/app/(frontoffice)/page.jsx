@@ -20,14 +20,24 @@ export default function HomePage() {
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
-    tourDate.setHours(8, 0, 0, 0);
+    tourDate.setHours(
+      tourDate.getHours(),
+      tourDate.getMinutes(),
+      tourDate.getSeconds(),
+      0
+    );
     return currentDate < tourDate;
   };
 
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
-    tourDate.setHours(18, 0, 0, 0);
+    tourDate.setHours(
+      tourDate.getHours(),
+      tourDate.getMinutes(),
+      tourDate.getSeconds(),
+      0
+    );
     return currentDate > tourDate;
   };
   const customdateFormat = (passedDate) => {

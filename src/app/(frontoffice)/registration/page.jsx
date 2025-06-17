@@ -70,7 +70,12 @@ export default function RegistrationPage() {
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
     const tourDate = new Date(startDate);
-    tourDate.setHours(8, 0, 0, 0);
+    tourDate.setHours(
+      tourDate.getHours(),
+      tourDate.getMinutes(),
+      tourDate.getSeconds(),
+      0
+    );
     return currentDate < tourDate;
   };
   const range = (start, end, step = 1) => {
@@ -99,7 +104,12 @@ export default function RegistrationPage() {
   const hasDateEnd = (endDate) => {
     const currentDate = new Date();
     const tourDate = new Date(endDate);
-    tourDate.setHours(18, 0, 0, 0);
+    tourDate.setHours(
+      tourDate.getHours(),
+      tourDate.getMinutes(),
+      tourDate.getSeconds(),
+      0
+    );
     // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
