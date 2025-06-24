@@ -24,6 +24,7 @@ export default function RegistrationPage() {
     prenom: "",
     dateNaissance: "",
     email: "",
+    telephone: "",
     confirmePresence: false,
     age: false,
     santéOk: false,
@@ -32,6 +33,15 @@ export default function RegistrationPage() {
     porte: "",
     place: "",
     rang: "",
+    bloc: "",
+    gradin: "",
+    chaise: "",
+    siege: "",
+    entree: "",
+    niveau: "",
+    parterre: "",
+    tribune: "",
+    categorie: "",
     textInfo: "",
   });
   const [formStep, setFormStep] = useState(1);
@@ -210,7 +220,8 @@ export default function RegistrationPage() {
       !formData.nom ||
       !formData.prenom ||
       !formData.dateNaissance ||
-      !formData.email
+      !formData.email ||
+      !formData.telephone
     ) {
       setErrorModal({
         isOpen: true,
@@ -274,7 +285,7 @@ export default function RegistrationPage() {
     e.preventDefault();
 
     // Vérifier que toutes les conditions sont acceptées
-    if (!formData.age || !formData.santéOk || !formData.cgu || !formData.acc) {
+    if (!formData.confirmePresence) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
@@ -288,18 +299,19 @@ export default function RegistrationPage() {
         prenom: formData.prenom,
         dateNaissance: formatDate(formData.dateNaissance),
         email: formData.email,
+        telephone: formData.telephone,
         eventId: eventId,
-        porte: ocrData?.porte,
-        rang: ocrData?.rang,
-        place: ocrData?.place,
-        bloc: ocrData?.bloc,
-        gradin: ocrData?.gradin,
-        chaise: ocrData?.chaise,
-        siege: ocrData?.siege,
-        entree: ocrData?.entree,
-        niveau: ocrData?.niveau,
-        parterre: ocrData?.parterre,
-        tribune: ocrData?.tribune,
+        porte: isManual ? formData.porte : ocrData?.porte,
+        rang: isManual ? formData.rang : ocrData?.rang,
+        place: isManual ? formData.place : ocrData?.place,
+        bloc: isManual ? formData.bloc : ocrData?.bloc,
+        gradin: isManual ? formData.gradin : ocrData?.gradin,
+        chaise: isManual ? formData.chaise : ocrData?.chaise,
+        siege: isManual ? formData.siege : ocrData?.siege,
+        entree: isManual ? formData.entree : ocrData?.entree,
+        niveau: isManual ? formData.niveau : ocrData?.niveau,
+        parterre: isManual ? formData.parterre : ocrData?.parterre,
+        tribune: isManual ? formData.tribune : ocrData?.tribune,
         ticketUrl: ocrData?.ticketUrl,
         textInfo: isManual ? formData.textInfo : "",
       };
@@ -313,7 +325,7 @@ export default function RegistrationPage() {
       // console.log("response from push participant", data);
     }
 
-    if (formStep === 2) {
+    if (formStep === 1) {
       // Toutes les conditions sont acceptées, rediriger vers la page de confirmation
       router.push("/confirmation");
     }
@@ -356,25 +368,20 @@ export default function RegistrationPage() {
       case 1:
         return (
           // Étape 1: Formulaire d'inscription avec upload de billet intégré
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleNextStep();
-            }}
-          >
+          <form onSubmit={handleSubmit}>
             <Input
               placeholder="NOM"
               name="nom"
               value={formData.nom}
               onChange={handleInputChange}
-              className="h-50"
+              className="h-50 w-full"
             />
             <Input
               placeholder="PRENOM"
               name="prenom"
               value={formData.prenom}
               onChange={handleInputChange}
-              className="mb-0 h-50"
+              className="mb-0 h-50 w-full"
             />
             {/* <Input
               type="date"
@@ -456,29 +463,113 @@ export default function RegistrationPage() {
               />
             </div>
             <Input
+              placeholder="Numéro de téléphone"
+              name="telephone"
+              value={formData.telephone}
+              onChange={handleInputChange}
+              className="h-50 w-full"
+            />
+            <Input
               type="email"
               placeholder="ADRESSE MAIL"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="h-50"
+              className="h-50 w-full"
             />
             {isManual && (
               <p>
                 Merci de remplir ci-dessous les informations de placement qui se
-                trouvent sur votre billet: (porte, gradin, tribbune, plateforme,
-                parterre, bloc, rang, place ...)
+                trouvent sur votre billet
               </p>
             )}
             {isManual && (
               <>
-                <Input
-                  placeholder="porte, gradin, tribune, plateforme, parterre, bloc, rang, place"
-                  name="textInfo"
-                  value={formData.textInfo}
-                  onChange={handleInputChange}
-                  className="mb-0 h-50"
-                />
+                <div className="flex justify-between">
+                  <Input
+                    placeholder="siege"
+                    name="siege"
+                    value={formData.siege}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="chaise"
+                    name="chaise"
+                    value={formData.chaise}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="entree"
+                    name="entree"
+                    value={formData.entree}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <Input
+                    placeholder="porte"
+                    name="porte"
+                    value={formData.porte}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="parterre"
+                    name="parterre"
+                    value={formData.parterre}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="rang"
+                    name="rang"
+                    value={formData.rang}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <Input
+                    placeholder="gradin"
+                    name="gradin"
+                    value={formData.gradin}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="bloc"
+                    name="bloc"
+                    value={formData.bloc}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="place"
+                    name="place"
+                    value={formData.place}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <Input
+                    placeholder="tribune"
+                    name="tribune"
+                    value={formData.tribune}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                  <Input
+                    placeholder="niveau"
+                    name="niveau"
+                    value={formData.niveau}
+                    onChange={handleInputChange}
+                    className="mb-0 h-50 max-w-[25%]"
+                  />
+                </div>
               </>
             )}
             <Checkbox
@@ -536,60 +627,7 @@ export default function RegistrationPage() {
       case 2:
         return (
           // Étape 2: Confirmation et conditions
-          <form onSubmit={handleSubmit}>
-            <div className="mb-8">
-              <TicketPreview />
-              <div className="text-center text-sm mb-4">
-                <p className="font-bold">DATE - VILLE</p>
-                <p>PORTE {isManual ? formData.porte : ocrData?.porte}</p>
-                <p>RANG {isManual ? formData.rang : ocrData?.rang}</p>
-                <p>PLACE {isManual ? formData.place : ocrData?.place}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <Checkbox
-                label="Je certifie avoir + de 18 ans pour participer au concours"
-                name="age"
-                onChange={handleInputChange}
-                checked={formData.age || false}
-                className="w-full"
-              />
-              <Checkbox
-                label="J'atteste ne pas avoir de contre indication médicale pour participer à l'Adrénaline MAX"
-                name="santéOk"
-                subLabel=" ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)"
-                linkText="voir les conditions"
-                onChange={handleInputChange}
-                checked={formData.santéOk || false}
-                className="w-full "
-              />
-              <Checkbox
-                label="J'accepte les conditions générales"
-                name="cgu"
-                linkText="voir conditions et règlement"
-                onChange={handleInputChange}
-                checked={formData.cgu || false}
-                className="w-full"
-              />
-              <Checkbox
-                label="MES INFORMATIONS SONT CORRECTES"
-                name="acc"
-                onChange={handleInputChange}
-                checked={formData.acc || false}
-                className="w-full"
-              />
-            </div>
-
-            <div className="mt-8 flex justify-center items-center">
-              <Button type="submit" desabled>
-                JE TENTE MA CHANCE
-              </Button>
-            </div>
-            <Button onClick={() => setFormStep(1)} variant="secondary">
-              RETOUR
-            </Button>
-          </form>
+          <form onSubmit={handleSubmit}></form>
         );
       default:
         return null;

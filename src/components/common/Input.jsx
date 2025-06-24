@@ -22,7 +22,7 @@ const Input = ({
           name={name}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={` text-gray-700 w-full rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
+          className={` text-gray-700 rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
         />
       </div>
     );
@@ -36,7 +36,7 @@ const Input = ({
       value={value}
       onChange={onChange}
       name={name}
-      className={` text-gray-700 w-full rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
+      className={` text-gray-700 rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
     />
   );
 };

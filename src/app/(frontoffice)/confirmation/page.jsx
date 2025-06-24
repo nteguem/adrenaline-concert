@@ -97,7 +97,7 @@ export default function ConfirmationPage() {
       `}
     >
       <div className="max-w-md w-full mx-auto flex flex-col items-center justify-center text-center">
-        <LogoHeader date={formattedDate} venue={data.data.tours[0].name} />
+        <LogoHeader date={formattedDate} venue={data?.data?.tours[0].name} />
 
         <div className="w-full mb-8">
           <h2 className={`font-din text-2xl font-bold mb-6`}>
@@ -106,7 +106,10 @@ export default function ConfirmationPage() {
             PRISE EN COMPTE
           </h2>
           <div className="text-lg">
-            <p className="mb-2">TIRAGE AU SORT CE SOIR PENDANT LE SHOW</p>
+            <p className="mb-2">
+              TIRAGE AU SORT CE SOIR A 19H, LES GAGNANTS SERONT DIRECTEMENT
+              CONTACTES PAR MAIL ET SMS
+            </p>
             <p className="text-blue-400">Bonne chance!</p>
           </div>
         </div>
