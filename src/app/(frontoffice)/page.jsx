@@ -8,6 +8,8 @@ import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
 import Login from "../../components/common/Login";
+import Checkbox from "@/components/common/Checkbox";
+import PopupModal from "@/components/common/PopupModal";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function HomePage() {
@@ -15,6 +17,23 @@ export default function HomePage() {
   const [isClicked, setIsClicked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
+  const [formData, setFormData] = useState({
+    confirmePresence: false,
+    age: false,
+    santéOk: false,
+    cgu: false,
+    acc: false,
+  });
+  const [errorModal, setErrorModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "error",
+  });
+  const closeModal = () => {
+    setErrorModal({ ...errorModal, isOpen: false });
+  };
+
   let formattedDate = null;
 
   const hasDatePassed = (startDate) => {
@@ -53,6 +72,28 @@ export default function HomePage() {
     return returnDate;
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Vérifier que toutes les conditions sont acceptées
+    if (!formData.age || !formData.santéOk || !formData.cgu || !formData.acc) {
+      setErrorModal({
+        isOpen: true,
+        title: "Conditions non acceptées",
+        message: "Veuillez accepter toutes les conditions pour continuer.",
+        type: "error",
+      });
+      return;
+    }
+  };
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (data) {
     // console.log("data length", data?.data?.tours.length);
@@ -78,7 +119,17 @@ export default function HomePage() {
 
   const handleClick = () => {
     setIsClicked(true);
-    router.push("/video");
+    if (!formData.age || !formData.santéOk || !formData.cgu || !formData.acc) {
+      setErrorModal({
+        isOpen: true,
+        title: "Conditions non acceptées",
+        message: "Veuillez accepter toutes les conditions pour continuer.",
+        type: "error",
+      });
+      return;
+    } else {
+      router.push("/video");
+    }
   };
 
   return (
@@ -116,40 +167,75 @@ export default function HomePage() {
               date={formattedDate}
               venue={data?.data?.tours[0]?.name}
             />
-            <div className="w-full max-w-md mx-auto mt-[65%]">
+            <div className="w-full max-w-md mx-auto mt-[40%]">
               <div className="mb-8">
-                <p className="text-base md:text-lg text-white mb-2">
-                  TENTEZ DE VIVRE L'EXPERIENCE
-                </p>
                 <p
-                  className={`
-        ${din.className} 
-        text-xl md:text-2xl 
-        font-bold 
-        text-white 
-        mb-6
-      `}
+                  className={`${din.className} text-4xl md:text-2xl font-bold text-white mb-6`}
                 >
                   ADRÉNALINE MAX
                 </p>
+                <p className="text-base md:text-lg text-white mb-2">
+                  TENTEZ DE VIVRE L'EXPERIENCE
+                </p>
               </div>
-
-              <HeartbeatButton
-                onClick={handleClick}
-                className={`
-      max-w-[300px] 
-      mx-auto 
-      transition-colors 
-      ${isClicked ? "bg-blue-400" : ""}
-    `}
-              >
-                {/* {formattedDate} {data.data[0].name} */}
-                {"ENTREZ"}
-              </HeartbeatButton>
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-3 px-3">
+                  <Checkbox
+                    label="Je certifie avoir + de 18 ans pour participer au concours"
+                    name="age"
+                    onChange={handleInputChange}
+                    checked={formData.age || false}
+                    className="w-full"
+                  />
+                  <Checkbox
+                    label="J'atteste ne pas avoir de contre indication médicale pour participer à l'Adrénaline MAX"
+                    name="santéOk"
+                    subLabel=" ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)"
+                    linkText="voir les conditions"
+                    onChange={handleInputChange}
+                    checked={formData.santéOk || false}
+                    className="w-full "
+                  />
+                  <Checkbox
+                    label="J'accepte les conditions générales"
+                    name="cgu"
+                    linkText="voir conditions et règlement"
+                    onChange={handleInputChange}
+                    checked={formData.cgu || false}
+                    className="w-full"
+                  />
+                  <Checkbox
+                    label="MES INFORMATIONS SONT CORRECTES"
+                    name="acc"
+                    onChange={handleInputChange}
+                    checked={formData.acc || false}
+                    className="w-full"
+                  />
+                </div>
+                <HeartbeatButton
+                  onClick={handleClick}
+                  className={`
+              max-w-[300px] 
+              mx-auto 
+              transition-colors 
+              ${isClicked ? "bg-blue-400" : ""}
+            `}
+                >
+                  {/* {formattedDate} {data.data[0].name} */}
+                  {"ENTREZ"}
+                </HeartbeatButton>
+              </form>
             </div>
           </>
         )}
       </div>
+      <PopupModal
+        isOpen={errorModal.isOpen}
+        onClose={closeModal}
+        title={errorModal.title}
+        message={errorModal.message}
+        type={errorModal.type}
+      />
     </main>
   );
 }

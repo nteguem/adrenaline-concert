@@ -289,7 +289,7 @@ export default function RegistrationPage() {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
-        message: "Veuillez accepter toutes les conditions pour continuer.",
+        message: "Merci de remplir toutes les cases.",
         type: "error",
       });
       return;

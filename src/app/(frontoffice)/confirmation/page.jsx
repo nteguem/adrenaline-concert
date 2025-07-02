@@ -107,8 +107,8 @@ export default function ConfirmationPage() {
           </h2>
           <div className="text-lg">
             <p className="mb-2">
-              TIRAGE AU SORT CE SOIR A 19H, LES GAGNANTS SERONT DIRECTEMENT
-              CONTACTES PAR MAIL ET SMS
+              TIRAGE AU SORT CE SOIR UNE HEURE AVANT LE DEBUT DU CONCERT, LES
+              GAGNANTS SERONT DIRECTEMENT CONTACTES PAR MAIL ET SMS
             </p>
             <p className="text-blue-400">Bonne chance!</p>
           </div>
