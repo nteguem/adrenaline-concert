@@ -226,17 +226,18 @@ export default function RegistrationPage() {
       setErrorModal({
         isOpen: true,
         title: "Formulaire incomplet",
-        message: "Veuillez remplir tous les champs du formulaire.",
+        message: "Merci de remplir toutes les cases.",
         type: "error",
       });
       return false;
     }
     if (isManual) {
-      if (!formData.textInfo) {
+      console.log("is manual");
+      if (!formData.chaise || !formData.entree || !formData.siege) {
         setErrorModal({
           isOpen: true,
           title: "Formulaire incomplet",
-          message: "Veuillez remplir tous les champs du formulaire.",
+          message: "Merci de remplir toutes les cases.",
           type: "error",
         });
         return false;
@@ -285,11 +286,11 @@ export default function RegistrationPage() {
     e.preventDefault();
 
     // Vérifier que toutes les conditions sont acceptées
-    if (!formData.confirmePresence) {
+    if (!formData.cgu) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
-        message: "Merci de remplir toutes les cases.",
+        message: "Merci de cocher toutes les cases.",
         type: "error",
       });
       return;
@@ -325,7 +326,7 @@ export default function RegistrationPage() {
       // console.log("response from push participant", data);
     }
 
-    if (formStep === 1) {
+    if (formStep === 2) {
       // Toutes les conditions sont acceptées, rediriger vers la page de confirmation
       router.push("/confirmation");
     }
@@ -368,7 +369,12 @@ export default function RegistrationPage() {
       case 1:
         return (
           // Étape 1: Formulaire d'inscription avec upload de billet intégré
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleNextStep();
+            }}
+          >
             <Input
               placeholder="NOM"
               name="nom"
@@ -627,7 +633,36 @@ export default function RegistrationPage() {
       case 2:
         return (
           // Étape 2: Confirmation et conditions
-          <form onSubmit={handleSubmit}></form>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-8">
+              <TicketPreview />
+              <div className="text-center text-sm mb-4">
+                <p className="font-bold">DATE - VILLE</p>
+                <p>PORTE {isManual ? formData.porte : ocrData?.porte}</p>
+                <p>RANG {isManual ? formData.rang : ocrData?.rang}</p>
+                <p>PLACE {isManual ? formData.place : ocrData?.place}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <Checkbox
+                label="MES INFORMATIONS SONT CORRECTES"
+                name="cgu"
+                onChange={handleInputChange}
+                checked={formData.cgu || false}
+                className="w-full"
+              />
+            </div>
+
+            <div className="mt-8 flex justify-center items-center">
+              <Button type="submit" desabled>
+                JE TENTE MA CHANCE
+              </Button>
+            </div>
+            <Button onClick={() => setFormStep(1)} variant="secondary">
+              RETOUR
+            </Button>
+          </form>
         );
       default:
         return null;
