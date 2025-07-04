@@ -78,8 +78,8 @@ export default function HomePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Vérifier que toutes les conditions sont acceptées
-    if (!formData.age || !formData.santéOk || !formData.cgu || !formData.acc) {
+    // Vérifier que toutes les conditions sont acceptées (sans acc)
+    if (!formData.age || !formData.santéOk || !formData.cgu) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
@@ -123,7 +123,7 @@ export default function HomePage() {
 
   const handleClick = () => {
     setIsClicked(true);
-    if (!formData.age || !formData.santéOk || !formData.cgu || !formData.acc) {
+    if (!formData.age || !formData.santéOk || !formData.cgu) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
