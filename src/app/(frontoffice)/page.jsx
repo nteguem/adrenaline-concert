@@ -248,21 +248,6 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex gap-3 w-full">
-                    <input
-                      type="checkbox"
-                      name="acc"
-                      checked={formData.acc || false}
-                      onChange={handleInputChange}
-                      className="mt-0.5 flex-shrink-0 w-4 h-4"
-                    />
-                    <div className="flex-1 text-left">
-                      <label className="text-white text-sm md:text-base leading-tight block">
-                        Mes informations sont correctes
-                      </label>
-                    </div>
-                  </div>
                 </div>
 
                 <HeartbeatButton
