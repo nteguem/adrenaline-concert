@@ -1,10 +1,5 @@
 import axios from 'axios';
-import { prisma } from '@/lib/db';
-import { format, parse, isValid, isSameDay } from 'date-fns';
-import { fr } from 'date-fns/locale'; 
-import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
-import { PDFDocument } from 'pdf-lib';
 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
@@ -21,85 +16,64 @@ export class OcrService {
         message?: string;
         data?: Record<string, string>;
         errorType?: string;
-        details?: string | any;
+        details?: string;
     }> {
         try {
+            console.log('=== DEBUT ANALYSE OCR ===');
+            console.log('Fichier reçu:', file.name, file.type, file.size);
+
+            // 1. Vérification basique du fichier
             if (!file) {
                 return {
                     success: false,
-                    message: 'Aucun fichier uploadé ou format non supporté',
-                    errorType: 'NO_FILE',
-                    details: 'Aucun fichier n\'a été fourni pour l\'analyse'
+                    message: 'Aucun fichier uploadé',
+                    errorType: 'NO_FILE'
                 };
             }
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to start of day
+            // 2. Conversion du fichier en base64
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64Image = buffer.toString('base64');
             
-            const latestEvent = await prisma.event.findFirst({
-                where: {
-                    status: 'Actif',
-                    eventDate: {
-                        gte: today // Get events from start of current day
-                    }
-                },
-                orderBy: {
-                    eventDate: 'asc' // Order by ascending to get the closest date
-                }
-            });
-
-            const fileExt = path.extname(file.name).toLowerCase().slice(1);
-            let base64Image: string;
-            let mimeType: string;
-            let buffer: Buffer;
-            let uploadResult: any;
-
-            // check if is pdf file or image
-            if (fileExt === 'pdf') {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
-                const pages = pdfDoc.getPages();
-                if (pages.length === 0) {
-                    return {
-                        success: false,
-                        message: "PDF vide",
-                        errorType: 'INVALID_PDF',
-                        details: "Le PDF ne contient aucune page"
-                    };
-                }
-
-                // Upload PDF to Cloudinary first for conversion
-                 uploadResult = await new Promise((resolve, reject) => {
-                    const uploadStream = cloudinary.uploader.upload_stream(
-                        {
-                            folder: `concert-tickets/${latestEvent?.city || 'unknown'}`,
-                            format: 'png',
-                            resource_type: 'auto',
-                        },
-                        (error, result) => {
-                            if (error) reject(error);
-                            else resolve(result);
-                        }
-                    );
-                    uploadStream.end(Buffer.from(arrayBuffer));
-                });
-
-                // Get the converted image from Cloudinary
-                const imageResponse = await axios.get((uploadResult as any).secure_url, {
-                    responseType: 'arraybuffer'
-                });
-                
-                buffer = Buffer.from(imageResponse.data);
-                base64Image = buffer.toString('base64');
-                mimeType = 'image/png';
+            // Déterminer le type MIME correctement
+            let mimeType = 'image/jpeg'; // par défaut
+            
+            // Vérifier le type MIME réel du fichier, pas juste l'extension
+            if (file.type) {
+                // Utiliser le type MIME du fichier si disponible
+                mimeType = file.type;
             } else {
-                const arrayBuffer = await file.arrayBuffer();
-                buffer = Buffer.from(arrayBuffer);
-                base64Image = buffer.toString('base64');
-                mimeType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+                // Fallback sur l'extension si pas de type MIME
+                const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+                if (fileExt === 'png') mimeType = 'image/png';
+                else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
+                else if (fileExt === 'webp') mimeType = 'image/webp';
+                else if (fileExt === 'gif') mimeType = 'image/gif';
+                else if (fileExt === 'bmp') mimeType = 'image/bmp';
+            }
 
-                 // Upload image to Cloudinary
-                 uploadResult = await new Promise((resolve, reject) => {
+            // Vérification additionnelle : détecter le type via les magic bytes
+            const uint8Array = new Uint8Array(arrayBuffer.slice(0, 4));
+            if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
+                mimeType = 'image/png';
+            } else if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8) {
+                mimeType = 'image/jpeg';
+            } else if (uint8Array[0] === 0x47 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46) {
+                mimeType = 'image/gif';
+            } else if (uint8Array[0] === 0x52 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x46) {
+                mimeType = 'image/webp';
+            }
+
+            console.log('Fichier:', file.name);
+            console.log('Type MIME fichier:', file.type);
+            console.log('Type MIME détecté:', mimeType);
+            console.log('Magic bytes:', Array.from(uint8Array).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '));
+
+            // 3. Upload vers Cloudinary pour stockage
+            let ticketUrl = '';
+            try {
+                const uploadResult = await new Promise((resolve, reject) => {
                     const uploadStream = cloudinary.uploader.upload_stream(
                         {
                             folder: 'concert-tickets-adrenaline',
@@ -112,34 +86,70 @@ export class OcrService {
                     );
                     uploadStream.end(buffer);
                 });
+                
+                ticketUrl = (uploadResult as any)?.secure_url || '';
+                console.log('Upload Cloudinary réussi:', ticketUrl);
+            } catch (uploadError) {
+                console.error('Erreur upload Cloudinary:', uploadError);
+                // On continue même si l'upload échoue
             }
 
-             // Upload to Cloudinary
-            //  let uploadResult;
-            //  try {
-            //      uploadResult = await new Promise((resolve, reject) => {
-            //          const uploadStream = cloudinary.uploader.upload_stream(
-            //              {
-            //                  folder: 'concert-tickets-adrenaline',
-            //                  resource_type: 'auto',
-            //              },
-            //              (error, result) => {
-            //                  if (error) reject(error);
-            //                  else resolve(result);
-            //              }
-            //          );
-            //          uploadStream.end(buffer);
-            //      });
-            //  } catch (uploadError) {
-            //      console.error('Erreur upload Cloudinary:', uploadError);
-            //      return {
-            //          success: false,
-            //          message: "Erreur lors du stockage de l'image",
-            //          errorType: 'UPLOAD_ERROR',
-            //          details: uploadError instanceof Error ? uploadError.message : 'Erreur inconnue'
-            //      };
-            //  }
- 
+            // 4. Appel à l'API Claude
+            console.log('=== PREPARATION APPEL CLAUDE ===');
+            console.log('API Key présente:', !!CLAUDE_API_KEY);
+            console.log('API Key début:', CLAUDE_API_KEY?.substring(0, 10) + '...');
+            
+            const claudePayload = {
+                model: "claude-sonnet-4-20250514", // Claude Sonnet 4 (nom correct)
+                max_tokens: 1024,
+                system: `Tu es un analyseur de billets de concert. Analyse l'image et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur.
+
+RÈGLES STRICTES:
+1. Si ce n'est PAS un billet de concert: réponds "NOT_TICKET"
+2. Si c'est une photo de personne: réponds "PHOTO_PERSONNE" 
+3. Si c'est un billet de concert VALIDE: réponds avec un objet JSON contenant les informations trouvées
+
+Format JSON attendu (inclure SEULEMENT les champs que tu trouves):
+{
+  "porte": "valeur trouvée",
+  "rang": "valeur trouvée", 
+  "place": "valeur trouvée",
+  "bloc": "valeur trouvée",
+  "gradin": "valeur trouvée",
+  "chaise": "valeur trouvée",
+  "siege": "valeur trouvée",
+  "entree": "valeur trouvée",
+  "niveau": "valeur trouvée",
+  "parterre": "valeur trouvée",
+  "tribune": "valeur trouvée"
+}
+
+IMPORTANT: 
+- Extraire UNIQUEMENT les valeurs, pas les labels
+- Si tu ne trouves aucune information de placement: réponds "INVALID_TICKET"
+- Pas de texte explicatif, SEULEMENT le JSON ou le message d'erreur`,
+
+                messages: [{
+                    role: "user",
+                    content: [
+                        {
+                            type: "text",
+                            text: "Analyse cette image de billet et réponds selon les règles définies."
+                        },
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: mimeType,
+                                data: base64Image
+                            }
+                        }
+                    ]
+                }]
+            };
+
+            console.log('Payload préparé, taille image base64:', base64Image.length);
+            console.log('URL API:', 'https://api.anthropic.com/v1/messages');
 
             const response = await axios({
                 method: 'post',
@@ -149,311 +159,224 @@ export class OcrService {
                     'x-api-key': CLAUDE_API_KEY,
                     'anthropic-version': '2023-06-01'
                 },
-                data: {
-                    model: "claude-3-opus-20240229",
-                    max_tokens: 1024,
-                                        system: "Tu es un expert en analyse de billets de concert. RÈGLES TRÈS STRICTES:\n\n"
-                           + "1. VALIDATION DU TYPE D'IMAGE:\n"
-                           + "   - Si c'est un logo/image d'entreprise: RÉPONDRE 'NOT_TICKET: Logo détecté'\n"
-                           + "   - Si c'est une photo de personne: RÉPONDRE 'PHOTO_PERSONNE: [description]'\n"
-                           + "   - Si ce n'est pas un billet: RÉPONDRE 'NOT_TICKET: [description]'\n\n"
-                           + "2. ANALYSE DES INFORMATIONS DE PLACEMENT:\n"
-                           + "   Format standard:\n"
-                           + "   * Date: extraire la date exacte (format JJ/MM/YYYY, DD.MM.YYYY, ou 'DD mois YYYY')\n"
-                           + "   * Formats de placement possibles (extraire tous les éléments présents):\n"
-                           + "     - TRIBUNE: 'TRIBUNE [type] [valeur]' (ex: TRIBUNE PORTE 1)\n"
-                           + "     - PARTERRE: 'PARTERRE IMPAIR OU PARTERRE [valeur] (ex: PARTERRE F2)'\n"
-                           + "     - GRADIN: 'GRADIN [numero] PORTE [valeur]'\n"
-                           + "     - ENTREE: 'ENTREE GRAND HALL'\n"
-                           + "     - NIVEAU: 'NIVEAU [valeur]'\n"
-                           + "     - BLOC: 'BLOC [valeur]'\n"
-                           + "     - ZONE: 'ZONE [valeur]'\n"
-                           + "     - CATEGORIE: 'CATEGORIE [Or/1/2/etc]' ou 'CAT [valeur]'\n"
-                           + "   * Pour le rang et la place:\n"
-                           + "     - Format standard: 'Rang [X] - Place [Y]'\n"
-                           + "     - Format simple: '[RANG] [PLACE]'\n"
-                           + "     - Format lettre/chiffre: accepter les deux\n"
-                           + "   * Extraire séparément:\n"
-                           + "     - tribune (si présent)\n"
-                           + "     - gradin (si présent)\n"
-                           + "     - niveau (si présent)\n"
-                           + "     - bloc (si présent)\n"
-                           + "     - categorie (si présent)\n"
-                           + "     - rang\n"
-                           + "     - place\n\n"
-                           + "3. RÈGLES D'EXTRACTION:\n"
-                           + "   - Extraire les valeurs EXACTES trouvées\n"
-                           + "   - Conserver la casse d'origine\n"
-                           + "   - Ne pas inclure les labels (Rang, Place, etc.)\n"
-                           + "   - Si un champ n'est pas présent, NE PAS l'inclure\n\n"
-                           + "4. RÉPONSE:\n"
-                           + "   - Billet valide: UNIQUEMENT objet JSON avec champs trouvés\n"
-                           + "   - Si informations manquantes: 'INVALID_TICKET: [détails]'\n\n"
-                           + "ATTENTION: EXTRAIRE UNIQUEMENT LES VALEURS, PAS LES LABELS.",
-                    messages: [{
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: "Analyse cette image et renvoie UNIQUEMENT le format de réponse spécifié, sans aucun texte explicatif."
-                            },
-                            {
-                                type: "image",
-                                source: {
-                                    type: "base64",
-                                    media_type: mimeType,
-                                    data: base64Image
-                                }
-                            }
-                        ]
-                    }]
+                data: claudePayload,
+                timeout: 30000, // 30 secondes de timeout
+                validateStatus: function (status) {
+                    // Accepter toutes les réponses pour les analyser
+                    return true;
                 }
-            })
+            });
 
-            const assistantMessage = response?.data?.content[0];
-            console.log('Réponse Claude:', assistantMessage);
+            console.log('=== REPONSE CLAUDE ===');
+            console.log('Status:', response.status);
+            console.log('Headers:', response.headers);
+            console.log('Data:', JSON.stringify(response.data, null, 2));
+            
+            // 5. Traitement de la réponse
+            if (response.status !== 200) {
+                console.error('=== ERREUR API CLAUDE ===');
+                console.error('Status:', response.status);
+                console.error('Response data:', response.data);
+                
+                return {
+                    success: false,
+                    message: `Erreur API Claude (${response.status})`,
+                    errorType: 'API_ERROR',
+                    details: JSON.stringify(response.data)
+                };
+            }
 
+            const assistantMessage = response?.data?.content?.[0];
             if (!assistantMessage?.text) {
+                console.error('=== REPONSE CLAUDE VIDE ===');
+                console.error('Structure response.data:', Object.keys(response.data || {}));
+                console.error('Content complet:', response.data?.content);
+                
                 return {
                     success: false,
-                    message: "Pas de réponse de l'IA",
+                    message: "L'API n'a pas retourné de réponse",
                     errorType: 'NO_AI_RESPONSE',
-                    details: "L'API n'a pas retourné de texte analysable"
+                    details: `Structure reçue: ${JSON.stringify(response.data)}`
                 };
             }
 
-            const cleanedText = assistantMessage.text.trim();
-            console.log('Cleaned text:', cleanedText);
+            const responseText = assistantMessage.text.trim();
+            console.log('Réponse Claude:', responseText);
 
-            if (cleanedText.startsWith('PHOTO_PERSONNE:')) {
-                const description = cleanedText.split('PHOTO_PERSONNE:')[1].trim();
+            // 6. Gestion des cas d'erreur
+            if (responseText === 'NOT_TICKET') {
                 return {
                     success: false,
-                    message: "L'image uploadée est une photo de personne. Veuillez fournir une photo de billet.",
-                    errorType: 'PHOTO_PERSONNE',
-                    details: description || "Photo de personne détectée"
+                    message: "L'image n'est pas un billet de concert valide",
+                    errorType: 'NOT_TICKET'
                 };
             }
 
-            if (cleanedText.startsWith('NOT_TICKET:')) {
-                const description = cleanedText.split('NOT_TICKET:')[1].trim();
+            if (responseText === 'PHOTO_PERSONNE') {
                 return {
                     success: false,
-                    message: "L'image n'est pas un billet. Veuillez fournir une photo de billet valide.",
-                    errorType: 'NOT_TICKET',
-                    details: description || "Document non reconnu comme billet"
+                    message: "L'image est une photo de personne, pas un billet",
+                    errorType: 'PHOTO_PERSONNE'
                 };
             }
 
-            if (cleanedText.startsWith('NOT_CONCERT_TICKET:')) {
-                const description = cleanedText.split('NOT_CONCERT_TICKET:')[1].trim();
+            if (responseText === 'INVALID_TICKET') {
                 return {
                     success: false,
-                    message: "L'image est un billet mais pas un billet de concert. Veuillez fournir un billet de concert valide.",
-                    errorType: 'NOT_CONCERT_TICKET',
-                    details: description || "Billet non reconnu comme billet de concert"
+                    message: "Le billet ne contient pas les informations de placement nécessaires",
+                    errorType: 'INVALID_TICKET'
                 };
             }
 
-            if (cleanedText.startsWith('INVALID_TICKET:')) {
-                const description = cleanedText.split('INVALID_TICKET:')[1].trim();
-                return {
-                    success: false,
-                    message: "Le billet ne contient pas clairement les informations de placement requises",
-                    errorType: 'INVALID_TICKET',
-                    details: description || "Informations de placement manquantes ou non explicites"
-                };
-            }
-
-            if (!cleanedText.startsWith('{')) {
-                return {
-                    success: false,
-                    message: "Format de réponse non reconnu",
-                    errorType: 'INVALID_RESPONSE_FORMAT',
-                    details: `Format de réponse inattendu: ${cleanedText.substring(0, 50)}...`
-                };
-            }
-
-            const jsonText = cleanedText.replace(/\n/g, '').replace(/'/g, '"');
-            let ticketInfo;
+            // 7. Parsing du JSON
+            let ticketData;
             try {
-                ticketInfo = JSON.parse(jsonText);
-            } catch (error) {
-                console.error('Erreur parsing JSON:', error);
+                // Nettoyer la réponse si nécessaire
+                let jsonText = responseText;
+                if (!jsonText.startsWith('{')) {
+                    // Chercher le premier { et dernier }
+                    const start = jsonText.indexOf('{');
+                    const end = jsonText.lastIndexOf('}');
+                    if (start !== -1 && end !== -1) {
+                        jsonText = jsonText.substring(start, end + 1);
+                    }
+                }
+                
+                ticketData = JSON.parse(jsonText);
+                console.log('Données extraites:', ticketData);
+                
+            } catch (parseError) {
+                console.error('Erreur parsing JSON:', parseError);
                 return {
                     success: false,
                     message: "Format de réponse invalide de l'IA",
-                    errorType: 'INVALID_AI_RESPONSE',
-                    details: `Erreur de parsing JSON: ${error instanceof Error ? error.message : 'Format invalide'}`
+                    errorType: 'PARSE_ERROR',
+                    details: `Réponse reçue: ${responseText.substring(0, 100)}...`
                 };
             }
 
-            if (!ticketInfo || typeof ticketInfo !== 'object') {
+            // 8. Validation et nettoyage des données
+            const cleanedData: Record<string, string> = {};
+            
+            // Ajouter l'URL du billet si disponible
+            if (ticketUrl) {
+                cleanedData.ticketUrl = ticketUrl;
+            }
+
+            // Nettoyer et valider chaque champ
+            const validFields = [
+                'porte', 'rang', 'place', 'bloc', 'gradin', 
+                'chaise', 'siege', 'entree', 'niveau', 
+                'parterre', 'tribune'
+            ];
+
+            for (const field of validFields) {
+                if (ticketData[field]) {
+                    const value = String(ticketData[field]).trim();
+                    if (value && value !== '' && value !== 'null' && value !== 'undefined') {
+                        cleanedData[field] = value;
+                    }
+                }
+            }
+
+            // 9. Vérification finale
+            if (Object.keys(cleanedData).filter(key => key !== 'ticketUrl').length === 0) {
                 return {
                     success: false,
-                    message: "Format de réponse invalide",
-                    errorType: 'INVALID_RESPONSE_FORMAT',
-                    details: "La réponse n'est pas un objet JSON valide"
+                    message: "Aucune information de placement trouvée sur le billet",
+                    errorType: 'NO_PLACEMENT_INFO'
                 };
             }
 
-            // if (!ticketInfo.porte || !ticketInfo.rang || !ticketInfo.place) {
-            //     const missingFields = [
-            //         !ticketInfo.porte ? 'porte' : null,
-            //         !ticketInfo.rang ? 'rang' : null,
-            //         !ticketInfo.place ? 'place' : null
-            //     ].filter(Boolean).join(', ');
-                
-            //     return {
-            //         success: false,
-            //         message: "Informations manquantes sur le billet",
-            //         errorType: 'MISSING_INFORMATION',
-            //         details: `Champs manquants: ${missingFields}`
-            //     };
-            // }
-
-            // const extractNumber = (value: string) => {
-            //     const matches = value.match(/\d+/);
-            //     return matches ? matches[0] : value;
-            // };
-
-            const ticketData: Record<string, string> = {};
-           
-            // Add available fields dynamically
-            if (ticketInfo.porte && ticketInfo.porte.trim()) {
-                ticketData.porte = String(ticketInfo.porte).trim();
-            }
-            if (ticketInfo.rang && ticketInfo.rang.trim()) {
-                ticketData.rang = String(ticketInfo.rang).replace(/Rang\s*/i, '').trim();
-            }
-            if (ticketInfo.place && ticketInfo.place.trim()) {
-                ticketData.place = String(ticketInfo.place).trim();
-            }
-            if (uploadResult?.secure_url) {
-                ticketData.ticketUrl = uploadResult.secure_url;
-            }
-            if (ticketInfo.niveau && ticketInfo.niveau.trim()) {
-                ticketData.niveau = String(ticketInfo.niveau).trim();
-            }
-            if (ticketInfo.bloc && ticketInfo.bloc.trim()) {
-                ticketData.bloc = String(ticketInfo.bloc).trim();
-            }
-            if (ticketInfo.gradin && ticketInfo.gradin.trim()) {
-                ticketData.gradin = String(ticketInfo.gradin).trim();
-            }
-            if (ticketInfo.chaise && ticketInfo.chaise.trim()) {
-                ticketData.chaise = String(ticketInfo.chaise).trim();
-            }
-            if (ticketInfo.siege && ticketInfo.siege.trim()) {
-                ticketData.siege = String(ticketInfo.siege).trim();
-            }
-            if (ticketInfo.entree && ticketInfo.entree.trim()) {
-                ticketData.entree = String(ticketInfo.entree).trim();
-            }
-            if (ticketInfo.parterre && ticketInfo.parterre.trim()) {
-
-                const parterreValue = String(ticketInfo.parterre).trim();
-
-                if (parterreValue.toLowerCase().startsWith('bloc')) {
-                    const blocMatch = parterreValue.match(/bloc\s+([A-Z0-9]+)/i);
-                    if (blocMatch) {
-                        ticketData.bloc = blocMatch[1];
-                    }
-                } else {
-                    ticketData.parterre = parterreValue;
-                }
-            }
-            if (ticketInfo.tribune && ticketInfo.tribune.trim()) {
-                ticketData.tribune = String(ticketInfo.tribune).trim();
-            }
-            if (ticketInfo.zone && ticketInfo.zone.trim()) {
-                ticketData.zone = String(ticketInfo.zone).trim();
-            }
-
-
-            // Add date parsing logic before adding to ticketData
-            if (ticketInfo.date && ticketInfo.date.trim()) {
-                const dateStr = ticketInfo.date.trim()
-                    .replace(/ [AÀ] \d{1,2}[H]\d{0,2}/i, '')  // Remove time part if exists
-                    .replace(/^(LUNDI|MARDI|MERCREDI|JEUDI|VENDREDI|SAMEDI|DIMANCHE)\s*/i, ''); // Remove day name if exists
-                let parsedDate: Date | null = null;
-
-                // Try different date formats
-                const dateFormats = [
-                    'dd/MM/yyyy',
-                    'dd-MM-yyyy',
-                    'dd.MM.yyyy',      // Added dot format
-                    'd MMMM yyyy',      // For "8 MARS 2026"
-                    'dd MMMM yyyy'      // For "08 MARS 2026"
-                ];
-
-                for (const format of dateFormats) {
-                    try {
-                        const attemptedParse = parse(dateStr, format, new Date(), { locale: fr });
-                        console.log('Attempting format:', format, 'with date:', dateStr);
-                        if (isValid(attemptedParse)) {
-                            parsedDate = attemptedParse;
-                            console.log('Successfully parsed date:', parsedDate);
-                            break;
-                        }
-                    } catch (error) {
-                        continue;
-                    }
-                }
-
-                if (parsedDate) {
-                    // Get the most recent event
-                    // Get the closest event (including today)
-                   
-
-                    console.log('teste ===>  ' +JSON.stringify(latestEvent));
-                   
-                        if(latestEvent){
-                            console.log('event date ==>', format(new Date(latestEvent.eventDate), 'yyyy-MM-dd HH:mm:ss'));
-                            console.log('parsed date ==>', format(parsedDate, 'yyyy-MM-dd HH:mm:ss'));
-                        }
-
-                    if (latestEvent && isSameDay(parsedDate, new Date(latestEvent.eventDate))) {
-
-                        ticketData.date = format(parsedDate, 'yyyy-MM-dd');
-                        ticketData.eventId = latestEvent.id;
-                    } else {
-                        return {
-                            success: false,
-                            message: "Il semble que la date de concert mentionnée sur votre billet ne correspond pas à celle du formulaire actuellement ouvert ",
-                            errorType: 'INVALID_DATE',
-                            details: "Veuillez vérifier que le billet correspond à l'événement en cours"
-                        };
-                    }
-                }
-            }
-
-             // Check if we have at least some basic information
-             if (Object.keys(ticketData).length === 0) {
-                return {
-                    success: false,
-                    message: "Aucune information valide trouvée sur le billet",
-                    errorType: 'NO_VALID_INFO',
-                    details: "Impossible d'extraire des informations valides du billet"
-                };
-            }
+            console.log('=== ANALYSE REUSSIE ===');
+            console.log('Données finales:', cleanedData);
 
             return {
                 success: true,
-                data: ticketData
+                data: cleanedData
             };
 
-        } catch (error: unknown) {
-            console.error('Erreur complète:', error);
-            const errorMessage = error instanceof Error ? error.message : 
-                (error as { response?: { data: any } })?.response?.data || 'Erreur inconnue';
+        } catch (error: any) {
+            console.error('=== ERREUR OCR COMPLETE ===');
+            console.error('Type erreur:', typeof error);
+            console.error('Message:', error.message);
+            console.error('Stack:', error.stack);
             
-            return {
-                success: false,
-                message: "Erreur lors de l'analyse du billet",
-                details: `Erreur technique: ${errorMessage}`,
-                errorType: 'AI_ANALYSIS_ERROR'
-            };
+            // Logs détaillés pour les erreurs axios
+            if (error.response) {
+                console.error('=== ERREUR RESPONSE ===');
+                console.error('Status:', error.response.status);
+                console.error('Status Text:', error.response.statusText);
+                console.error('Headers:', error.response.headers);
+                console.error('Data:', error.response.data);
+                console.error('Config URL:', error.config?.url);
+                console.error('Config Method:', error.config?.method);
+                console.error('Config Headers:', error.config?.headers);
+                
+                const status = error.response.status;
+                const errorData = error.response.data;
+                
+                if (status === 400) {
+                    return {
+                        success: false,
+                        message: "Erreur dans la requête envoyée à l'API d'analyse",
+                        errorType: 'API_BAD_REQUEST',
+                        details: `Status 400 - Data: ${JSON.stringify(errorData)}`
+                    };
+                } else if (status === 401) {
+                    return {
+                        success: false,
+                        message: "Erreur d'authentification avec le service d'analyse",
+                        errorType: 'API_AUTH_ERROR',
+                        details: `Status 401 - Vérifiez votre clé API Claude`
+                    };
+                } else if (status === 404) {
+                    return {
+                        success: false,
+                        message: "URL de l'API introuvable",
+                        errorType: 'API_NOT_FOUND',
+                        details: `Status 404 - URL: ${error.config?.url} - Data: ${JSON.stringify(errorData)}`
+                    };
+                } else if (status === 429) {
+                    return {
+                        success: false,
+                        message: "Trop de requêtes, veuillez réessayer dans quelques instants",
+                        errorType: 'API_RATE_LIMIT',
+                        details: `Status 429 - Data: ${JSON.stringify(errorData)}`
+                    };
+                } else if (status >= 500) {
+                    return {
+                        success: false,
+                        message: "Erreur temporaire du service d'analyse, veuillez réessayer",
+                        errorType: 'API_SERVER_ERROR',
+                        details: `Status ${status} - Data: ${JSON.stringify(errorData)}`
+                    };
+                } else {
+                    return {
+                        success: false,
+                        message: `Erreur API inconnue (${status})`,
+                        errorType: 'API_UNKNOWN_ERROR',
+                        details: `Status ${status} - Data: ${JSON.stringify(errorData)}`
+                    };
+                }
+            } else if (error.request) {
+                console.error('=== ERREUR REQUEST ===');
+                console.error('Request:', error.request);
+                return {
+                    success: false,
+                    message: "Impossible de joindre le service d'analyse",
+                    errorType: 'NETWORK_ERROR',
+                    details: `Erreur réseau: ${error.message} - Code: ${error.code || 'N/A'}`
+                };
+            } else {
+                console.error('=== ERREUR SETUP ===');
+                return {
+                    success: false,
+                    message: "Erreur de configuration",
+                    errorType: 'SETUP_ERROR',
+                    details: `Erreur: ${error.message}`
+                };
+            }
         }
     }
 }

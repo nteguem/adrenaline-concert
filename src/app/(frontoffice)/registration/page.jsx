@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import LogoHeader from "@/components/common/LogoHeader";
 import Input from "@/components/common/Input";
@@ -30,19 +30,6 @@ export default function RegistrationPage() {
     santéOk: false,
     cgu: false,
     acc: false,
-    porte: "",
-    place: "",
-    rang: "",
-    bloc: "",
-    gradin: "",
-    chaise: "",
-    siege: "",
-    entree: "",
-    niveau: "",
-    parterre: "",
-    tribune: "",
-    categorie: "",
-    textInfo: "",
   });
   const [formStep, setFormStep] = useState(1);
   const [ticketImage, setTicketImage] = useState(null);
@@ -56,26 +43,10 @@ export default function RegistrationPage() {
   });
   const [ocrLoad, setOcrLoad] = useState(false);
   const [ocrErrorMessage, setOcrErrorMessage] = useState("");
-  const [isManual, setIsManual] = useState(false);
-  const [errorCount, setErrorCount] = useState(0);
+  const [billetNonReconnu, setBilletNonReconnu] = useState(false);
+  const [uploadAttempts, setUploadAttempts] = useState(0);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
-  const [ticketUrl, setTicketUrl] = useState(null);
   let formattedDate = null;
-
-  useEffect(() => {
-    const increment = () => {
-      if (errorCount >= 2) {
-        setIsManual(true);
-        setErrorModal({
-          isOpen: true,
-          title: "Lecture billet impossible",
-          message: "Veuillez remplir les champs du billet manuellement.",
-          type: "error",
-        });
-      }
-    };
-    increment();
-  }, [errorCount]);
 
   const hasDatePassed = (startDate) => {
     const currentDate = new Date();
@@ -88,6 +59,7 @@ export default function RegistrationPage() {
     );
     return currentDate < tourDate;
   };
+
   const range = (start, end, step = 1) => {
     const output = [];
     for (let i = start; i < end; i += step) {
@@ -95,6 +67,7 @@ export default function RegistrationPage() {
     }
     return output;
   };
+
   const years = range(1990, getYear(new Date()) + 1, 1);
   const months = [
     "Janvier",
@@ -120,26 +93,22 @@ export default function RegistrationPage() {
       tourDate.getSeconds(),
       0
     );
-    // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
+
   const customdateFormat = (passedDate) => {
-    // console.log(passedDate);
     const date = new Date(passedDate?.eventDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const year = date.getUTCFullYear(); // Get full year
-
-    // Format to dd.mm.yyyy
+    const year = date.getUTCFullYear();
     const returnDate = `${day}.${month}.${year}`;
-    // console.log("formatted date:", returnDate);
     return returnDate;
   };
+
   let eventId = null;
 
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (data) {
-    // console.log("data length", data?.data?.tours.length);
     eventId = data.data?.tours[0]?.nextEvent.id;
     if (data?.data?.tours.length > 0) {
       if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
@@ -170,48 +139,84 @@ export default function RegistrationPage() {
   };
 
   const handleFileSelect = async (dataUrl, fileName = "") => {
-    // Le composant FileUpload nous renvoie déjà un dataURL
     setTicketImage(dataUrl);
     if (fileName) {
       setTicketFileName(fileName);
     }
     setOcrLoad(true);
     setOcrErrorMessage("");
+    
+    // Incrémenter IMMEDIATEMENT le compteur
+    const newAttempts = uploadAttempts + 1;
+    setUploadAttempts(newAttempts);
+    
     try {
-      // Create a FormData object
       const formData = new FormData();
-
-      // Convert dataUrl to a Blob
       const response = await fetch(dataUrl);
       const blob = await response.blob();
-
-      // Append the Blob to the FormData object
       formData.append("file", blob, fileName || "uploaded-image.png");
 
-      // Make the API request
       const apiResponse = await fetch("/api/ocr", {
         method: "POST",
         body: formData,
       });
+      
       const result = await apiResponse.json();
-      // console.log("ticketUrl:", result);
-      // Check for a successful response
-      if (!apiResponse.ok) {
-        setErrorCount(errorCount + 1);
-        setOcrErrorMessage(
-          result?.message || "Erreur lors de l'analyse du billet"
-        );
-        throw new Error("Network response was not ok");
+      
+      if (!apiResponse.ok || !result?.success) {
+        // ECHEC
+        setOcrLoad(false);
+        setOcrErrorMessage("L'analyse du billet n'a pas pu s'effectuer correctement");
+        
+        // Vérifier si on a atteint 2 tentatives
+        if (newAttempts >= 2) {
+          setBilletNonReconnu(true);
+          setErrorModal({
+            isOpen: true,
+            title: "Billet non reconnu",
+            message: "Ton billet n'a pas été reconnu par le formulaire. Pas d'inquiétude : si tu fais partie des gagnants, pense à te munir de ton billet lors du brief avec les équipes techniques.",
+            type: "info",
+          });
+        }
+        return;
       }
 
-      if (result?.success === true) {
-        setOcrData(result?.data);
-        setOcrLoad(false);
-      }
-      // Handle the result as needed
+      // SUCCES
+      setOcrData(result?.data);
+      setOcrLoad(false);
+      setOcrErrorMessage("");
+      // On garde le compteur mais on enlève pas les erreurs en cas de succès
+      
     } catch (error) {
       console.error("Error fetching OCR:", error);
+      setOcrLoad(false);
+      setOcrErrorMessage("L'analyse du billet n'a pas pu s'effectuer correctement");
+      
+      // Vérifier si on a atteint 2 tentatives
+      if (newAttempts >= 2) {
+        setBilletNonReconnu(true);
+        setErrorModal({
+          isOpen: true,
+          title: "Billet non reconnu",
+          message: "Ton billet n'a pas été reconnu par le formulaire. Pas d'inquiétude : si tu fais partie des gagnants, pense à te munir de ton billet lors du brief avec les équipes techniques.",
+          type: "info",
+        });
+      }
     }
+  };
+
+  // Fonction pour calculer l'âge
+  const calculateAge = (birthDate) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
   };
 
   const validateForm = () => {
@@ -231,17 +236,17 @@ export default function RegistrationPage() {
       });
       return false;
     }
-    if (isManual) {
-      console.log("is manual");
-      if (!formData.chaise || !formData.entree || !formData.siege) {
-        setErrorModal({
-          isOpen: true,
-          title: "Formulaire incomplet",
-          message: "Merci de remplir toutes les cases.",
-          type: "error",
-        });
-        return false;
-      }
+
+    // Vérifier l'âge (doit avoir 18 ans ou plus)
+    const age = calculateAge(formData.dateNaissance);
+    if (age < 18) {
+      setErrorModal({
+        isOpen: true,
+        title: "Âge insuffisant",
+        message: "Il semble que tu ne sois pas encore majeur(e). Malheureusement, l'inscription est réservée aux personnes de 18 ans et plus.",
+        type: "error",
+      });
+      return false;
     }
 
     // Vérifier le format de l'email
@@ -256,36 +261,33 @@ export default function RegistrationPage() {
       return false;
     }
 
-    // Vérifier si le billet a été importé
-    if (!ticketImage) {
+    // LE BILLET N'EST PLUS REQUIRED SI billetNonReconnu = true
+    if (!billetNonReconnu && !ticketImage) {
       setErrorModal({
         isOpen: true,
         title: "Billet manquant",
-        message: "",
+        message: "Veuillez importer votre billet.",
         type: "error",
       });
       return false;
     }
 
-    // Si tout est valide, passer à l'étape suivante
     return true;
   };
 
   const handleNextStep = () => {
     if (formStep === 1 && validateForm()) {
-      // Si le formulaire est valide, on passe directement à l'étape de confirmation
       setFormStep(2);
     }
   };
 
   const formatDate = (date) => {
-    return date.toISOString().split("T")[0]; // retourne 'yyyy-MM-dd'
+    return date.toISOString().split("T")[0];
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Vérifier que toutes les conditions sont acceptées
     if (!formData.cgu) {
       setErrorModal({
         isOpen: true,
@@ -302,32 +304,30 @@ export default function RegistrationPage() {
         email: formData.email,
         telephone: formData.telephone,
         eventId: eventId,
-        porte: isManual ? formData.porte : ocrData?.porte,
-        rang: isManual ? formData.rang : ocrData?.rang,
-        place: isManual ? formData.place : ocrData?.place,
-        bloc: isManual ? formData.bloc : ocrData?.bloc,
-        gradin: isManual ? formData.gradin : ocrData?.gradin,
-        chaise: isManual ? formData.chaise : ocrData?.chaise,
-        siege: isManual ? formData.siege : ocrData?.siege,
-        entree: isManual ? formData.entree : ocrData?.entree,
-        niveau: isManual ? formData.niveau : ocrData?.niveau,
-        parterre: isManual ? formData.parterre : ocrData?.parterre,
-        tribune: isManual ? formData.tribune : ocrData?.tribune,
-        ticketUrl: ocrData?.ticketUrl,
-        textInfo: isManual ? formData.textInfo : "",
+        porte: billetNonReconnu ? "" : (ocrData?.porte || ""),
+        rang: billetNonReconnu ? "" : (ocrData?.rang || ""),
+        place: billetNonReconnu ? "" : (ocrData?.place || ""),
+        bloc: billetNonReconnu ? "" : (ocrData?.bloc || ""),
+        gradin: billetNonReconnu ? "" : (ocrData?.gradin || ""),
+        chaise: billetNonReconnu ? "" : (ocrData?.chaise || ""),
+        siege: billetNonReconnu ? "" : (ocrData?.siege || ""),
+        entree: billetNonReconnu ? "" : (ocrData?.entree || ""),
+        niveau: billetNonReconnu ? "" : (ocrData?.niveau || ""),
+        parterre: billetNonReconnu ? "" : (ocrData?.parterre || ""),
+        tribune: billetNonReconnu ? "" : (ocrData?.tribune || ""),
+        ticketUrl: ocrData?.ticketUrl || "",
+        textInfo: billetNonReconnu ? "Billet non reconnu par OCR" : "",
       };
+      
       const response = await fetch("/api/participants_fo", {
         method: "POST",
         body: JSON.stringify(postBody),
       });
 
-      // Handle response if necessary
       const data = await response.json();
-      // console.log("response from push participant", data);
     }
 
     if (formStep === 2) {
-      // Toutes les conditions sont acceptées, rediriger vers la page de confirmation
       router.push("/confirmation");
     }
   };
@@ -336,7 +336,6 @@ export default function RegistrationPage() {
     setErrorModal({ ...errorModal, isOpen: false });
   };
 
-  // Solution: Créer un composant d'aperçu de ticket personnalisé qui utilise directement ticketImage
   const TicketPreview = () => {
     if (!ticketImage) return null;
 
@@ -350,13 +349,12 @@ export default function RegistrationPage() {
               className="w-full h-full object-contain"
             />
           </div>
-
           <div className="flex-grow">
             <p className="font-medium text-blue-800 truncate">
               {ticketFileName || "Billet"}
             </p>
             <p className="text-sm text-blue-600 flex items-center">
-              Billet importé
+              {billetNonReconnu ? "Billet non reconnu" : "Billet importé"}
             </p>
           </div>
         </div>
@@ -368,7 +366,6 @@ export default function RegistrationPage() {
     switch (formStep) {
       case 1:
         return (
-          // Étape 1: Formulaire d'inscription avec upload de billet intégré
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -389,20 +386,23 @@ export default function RegistrationPage() {
               onChange={handleInputChange}
               className="mb-0 h-50 w-full"
             />
-            {/* <Input
-              type="date"
-              placeholder="DATE DE NAISSANCE"
-              name="dateNaissance"
-              value={formData.dateNaissance}
-              onChange={handleInputChange}
-              className="text-white h-50 w-full"
-            /> */}
             <div className="w-full">
               <DatePicker
                 selected={formData.dateNaissance}
-                onChange={(date) =>
-                  setFormData({ ...formData, dateNaissance: date })
-                }
+                onChange={(date) => {
+                  setFormData({ ...formData, dateNaissance: date });
+                  if (date) {
+                    const age = calculateAge(date);
+                    if (age < 18) {
+                      setErrorModal({
+                        isOpen: true,
+                        title: "Âge insuffisant",
+                        message: "Il semble que tu ne sois pas encore majeur(e). Malheureusement, l'inscription est réservée aux personnes de 18 ans et plus.",
+                        type: "error",
+                      });
+                    }
+                  }
+                }}
                 placeholderText="DATE DE NAISSANCE"
                 name="dateNaissance"
                 dateFormat={"dd/MM/yyyy"}
@@ -483,101 +483,7 @@ export default function RegistrationPage() {
               onChange={handleInputChange}
               className="h-50 w-full"
             />
-            {isManual && (
-              <p>
-                Merci de remplir ci-dessous les informations de placement qui se
-                trouvent sur votre billet
-              </p>
-            )}
-            {isManual && (
-              <>
-                <div className="flex justify-between">
-                  <Input
-                    placeholder="siege"
-                    name="siege"
-                    value={formData.siege}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="chaise"
-                    name="chaise"
-                    value={formData.chaise}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="entree"
-                    name="entree"
-                    value={formData.entree}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                </div>
-                <div className="flex justify-between">
-                  <Input
-                    placeholder="porte"
-                    name="porte"
-                    value={formData.porte}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="parterre"
-                    name="parterre"
-                    value={formData.parterre}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="rang"
-                    name="rang"
-                    value={formData.rang}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                </div>
-                <div className="flex justify-between">
-                  <Input
-                    placeholder="gradin"
-                    name="gradin"
-                    value={formData.gradin}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="bloc"
-                    name="bloc"
-                    value={formData.bloc}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="place"
-                    name="place"
-                    value={formData.place}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                </div>
-                <div className="flex justify-between">
-                  <Input
-                    placeholder="tribune"
-                    name="tribune"
-                    value={formData.tribune}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                  <Input
-                    placeholder="niveau"
-                    name="niveau"
-                    value={formData.niveau}
-                    onChange={handleInputChange}
-                    className="mb-0 h-50 max-w-[25%]"
-                  />
-                </div>
-              </>
-            )}
+
             <Checkbox
               label="J'ACCEPTE DE RECEVOIR DES INFORMATIONS CONCERNANT ADRENALINE TOUR"
               checked={formData.confirmePresence}
@@ -585,62 +491,98 @@ export default function RegistrationPage() {
               name="confirmePresence"
             />
 
-            <div className="mt-6 mb-4">
-              {/* <p className="text-green-400 text-center mb-2">
-                Veuillez importer votre billet de concert
-              </p> */}
-              {!ticketImage ? (
-                <FileUpload
-                  onFileSelect={(dataUrl, fileName) =>
-                    handleFileSelect(dataUrl, fileName)
-                  }
-                  initialPreview={ticketImage}
-                  initialFileName={ticketFileName}
-                />
-              ) : (
-                !isManual && <TicketPreview />
-              )}
+            {/* SECTION BILLET - Disparaît complètement si billet non reconnu */}
+            {!billetNonReconnu && (
+              <div className="mt-6 mb-4">
+                {!ticketImage ? (
+                  <FileUpload
+                    onFileSelect={(dataUrl, fileName) =>
+                      handleFileSelect(dataUrl, fileName)
+                    }
+                    initialPreview={ticketImage}
+                    initialFileName={ticketFileName}
+                  />
+                ) : (
+                  <TicketPreview />
+                )}
 
-              {ticketImage && !isManual && (
-                <div className="flex justify-center mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setTicketImage(null)}
-                    className="text-sm text-blue-500 hover:text-blue-700"
-                  >
-                    Changer de billet
-                  </button>
-                </div>
-              )}
-            </div>
+                {ticketImage && (
+                  <div className="flex justify-center mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicketImage(null);
+                        setOcrData(null);
+                        setOcrLoad(false);
+                        setOcrErrorMessage("");
+                        // NE PAS remettre à zéro les tentatives pour éviter le spam
+                      }}
+                      className="text-sm text-blue-500 hover:text-blue-700"
+                    >
+                      Changer de billet
+                    </button>
+                  </div>
+                )}
+
+                {/* Message d'erreur OCR EN ROUGE */}
+                {ocrErrorMessage && (
+                  <div className="text-center mt-4">
+                    <p className="text-red-500 text-sm">{ocrErrorMessage}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Message informatif pour billet non reconnu */}
+            {billetNonReconnu && (
+              <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded mt-6">
+                <p className="text-sm">
+                  <strong>Information :</strong> Ton billet n'a pas été reconnu par le formulaire. Pas d'inquiétude : si tu fais partie des gagnants, pense à te munir de ton billet lors du brief avec les équipes techniques.
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 flex justify-center">
               {ocrLoad ? (
-                <>
-                  {ocrErrorMessage && !isManual ? (
-                    <p className="text-danger">{ocrErrorMessage}</p>
-                  ) : (
-                    !isManual && <div>chargement des infos du billet ...</div>
-                  )}
-                </>
+                <div className="text-center text-white">
+                  <div>Chargement des infos du billet...</div>
+                </div>
               ) : (
                 <Button type="submit">CONTINUEZ</Button>
               )}
-              {isManual && <Button type="submit">CONTINUEZ</Button>}
             </div>
           </form>
         );
       case 2:
         return (
-          // Étape 2: Confirmation et conditions
           <form onSubmit={handleSubmit}>
             <div className="mb-8">
-              <TicketPreview />
+              {ticketImage && <TicketPreview />}
               <div className="text-center text-sm mb-4">
-                <p className="font-bold">DATE - VILLE</p>
-                <p>PORTE {isManual ? formData.porte : ocrData?.porte}</p>
-                <p>RANG {isManual ? formData.rang : ocrData?.rang}</p>
-                <p>PLACE {isManual ? formData.place : ocrData?.place}</p>
+                {!billetNonReconnu && ocrData ? (
+                  <div>
+                    {/* Affichage 100% dynamique de tous les champs présents */}
+                    {Object.entries(ocrData)
+                      .filter(([key, value]) => key !== 'ticketUrl' && value && value.trim() !== '')
+                      .map(([key, value]) => (
+                        <p key={key}>
+                          {key.toUpperCase()} {value}
+                        </p>
+                      ))}
+                    
+                    {/* Si aucun champ de placement n'est présent */}
+                    {Object.entries(ocrData).filter(([key, value]) => key !== 'ticketUrl' && value && value.trim() !== '').length === 0 && (
+                      <p>Informations du billet en cours de traitement</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-blue-600 font-medium">
+                    {billetNonReconnu 
+                      ? "Informations du billet à vérifier lors du brief"
+                      : "Informations du billet en cours de traitement"
+                    }
+                  </p>
+                )}
               </div>
             </div>
 
@@ -655,7 +597,7 @@ export default function RegistrationPage() {
             </div>
 
             <div className="mt-8 flex justify-center items-center">
-              <Button type="submit" desabled>
+              <Button type="submit">
                 JE TENTE MA CHANCE
               </Button>
             </div>

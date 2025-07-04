@@ -10,24 +10,26 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
+  background: linear-gradient(to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+      rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
   height: 100vh;
   overflow-x: hidden !important;
 
 }
 
 @layer base {
-  h1, h2, h3 {
+
+  h1,
+  h2,
+  h3 {
     font-family: var(--font-din);
     text-transform: uppercase;
   }
-  
-  body, button, input {
+
+  body,
+  button,
+  input {
     font-family: var(--font-din);
   }
 }
@@ -36,11 +38,11 @@ body {
   .btn-primary {
     @apply bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 w-full rounded transition-colors;
   }
-  
+
   .btn-secondary {
     @apply bg-blue-300 hover:bg-blue-200 text-white font-bold py-2 px-4 w-full rounded transition-colors;
   }
-  
+
   .input-field {
     @apply bg-blue-600 text-white w-full rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-300;
   }
@@ -48,11 +50,17 @@ body {
 
 /* Animation pour le fond bleu DnB */
 .dnb-bg {
-    background-image: url('/m_bleu_transparent.gif');
-    background-size: 50%;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
+  background-image: url('/m_bleu_transparent.gif');
+  background-size: 40%;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -webkit-backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
 
 .dnb-bg::before {
   content: '';
@@ -72,10 +80,12 @@ body {
     opacity: 0.1;
     transform: scale(0.8);
   }
+
   50% {
     opacity: 0.3;
     transform: scale(1.2);
   }
+
   100% {
     opacity: 0.1;
     transform: scale(0.8);
@@ -117,22 +127,27 @@ body {
     transform: translate(0);
     opacity: 0.5;
   }
+
   20% {
     transform: translate(-3px, 2px);
     opacity: 0.7;
   }
+
   40% {
     transform: translate(-2px, -2px);
     opacity: 0.6;
   }
+
   60% {
     transform: translate(3px, 1px);
     opacity: 0.8;
   }
+
   80% {
     transform: translate(2px, -1px);
     opacity: 0.7;
   }
+
   100% {
     transform: translate(0);
     opacity: 0.5;
@@ -155,7 +170,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0) 100%);
   animation: heartbeat-pulse 1.5s infinite;
   pointer-events: none;
 }
@@ -164,6 +179,7 @@ body {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -197,9 +213,11 @@ body {
   0% {
     opacity: 0.2;
   }
+
   50% {
     opacity: 0.5;
   }
+
   100% {
     opacity: 0.2;
   }
@@ -236,13 +254,16 @@ body {
 .text-danger {
   color: #f55 !important
 }
+
 input.h-50 {
   height: 50px !important;
 }
+
 .react-datepicker-wrapper {
   width: 100% !important;
 
 }
+
 .react-datepicker-popper {
   z-index: 9999 !important;
 }
@@ -251,9 +272,11 @@ input.h-50 {
   0% {
     box-shadow: 0 0 0 0 rgba(0, 186, 255, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 15px rgba(0, 186, 255, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(0, 186, 255, 0);
   }

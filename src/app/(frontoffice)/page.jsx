@@ -12,6 +12,7 @@ import Checkbox from "@/components/common/Checkbox";
 import PopupModal from "@/components/common/PopupModal";
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
+
 export default function HomePage() {
   const router = useRouter();
   const [isClicked, setIsClicked] = useState(false);
@@ -30,6 +31,7 @@ export default function HomePage() {
     message: "",
     type: "error",
   });
+  
   const closeModal = () => {
     setErrorModal({ ...errorModal, isOpen: false });
   };
@@ -59,6 +61,7 @@ export default function HomePage() {
     );
     return currentDate > tourDate;
   };
+
   const customdateFormat = (passedDate) => {
     // console.log(passedDate);
     const date = new Date(passedDate?.eventDate);
@@ -86,6 +89,7 @@ export default function HomePage() {
       return;
     }
   };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
@@ -134,6 +138,7 @@ export default function HomePage() {
 
   return (
     <main
+      style={{ paddingTop: '150px' }}
       className={`
         ${din.variable} 
         min-h-screen 
@@ -142,9 +147,8 @@ export default function HomePage() {
         flex 
         items-center 
         justify-center 
-        p-4 
-        md:p-6
-        pt-20  // Ajoutez ce padding pour compenser l'en-tête fixe
+        p-2 
+        md:p-4
       `}
     >
       <div
@@ -167,61 +171,109 @@ export default function HomePage() {
               date={formattedDate}
               venue={data?.data?.tours[0]?.name}
             />
-            <div className="w-full max-w-md mx-auto mt-[40%]">
-              <div className="mb-8">
+            <div className="w-full max-w-md mx-auto mt-4">
+              <div className="mb-4">
                 <p
-                  className={`${din.className} text-4xl md:text-2xl font-bold text-white mb-6`}
+                  className={`${din.className} text-4xl md:text-3xl font-bold text-white mb-3`}
                 >
                   ADRÉNALINE MAX
                 </p>
-                <p className="text-base md:text-lg text-white mb-2">
+                <p className="text-sm md:text-base text-white mb-2">
                   TENTEZ DE VIVRE L'EXPERIENCE
                 </p>
               </div>
+              
               <form onSubmit={handleSubmit}>
-                <div className="space-y-3 px-3">
-                  <Checkbox
-                    label="Je certifie avoir + de 18 ans pour participer au concours"
-                    name="age"
-                    onChange={handleInputChange}
-                    checked={formData.age || false}
-                    className="w-full"
-                  />
-                  <Checkbox
-                    label="J'atteste ne pas avoir de contre indication médicale pour participer à l'Adrénaline MAX"
-                    name="santéOk"
-                    subLabel=" ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)"
-                    linkText="voir les conditions"
-                    onChange={handleInputChange}
-                    checked={formData.santéOk || false}
-                    className="w-full "
-                  />
-                  <Checkbox
-                    label="J'accepte les conditions générales"
-                    name="cgu"
-                    linkText="voir conditions et règlement"
-                    onChange={handleInputChange}
-                    checked={formData.cgu || false}
-                    className="w-full"
-                  />
-                  <Checkbox
-                    label="MES INFORMATIONS SONT CORRECTES"
-                    name="acc"
-                    onChange={handleInputChange}
-                    checked={formData.acc || false}
-                    className="w-full"
-                  />
+                <div className="space-y-3 px-3 mb-4">
+                  <div className="flex gap-3 w-full">
+                    <input
+                      type="checkbox"
+                      name="age"
+                      checked={formData.age || false}
+                      onChange={handleInputChange}
+                      className="mt-0.5 flex-shrink-0 w-4 h-4"
+                    />
+                    <div className="flex-1 text-left">
+                      <label className="text-white text-sm md:text-base leading-tight block">
+                        Je certifie avoir + de 18 ans pour participer au concours
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 w-full">
+                    <input
+                      type="checkbox"
+                      name="santéOk"
+                      checked={formData.santéOk || false}
+                      onChange={handleInputChange}
+                      className="mt-0.5 flex-shrink-0 w-4 h-4"
+                    />
+                    <div className="flex-1 text-left">
+                      <label className="text-white text-sm md:text-base leading-tight block">
+                        J'atteste ne pas avoir de contre indication médicale pour participer à l'Adrénaline MAX
+                      </label>
+                      <div className="text-gray-300 text-xs mt-1 leading-tight">
+                        ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)
+                      </div>
+                      <div className="mt-1">
+                        <button 
+                          type="button" 
+                          className="text-blue-400 text-xs underline hover:text-blue-300"
+                        >
+                          voir les conditions
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 w-full">
+                    <input
+                      type="checkbox"
+                      name="cgu"
+                      checked={formData.cgu || false}
+                      onChange={handleInputChange}
+                      className="mt-0.5 flex-shrink-0 w-4 h-4"
+                    />
+                    <div className="flex-1 text-left">
+                      <label className="text-white text-sm md:text-base leading-tight block">
+                        J'accepte les conditions générales
+                      </label>
+                      <div className="mt-1">
+                        <button 
+                          type="button" 
+                          className="text-blue-400 text-xs underline hover:text-blue-300"
+                        >
+                          voir conditions et règlement
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 w-full">
+                    <input
+                      type="checkbox"
+                      name="acc"
+                      checked={formData.acc || false}
+                      onChange={handleInputChange}
+                      className="mt-0.5 flex-shrink-0 w-4 h-4"
+                    />
+                    <div className="flex-1 text-left">
+                      <label className="text-white text-sm md:text-base leading-tight block">
+                        Mes informations sont correctes
+                      </label>
+                    </div>
+                  </div>
                 </div>
+
                 <HeartbeatButton
                   onClick={handleClick}
                   className={`
-              max-w-[300px] 
-              mx-auto 
-              transition-colors 
-              ${isClicked ? "bg-blue-400" : ""}
-            `}
+                    max-w-[300px] 
+                    mx-auto 
+                    transition-colors 
+                    ${isClicked ? "bg-blue-400" : ""}
+                  `}
                 >
-                  {/* {formattedDate} {data.data[0].name} */}
                   {"ENTREZ"}
                 </HeartbeatButton>
               </form>
@@ -229,6 +281,7 @@ export default function HomePage() {
           </>
         )}
       </div>
+      
       <PopupModal
         isOpen={errorModal.isOpen}
         onClose={closeModal}
