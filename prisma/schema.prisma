@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  nom           String
+  prenom        String
+  dateNaissance DateTime
+  email         String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isAdmin       Boolean
+  username      String
+  password      String
+}
+
+model tirage {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  eventId         String
+  dateTirage      DateTime
+  nombreVainqueur Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model vainqueur {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  tirageid      String
+  participantId String
+  nom_participant String
+  prenom_participant String
+  email         String @unique
+  rang          Int
+  porte         String
+  place         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  ticketUrl     String
+  ticketInfo    String
+
+}
+
+model participant {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  nom           String
+  prenom        String
+  eventId       String
+  dateNaissance DateTime
+  email         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  rang          String?
+  place         String?
+  porte         String?
+  bloc          String?
+  gradin        String?
+  chaise        String?
+  siege         String?
+  entree        String?
+  niveau        String?
+  parterre      String?
+  tribune       String?
+  ticketUrl     String?
+  textInfo      String?
+  zone          String?
+}
+
+model Tour {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String
+  startDate     DateTime
+  createdAt     DateTime @default(now())
+  endDate       DateTime
+  status        String
+
+}
+
+model Event {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  tourId        String
+  city          String
+  createdAt     DateTime @default(now())
+  venue         String
+  eventDate     DateTime
+  endDate       DateTime
+  status        String
+}

@@ -1,0 +1,521 @@
+// adrenaline-concert/src/services/participantService.ts
+import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
+import { NextRequest } from 'next/server';
+import {
+    ParticipantCreateInput,
+    ParticipantUpdateInput,
+    PaginationOptions
+} from '@/models/participantModel';
+
+import { 
+    successResponse, 
+    errorResponse, 
+    apiErrorHandler 
+} from '@/lib/apiUtils';
+
+import { OcrService } from './ocrService';
+
+
+export class ParticipantService {
+    /**
+     * Créer un nouveau participant
+     * @param data Données du participant à créer
+     * @returns Le participant créé avec un message de succès
+     */
+    static async createParticipant(data: ParticipantCreateInput): Promise<{ [key: string]: any }> {
+        try {
+            // Création du participant avec les données fournies
+            const newParticipant = await prisma.participant.create({
+                data: {
+                    nom: data.nom,          
+                    prenom: data.prenom, 
+                    eventId: data.eventId, 
+                    email: data.email,
+                    rang: data.rang ?? '',
+                    place: data.place ?? '',   
+                    porte: data.porte ?? '',   
+                    dateNaissance: new Date(data.dateNaissance),
+                    bloc:  data.bloc ?? '', 
+                    tribune:  data.tribune ?? '', 
+                    gradin:  data.gradin?? '',
+                    chaise:  data.chaise?? '',
+                    siege:   data.siege?? '',
+                    entree:   data.entree?? '',
+                    niveau:   data.niveau?? '',
+                    parterre:  data.parterre?? '',
+                    ticketUrl: data.ticketUrl?? '',
+                    textInfo: data.textInfo?? '',
+                    zone: data.zone?? ''
+                },
+            });
+
+            return {
+                ...newParticipant,
+                name: `${newParticipant.nom} ${newParticipant.prenom}`, // Format complet du nom
+                message: 'success',
+            };
+        } catch (error) {
+            console.error('Erreur lors de la création du participant:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gérer la création d'un nouveau participant depuis une requête API
+     * @param request Requête entrante
+     * @returns Réponse avec le participant créé ou message d'erreur
+     */
+    static async handleCreateParticipant(request: NextRequest) {
+        try {
+            const body = await request.json();
+            
+            // Validation des champs requis pour un participant
+            const requiredFields: (keyof ParticipantCreateInput)[] = ['nom', 'prenom', 'email', 'dateNaissance'];
+            const missingFields = requiredFields.filter(field => !body[field]);
+            
+            if (missingFields.length > 0) {
+                return errorResponse(`Champs manquants : ${missingFields.join(', ')}`);
+            }
+
+            // Check if participant already exists for this event
+            const existingParticipant = await prisma.participant.findFirst({
+                where: {
+                    AND: [
+                        { email: body.email },
+                        { eventId: body.eventId }
+                    ]
+                }
+            });
+
+            if (existingParticipant) {
+                return errorResponse('Un participant avec cet email est déjà enregistré pour cet événement');
+            }
+
+            // Préparation des données du participant
+            const participantInput: ParticipantCreateInput = {
+                nom: body.nom,
+                eventId: body.eventId,
+                prenom: body.prenom,
+                email: body.email,
+                rang: body.rang ?? '',
+                place: body.place ?? '',
+                porte: body.porte ?? '',
+                dateNaissance: body.dateNaissance,
+                bloc:  body.bloc ?? '', 
+                tribune:  body.tribune ?? '', 
+                gradin:  body.gradin?? '',
+                chaise:  body.chaise?? '',
+                siege:   body.siege?? '',
+                entree:   body.entree?? '',
+                niveau:   body.niveau?? '',
+                parterre:  body.parterre?? '',
+                ticketUrl: body.ticketUrl?? '',
+                textInfo: body.textInfo?? '',
+                zone:     body.zone?? ''
+            };
+            
+            // Création du participant
+            const participant = await this.createParticipant(participantInput);
+            return successResponse(participant, undefined, 201);
+        } catch (error) {
+            return apiErrorHandler(error);
+        }
+    }
+
+
+
+    // static async handleCreateParticipant(formData: FormData) {
+    //     try {
+    //         // Validation des champs requis pour un participant
+    //         const requiredFields: (keyof ParticipantCreateInput)[] = ['nom', 'prenom', 'email', 'dateNaissance', 'eventId'];
+    //         const missingFields = requiredFields.filter(field => !formData.get(field));
+
+    //         if (missingFields.length > 0) {
+    //             return errorResponse(`Champs manquants : ${missingFields.join(', ')}`);
+    //         }
+
+    //         // Get the file
+    //         const file = formData.get('file') as File | null;
+    //         if (!file) {
+    //             return errorResponse('Fichier de billet requis');
+    //         }
+
+    //         // Analyze ticket
+    //         console.log('fichier ================> '+JSON.stringify(file));
+    //         const ticketAnalysis = await OcrService.analyzeTicket(file);
+    //         if(!ticketAnalysis.success) {
+    //             console.log('response==> '+JSON.stringify(ticketAnalysis));
+    //             return errorResponse(ticketAnalysis.message || 'Erreur lors de l\'analyse du billet', 400);
+    //         }
+
+    //         console.log('response ====> ' +JSON.stringify(ticketAnalysis));
+    //         console.log('rang ====> ' +ticketAnalysis.data?.rang);
+
+    //         // Convert dateNaissance string to proper date format
+    //         const dateNaissanceStr = formData.get('dateNaissance') as string;
+    //         if (!dateNaissanceStr) {
+    //             return errorResponse('Date de naissance invalide');
+    //         }
+
+    //         // Préparation des données du participant
+    //         const participantInput: ParticipantCreateInput = {
+    //             nom: formData.get('nom') as string,
+    //             eventId: formData.get('eventId') as string,
+    //             prenom: formData.get('prenom') as string,
+    //             email: formData.get('email') as string,
+    //             dateNaissance: new Date(dateNaissanceStr),
+    //             rang: ticketAnalysis.data?.rang ? parseInt(ticketAnalysis.data.rang) : undefined,
+    //             place: ticketAnalysis.data?.place ? parseInt(ticketAnalysis.data.place) : undefined
+    //         };
+            
+    //         // Création du participant
+    //         const participant = await this.createParticipant(participantInput);
+            
+    //         return successResponse({
+    //             ...participant,
+    //         }, undefined, 201);
+    //     } catch (error) {
+    //         console.error('Error in handleCreateParticipant:', error);
+    //         return apiErrorHandler(error);
+    //     }
+    // }
+
+    /**
+     * Récupérer tous les participants avec pagination et recherche
+     * @param options Options de pagination et de recherche
+     * @returns Liste des participants et informations de pagination
+     */
+    static async getParticipants(options: PaginationOptions = {}): Promise<{
+        participants: any[];
+        pagination: {
+            total: number;
+            pages: number;
+            page: number;
+            limit: number;
+        }
+    }> {
+        const {
+            page = 1,
+            limit = 10,
+            search = '',
+        } = options;
+        
+        const skip = (page - 1) * limit;
+        
+        try {
+            // Construire la condition de recherche
+            const whereCondition: Prisma.participantWhereInput = search
+                ? {
+                    OR: [
+                        { nom: { contains: search, mode: 'insensitive' } },
+                        { prenom: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } },
+                    ],
+                }
+                : {};
+            
+            // Récupérer les participants avec pagination
+            const [participants, total] = await Promise.all([
+                prisma.participant.findMany({
+                    where: whereCondition,
+                    skip,
+                    take: limit,
+                    orderBy: {
+                        nom: 'asc',
+                    },
+                    select: {
+                        id: true,
+                        nom: true,
+                        ticketUrl: true,
+                        prenom: true,
+                        eventId: true,
+                        email: true,
+                        dateNaissance: true,
+                        textInfo: true,
+                        rang: true,
+                        place: true,
+                        porte: true,
+                        bloc: true,
+                        zone: true,
+                    }
+                }),
+                prisma.participant.count({
+                    where: whereCondition,
+                }),
+            ]);
+            
+            return {
+                participants,
+                pagination: {
+                    total,
+                    pages: Math.ceil(total / limit),
+                    page,
+                    limit,
+                },
+            };
+        } catch (error) {
+            console.error('Erreur lors de la récupération des participants:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Gérer la récupération de tous les participants
+     * @param request Requête entrante
+     * @returns Réponse avec la liste des participants
+     */
+    static async handleGetAllParticipants(request: NextRequest) {
+        try {
+            const { searchParams } = new URL(request.url);
+            const limit = parseInt(searchParams.get('limit') || '10');
+            const page = parseInt(searchParams.get('page') || '1');
+            const search = searchParams.get('search') || '';
+            
+            const result = await this.getParticipants({ page, limit, search });
+            
+            return successResponse({
+                participants: result.participants,
+            }, result.pagination);
+        } catch (error) {
+            console.error('Erreur dans handleGetAllParticipants:', error);
+            return apiErrorHandler(error);
+        }
+    }
+
+   
+
+
+  static async getParticipantsByEventId(eventId: string) {
+    try {
+      const participants = await prisma.participant.findMany({
+        where: {
+          eventId: eventId
+        },
+        select: {
+          id: true,
+          nom: true,
+          prenom: true,
+          email: true,
+          eventId: true,
+          dateNaissance: true,
+          createdAt: true,
+          textInfo: true,
+          ticketUrl: true,
+          rang: true,
+          place: true,
+          porte: true,
+          bloc: true,
+          zone: true,
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      if (!participants.length) {
+        return errorResponse('Aucun participant trouvé pour cet événement', 404);
+      }
+
+      return successResponse({
+        message: `${participants.length} participants trouvés`,
+        participants: participants
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des participants:", error);
+      return apiErrorHandler(error);
+    }
+  }
+
+    /**
+     * Mettre à jour un participant existant
+     * @param id Identifiant du participant à mettre à jour
+     * @param data Données à mettre à jour
+     * @returns Participant mis à jour
+     */
+    static async updateParticipant(id: string, data: ParticipantUpdateInput): Promise<{ [key: string]: any }> {
+        try {
+            // Vérifier si le participant existe
+            const existingParticipant = await prisma.participant.findUnique({
+                where: { id }
+            });
+            
+            if (!existingParticipant) {
+                throw new Error(`Participant avec l'ID ${id} non trouvé`);
+            }
+            
+            // Préparer les données à mettre à jour
+            const updateData: Prisma.participantUpdateInput = {};
+            
+            // Ajouter uniquement les champs qui sont définis
+            if (data.nom !== undefined) updateData.nom = data.nom;
+            if (data.prenom !== undefined) updateData.prenom = data.prenom;
+            if (data.email !== undefined) updateData.email = data.email;
+            if (data.dateNaissance !== undefined) updateData.dateNaissance = new Date(data.dateNaissance);
+            
+            // Mettre à jour le participant
+            const updatedParticipant = await prisma.participant.update({
+                where: { id },
+                data: updateData,
+                select: {
+                    id: true,
+                    nom: true,
+                    prenom: true,
+                    email: true,
+                    eventId: true,
+                    dateNaissance: true
+                }
+            });
+            
+            return {
+                ...updatedParticipant,
+                message: 'Participant mis à jour avec succès'
+            };
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour du participant:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Gérer la mise à jour d'un participant
+     * @param request Requête entrante
+     * @param params Paramètres de la route
+     * @returns Réponse avec le participant mis à jour
+     */
+    static async handleUpdateParticipant(request: NextRequest, { params }: { params: { id: string } }) {
+        try {
+            const id = params.id;
+            
+            if (!id) {
+                return errorResponse('ID du participant manquant');
+            }
+            
+            const body = await request.json();
+            
+            // Validation de base - au moins un champ à mettre à jour doit être présent
+            const updateFields = ['nom', 'prenom', 'email', 'dateNaissance','eventId'];
+            const hasUpdateFields = updateFields.some(field => body[field] !== undefined);
+            
+            if (!hasUpdateFields) {
+                return errorResponse('Aucun champ à mettre à jour fourni');
+            }
+            
+            // Préparer les données de mise à jour
+            const updateInput: ParticipantUpdateInput = {};
+            
+            if (body.nom !== undefined) updateInput.nom = body.nom;
+            if (body.prenom !== undefined) updateInput.prenom = body.prenom;
+            if (body.email !== undefined) updateInput.email = body.email;
+            if (body.dateNaissance !== undefined) updateInput.dateNaissance = body.dateNaissance;
+            
+            const updatedParticipant = await this.updateParticipant(id, updateInput);
+            
+            return successResponse(updatedParticipant);
+        } catch (error) {
+            return apiErrorHandler(error);
+        }
+    }
+    
+    /**
+     * Obtenir un participant par son ID
+     * @param id Identifiant du participant
+     * @returns Données du participant
+     */
+    static async getParticipantById(id: string): Promise<{ [key: string]: any }> {
+        try {
+            const participant = await prisma.participant.findUnique({
+                where: { id },
+                select: {
+                    id: true,
+                    nom: true,
+                    prenom: true,
+                    eventId: true,
+                    email: true,
+                    dateNaissance: true
+                }
+            });
+            
+            if (!participant) {
+                throw new Error(`Participant avec l'ID ${id} non trouvé`);
+            }
+            
+            return {
+                participant
+            };
+        } catch (error) {
+            console.error('Erreur lors de la récupération du participant:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Gérer la récupération d'un participant par ID
+     * @param request Requête entrante
+     * @param params Paramètres de la route
+     * @returns Réponse avec les données du participant
+     */
+    static async handleGetParticipantById(request: NextRequest, { params }: { params: { id: string } }) {
+        try {
+            const id = params.id;
+            
+            if (!id) {
+                return errorResponse('ID du participant manquant');
+            }
+            
+            const result = await this.getParticipantById(id);
+            
+            return successResponse(result);
+        } catch (error) {
+            return apiErrorHandler(error);
+        }
+    }
+    
+    /**
+     * Supprimer un participant
+     * @param id Identifiant du participant à supprimer
+     */
+    static async deleteParticipant(id: string): Promise<void> {
+        try {
+            // Vérifier si le participant existe
+            const existingParticipant = await prisma.participant.findUnique({
+                where: { id }
+            });
+            
+            if (!existingParticipant) {
+                throw new Error(`Participant avec l'ID ${id} non trouvé`);
+            }
+            
+            // Supprimer le participant
+            await prisma.participant.delete({
+                where: { id }
+            });
+        } catch (error) {
+            console.error('Erreur lors de la suppression du participant:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gérer la suppression d'un participant
+     * @param request Requête entrante
+     * @param params Paramètres de la route
+     * @returns Réponse de confirmation de suppression
+     */
+    static async handleDeleteParticipant(request: NextRequest, { params }: { params: { id: string } }) {
+        try {
+            const id = params.id;
+            
+            if (!id) {
+                return errorResponse('ID du participant manquant');
+            }
+            
+            await this.deleteParticipant(id);
+            
+            return successResponse({ message: 'Participant supprimé avec succès' });
+        } catch (error) {
+            return apiErrorHandler(error);
+        }
+    }
+}
