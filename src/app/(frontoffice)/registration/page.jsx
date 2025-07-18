@@ -41,14 +41,14 @@ export default function RegistrationPage() {
     gradin: "",
     place: "",
     bloc: "",
-    rang: ""
+    rang: "",
   });
   const manualInputsRef = useRef({
     categorie: "",
     gradin: "",
     place: "",
     bloc: "",
-    rang: ""
+    rang: "",
   });
   const [errorModal, setErrorModal] = useState({
     isOpen: false,
@@ -148,6 +148,39 @@ export default function RegistrationPage() {
     formattedDate = customdateFormat(data.data?.tours[0]?.nextEvent);
   }
 
+  // LOGIQUE BOUTON GRISÉ - Vérification en temps réel
+  const isButtonDisabled = () => {
+    // Vérifier les champs obligatoires
+    if (
+      !formData.nom ||
+      !formData.prenom ||
+      !formData.dateNaissance ||
+      !formData.email ||
+      !formData.telephone
+    ) {
+      return true;
+    }
+
+    // Vérifier le billet
+    if (!ticketImage) {
+      return true;
+    }
+
+    // Si OCR a échoué, vérifier les champs manuels obligatoires
+    if (ocrFailed) {
+      if (!manualTicketData.rang || !manualTicketData.place) {
+        return true;
+      }
+    }
+
+    // Si OCR en cours, désactiver le bouton
+    if (ocrLoad) {
+      return true;
+    }
+
+    return false;
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
@@ -165,13 +198,13 @@ export default function RegistrationPage() {
     setOcrErrorMessage("");
     setOcrStatus(null);
     setOcrStatusMessage("");
-    
+
     // Incrémenter le compteur - SIMPLE ET DIRECT
     uploadAttemptsRef.current++;
     const attempts = uploadAttemptsRef.current;
-    
+
     console.log(`=== TENTATIVE ${attempts}/2 ===`);
-    
+
     try {
       const formData = new FormData();
       const response = await fetch(dataUrl);
@@ -182,50 +215,53 @@ export default function RegistrationPage() {
         method: "POST",
         body: formData,
       });
-      
+
       const result = await apiResponse.json();
-      
+
       if (!apiResponse.ok || !result?.success) {
         // ECHEC OCR
         setOcrLoad(false);
-        
+
         if (attempts >= 2) {
-          console.log('=== ACTIVATION MODE MANUEL ===');
+          console.log("=== ACTIVATION MODE MANUEL ===");
           setOcrFailed(true);
-          setOcrStatus('error');
-          setOcrStatusMessage("2 tentatives échouées - Remplissage manuel requis");
+          setOcrStatus("error");
+          setOcrStatusMessage("le billet n’a pas été reconnu");
         } else {
           console.log(`=== ECHEC TENTATIVE ${attempts} ===`);
-          setOcrStatus('error');
-          setOcrStatusMessage(`Tentative ${attempts}/2 échouée - ${result?.message || "Réessayez avec une meilleure qualité d'image"}`);
-          setOcrErrorMessage("L'analyse du billet n'a pas pu s'effectuer correctement");
+          setOcrStatus("error");
+          setOcrStatusMessage("le billet n’a pas été reconnu");
+          setOcrErrorMessage(
+            "L'analyse du billet n'a pas pu s'effectuer correctement"
+          );
         }
         return;
       }
 
       // SUCCES OCR
-      console.log('=== SUCCES OCR ===');
+      console.log("=== SUCCES OCR ===");
       setOcrData(result?.data);
       setOcrLoad(false);
-      setOcrStatus('success');
+      setOcrStatus("success");
       setOcrStatusMessage("");
       setOcrErrorMessage("");
       setOcrFailed(false);
-      
     } catch (error) {
       console.error("Error fetching OCR:", error);
       setOcrLoad(false);
-      
+
       if (attempts >= 2) {
-        console.log('=== ACTIVATION MODE MANUEL (CATCH) ===');
+        console.log("=== ACTIVATION MODE MANUEL (CATCH) ===");
         setOcrFailed(true);
-        setOcrStatus('error');
-        setOcrStatusMessage("2 tentatives échouées - Remplissage manuel requis");
+        setOcrStatus("error");
+        setOcrStatusMessage("le billet n’a pas été reconnu");
       } else {
         console.log(`=== ECHEC TENTATIVE ${attempts} (CATCH) ===`);
-        setOcrStatus('error');
-        setOcrStatusMessage(`Tentative ${attempts}/2 échouée - Réessayez avec une meilleure qualité d'image`);
-        setOcrErrorMessage("L'analyse du billet n'a pas pu s'effectuer correctement");
+        setOcrStatus("error");
+        setOcrStatusMessage("le billet n’a pas été reconnu");
+        setOcrErrorMessage(
+          "L'analyse du billet n'a pas pu s'effectuer correctement"
+        );
       }
     }
   };
@@ -244,11 +280,14 @@ export default function RegistrationPage() {
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -275,8 +314,7 @@ export default function RegistrationPage() {
     if (age < 18) {
       setErrorModal({
         isOpen: true,
-        title: "Pour participer à l'expérience, il faut être majeur",
-        message: "Il semble que tu ne sois pas encore majeur(e). Malheureusement, l'inscription est réservée aux personnes de 18 ans et plus.",
+        message: "Pour participer à l'expérience, il faut être majeur.",
         type: "error",
       });
       return false;
@@ -311,7 +349,8 @@ export default function RegistrationPage() {
         setErrorModal({
           isOpen: true,
           title: "Informations manquantes",
-          message: "Veuillez renseigner au minimum le rang et la place de votre billet.",
+          message:
+            "Veuillez renseigner au minimum le rang et la place de votre billet.",
           type: "error",
         });
         return false;
@@ -322,6 +361,9 @@ export default function RegistrationPage() {
   };
 
   const handleNextStep = () => {
+    // BLOQUER L'ACTION SI LE BOUTON EST DÉSACTIVÉ
+    if (isButtonDisabled()) return;
+
     if (formStep === 1 && validateForm()) {
       setFormStep(2);
     }
@@ -334,14 +376,14 @@ export default function RegistrationPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log('=== SUBMIT ===');
-    console.log('ocrFailed:', ocrFailed);
-    console.log('manualTicketData state:', manualTicketData);
-    console.log('ocrData:', ocrData);
+    console.log("=== SUBMIT ===");
+    console.log("ocrFailed:", ocrFailed);
+    console.log("manualTicketData state:", manualTicketData);
+    console.log("ocrData:", ocrData);
 
     // Préparer les données de billet selon le mode (OCR ou manuel)
     let billetData = {};
-    
+
     if (ocrFailed) {
       // Mode manuel - utiliser le state manualTicketData
       billetData = {
@@ -357,9 +399,9 @@ export default function RegistrationPage() {
         parterre: "",
         tribune: "",
         categorie: manualTicketData.categorie || "",
-        textInfo: "Billet rempli manuellement après échec OCR"
+        textInfo: "Billet rempli manuellement après échec OCR",
       };
-      console.log('Données manuelles depuis state:', billetData);
+      console.log("Données manuelles depuis state:", billetData);
     } else {
       // Mode OCR - utiliser les données extraites
       billetData = {
@@ -374,11 +416,11 @@ export default function RegistrationPage() {
         niveau: ocrData?.niveau || "",
         parterre: ocrData?.parterre || "",
         tribune: ocrData?.tribune || "",
-        textInfo: ""
+        textInfo: "",
       };
-      console.log('Données OCR:', billetData);
+      console.log("Données OCR:", billetData);
     }
-    
+
     const postBody = {
       nom: formData.nom,
       prenom: formData.prenom,
@@ -389,16 +431,16 @@ export default function RegistrationPage() {
       ...billetData,
       ticketUrl: ocrData?.ticketUrl || "",
     };
-    
-    console.log('Payload final:', postBody);
-    
+
+    console.log("Payload final:", postBody);
+
     const response = await fetch("/api/participants_fo", {
       method: "POST",
       body: JSON.stringify(postBody),
     });
 
     const data = await response.json();
-    console.log('Réponse API:', data);
+    console.log("Réponse API:", data);
 
     if (formStep === 2) {
       router.push("/confirmation");
@@ -432,38 +474,58 @@ export default function RegistrationPage() {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
                   <span>Analyse en cours...</span>
                 </div>
-              ) : ocrStatus === 'success' ? (
+              ) : ocrStatus === "success" ? (
                 <div className="flex items-center text-green-600 animate-fade-in">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   <span>Billet valide</span>
                 </div>
-              ) : ocrStatus === 'error' && !ocrFailed ? (
+              ) : ocrStatus === "error" && !ocrFailed ? (
                 <div className="flex items-center text-red-500 animate-fade-in">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   <span>Analyse échouée</span>
                 </div>
               ) : ocrFailed ? (
                 <span className="text-blue-600">Billet importé</span>
               ) : ocrFailed ? (
-                <span className="text-orange-600">Billet à compléter manuellement</span>
+                <span className="text-orange-600">
+                  Billet à compléter manuellement
+                </span>
               ) : (
                 <span className="text-blue-600">Billet importé</span>
               )}
             </div>
           </div>
         </div>
-        
+
         {/* Message de statut OCR - Seulement en étape 1 et pas pour succès */}
-        {ocrStatusMessage && ocrStatus !== 'success' && formStep === 1 && (
-          <div className={`px-4 py-2 text-sm animate-fade-in ${
-            ocrFailed 
-              ? 'bg-orange-100 text-orange-700 border-t border-orange-200'
-              : 'bg-red-100 text-red-700 border-t border-red-200'
-          }`}>
+        {ocrStatusMessage && ocrStatus !== "success" && formStep === 1 && (
+          <div
+            className={`px-4 py-2 text-sm animate-fade-in ${
+              ocrFailed
+                ? "bg-orange-100 text-orange-700 border-t border-orange-200"
+                : "bg-red-100 text-red-700 border-t border-red-200"
+            }`}
+          >
             {ocrStatusMessage}
           </div>
         )}
@@ -477,9 +539,10 @@ export default function RegistrationPage() {
     return (
       <div className="mt-6 mb-4">
         <p className="text-white text-sm mb-4 text-center">
-          MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
+          MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR
+          VOTRE BILLET
         </p>
-        
+
         <div className="space-y-2">
           {/* Première ligne - 4 champs si possible, sinon on passe à la ligne suivante */}
           <div className="flex flex-wrap gap-2 justify-start">
@@ -522,10 +585,6 @@ export default function RegistrationPage() {
             />
           </div>
         </div>
-        
-        <p className="text-white text-xs mt-2 text-center opacity-75">
-          * CHAMPS OBLIGATOIRES
-        </p>
       </div>
     );
   };
@@ -556,6 +615,7 @@ export default function RegistrationPage() {
             />
             <div className="w-full">
               <DatePicker
+                autoComplete="off"
                 selected={formData.dateNaissance}
                 onChange={(date) => {
                   setFormData({ ...formData, dateNaissance: date });
@@ -564,8 +624,8 @@ export default function RegistrationPage() {
                     if (age < 18) {
                       setErrorModal({
                         isOpen: true,
-                        title: "Pour participer à l'expérience, il faut être majeur",
-                        message: "Il semble que tu ne sois pas encore majeur(e). Malheureusement, l'inscription est réservée aux personnes de 18 ans et plus.",
+                        message:
+                          "Pour participer à l'expérience, il faut être majeur.",
                         type: "error",
                       });
                     }
@@ -678,7 +738,9 @@ export default function RegistrationPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      console.log('=== CHANGER DE BILLET (compteur conservé) ===');
+                      console.log(
+                        "=== CHANGER DE BILLET (compteur conservé) ==="
+                      );
                       // Reset tout SAUF le compteur
                       setTicketImage(null);
                       setOcrData(null);
@@ -693,7 +755,7 @@ export default function RegistrationPage() {
                         gradin: "",
                         place: "",
                         bloc: "",
-                        rang: ""
+                        rang: "",
                       });
                     }}
                     className="text-sm text-blue-500 hover:text-blue-700"
@@ -713,7 +775,20 @@ export default function RegistrationPage() {
                   <div>Chargement des infos du billet...</div>
                 </div>
               ) : (
-                <Button type="submit">CONTINUEZ</Button>
+                <Button
+                  type="submit"
+                  disabled={isButtonDisabled()}
+                  className={`
+                    transition-colors 
+                    ${
+                      isButtonDisabled()
+                        ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60"
+                        : ""
+                    }
+                  `}
+                >
+                  CONTINUEZ
+                </Button>
               )}
             </div>
           </form>
@@ -729,7 +804,7 @@ export default function RegistrationPage() {
                     {/* Affichage des champs manuels remplis - alignés à gauche */}
                     <div className="text-left">
                       {Object.entries(manualTicketData)
-                        .filter(([key, value]) => value && value.trim() !== '')
+                        .filter(([key, value]) => value && value.trim() !== "")
                         .map(([key, value]) => (
                           <p key={key}>
                             {key.toUpperCase()} : {value}
@@ -745,15 +820,21 @@ export default function RegistrationPage() {
                     {/* Affichage 100% dynamique de tous les champs présents - alignés à gauche */}
                     <div className="text-left">
                       {Object.entries(ocrData)
-                        .filter(([key, value]) => key !== 'ticketUrl' && value && value.trim() !== '')
+                        .filter(
+                          ([key, value]) =>
+                            key !== "ticketUrl" && value && value.trim() !== ""
+                        )
                         .map(([key, value]) => (
                           <p key={key}>
                             {key.toUpperCase()} : {value}
                           </p>
                         ))}
-                      
+
                       {/* Si aucun champ de placement n'est présent */}
-                      {Object.entries(ocrData).filter(([key, value]) => key !== 'ticketUrl' && value && value.trim() !== '').length === 0 && (
+                      {Object.entries(ocrData).filter(
+                        ([key, value]) =>
+                          key !== "ticketUrl" && value && value.trim() !== ""
+                      ).length === 0 && (
                         <p>Informations du billet en cours de traitement</p>
                       )}
                     </div>
@@ -789,11 +870,15 @@ export default function RegistrationPage() {
             </div>
 
             <div className="mt-8 flex justify-between items-center space-x-4">
-              <Button onClick={() => setFormStep(1)} variant="secondary" className="flex-1">
+              <Button
+                onClick={() => setFormStep(1)}
+                variant="secondary"
+                className="flex-1 !bg-white !text-black"
+              >
                 RETOUR
               </Button>
               <Button type="submit" className="flex-1">
-                JE TENTE MA CHANCE
+                VALIDER
               </Button>
             </div>
           </form>
@@ -829,14 +914,14 @@ export default function RegistrationPage() {
             transform: translateY(0);
           }
         }
-        
+
         .animate-fade-in {
           animation: fade-in 0.3s ease-out;
         }
       `}</style>
       <div className="w-full max-w-md mx-auto">
         <div className="mb-12">
-          <LogoHeader date={formattedDate} venue={data?.data?.tours[0].name} />
+          <LogoHeader date={formattedDate} venue={data?.data?.tours[0]?.name} />
         </div>
 
         <div className="w-full">{renderFormStep()}</div>

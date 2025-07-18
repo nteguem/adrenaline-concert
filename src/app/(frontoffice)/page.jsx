@@ -164,7 +164,7 @@ export default function HomePage() {
               venue={data?.data?.tours[0]?.name}
             />
             <div className="w-full max-w-md mx-auto -mt-8">
-              <div className="mb-4">
+              <div className="mb-12">
                 <p
                   className={`${din.className} text-4xl md:text-3xl font-bold text-white mb-3`}
                 >
@@ -176,7 +176,7 @@ export default function HomePage() {
               </div>
               
               <form onSubmit={handleSubmit}>
-                <div className="space-y-3 px-3 mb-4">
+                <div className="space-y-3 px-3 mb-4 mt-14">
                   <div className="flex gap-3 w-full">
                     <input
                       type="checkbox"
