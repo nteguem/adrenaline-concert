@@ -284,7 +284,7 @@ const FileUpload = ({
                 className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded flex items-center justify-center space-x-3 transition-colors"
               >
                 <Upload className="h-6 w-6" />
-                <span>TÉLÉVERSER UN FICHIER</span>
+                <span>IMPORTER UN FICHIER</span>
               </button>
 
               {/* Bouton Caméra - affiché seulement si supporté */}

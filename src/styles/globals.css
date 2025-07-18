@@ -15,11 +15,9 @@ body {
       rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
   height: 100vh;
   overflow-x: hidden !important;
-
 }
 
 @layer base {
-
   h1,
   h2,
   h3 {
@@ -48,48 +46,20 @@ body {
   }
 }
 
-/* Animation pour le fond bleu DnB */
+/* Background optimisé pour Matt Pokora */
 .dnb-bg {
-  background-image: url('/m_bleu.gif');
-  background-size: auto; /* Garde la taille originale du GIF */
-  background-position: center center; /* Centre parfaitement le GIF */
+  background-image: url('/background.png');
+  background-size: cover; /* Couvre tout l'écran */
+  background-position: center center; /* Centre l'image */
   background-repeat: no-repeat;
+  background-attachment: fixed; /* Fixe le background lors du scroll */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   image-rendering: pixelated;
+  min-height: 100vh; /* Assure une hauteur minimale */
 }
 
-.dnb-bg::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at center, #0077ff, transparent 50%);
-  opacity: 0.2;
-  animation: glowPulse 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes glowPulse {
-  0% {
-    opacity: 0.1;
-    transform: scale(0.8);
-  }
-
-  50% {
-    opacity: 0.3;
-    transform: scale(1.2);
-  }
-
-  100% {
-    opacity: 0.1;
-    transform: scale(0.8);
-  }
-}
-
-/* Animation du logo DnB avec effet de glitch */
+/* Animation du logo DnB avec effet de glitch (conservé) */
 .dnb-logo {
   position: relative;
   overflow: hidden;
@@ -151,10 +121,7 @@ body {
   }
 }
 
-/* Animation de l'électrocardiogramme */
-
-
-/* Animation alternative plus élaborée avec un effet de battement */
+/* Animation de l'électrocardiogramme (conservé) */
 .heartbeat-animated {
   position: relative;
   overflow: hidden;
@@ -258,7 +225,6 @@ input.h-50 {
 
 .react-datepicker-wrapper {
   width: 100% !important;
-
 }
 
 .react-datepicker-popper {
@@ -279,9 +245,37 @@ input.h-50 {
   }
 }
 
+/* Media queries optimisées pour mobile */
 @media (max-width: 768px) {
   .dnb-bg {
-     background-size: auto; /* Garde aussi la taille originale sur mobile */
+    background-size: cover; /* Garde le cover sur mobile */
     background-position: center center;
+    background-attachment: scroll; /* Scroll au lieu de fixed pour de meilleures performances sur mobile */
+  }
+  
+  /* Ajustements pour les petits écrans */
+  body {
+    font-size: 16px; /* Évite le zoom automatique sur iOS */
+  }
+}
+
+@media (max-width: 480px) {
+  .dnb-bg {
+    background-position: center top; /* Privilégie le haut de l'image sur très petits écrans */
+  }
+}
+
+/* Pour les écrans très larges (desktop) */
+@media (min-width: 1920px) {
+  .dnb-bg {
+    background-size: cover; /* Maintient le cover même sur grands écrans */
+  }
+}
+
+/* Pour les écrans en orientation paysage sur mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .dnb-bg {
+    background-position: center center;
+    background-size: cover;
   }
 }

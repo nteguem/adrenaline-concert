@@ -314,7 +314,7 @@ export default function RegistrationPage() {
     if (age < 18) {
       setErrorModal({
         isOpen: true,
-        message: "Pour participer à l'expérience, il faut être majeur.",
+        message: "Pour participer à l’expérience, il faut avoir + de 18 ans.",
         type: "error",
       });
       return false;
@@ -625,7 +625,7 @@ export default function RegistrationPage() {
                       setErrorModal({
                         isOpen: true,
                         message:
-                          "Pour participer à l'expérience, il faut être majeur.",
+                          "Pour participer à l’expérience, il faut avoir + de 18 ans.",
                         type: "error",
                       });
                     }
@@ -760,7 +760,7 @@ export default function RegistrationPage() {
                     }}
                     className="text-sm text-blue-500 hover:text-blue-700"
                   >
-                    Changer de billet
+                    Réessayer
                   </button>
                 </div>
               )}
@@ -853,29 +853,13 @@ export default function RegistrationPage() {
                 </div>
               )}
             </div>
-
-            <div className="space-y-3 mb-6">
-              <div
-                onClick={() => setFormStep(1)}
-                className="flex items-center cursor-pointer"
-              >
-                <Checkbox
-                  label="MODIFIER MES INFORMATIONS"
-                  name="cgu"
-                  onChange={handleInputChange}
-                  checked={formData.cgu || false}
-                  className="w-full pointer-events-none"
-                />
-              </div>
-            </div>
-
             <div className="mt-8 flex justify-between items-center space-x-4">
               <Button
                 onClick={() => setFormStep(1)}
                 variant="secondary"
                 className="flex-1 !bg-white !text-black"
               >
-                RETOUR
+                MODIFIER MES INFORMATIONS
               </Button>
               <Button type="submit" className="flex-1">
                 VALIDER

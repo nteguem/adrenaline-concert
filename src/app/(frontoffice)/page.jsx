@@ -164,15 +164,14 @@ export default function HomePage() {
               venue={data?.data?.tours[0]?.name}
             />
             <div className="w-full max-w-md mx-auto -mt-8">
-              <div className="mb-12">
-                <p
-                  className={`${din.className} text-4xl md:text-3xl font-bold text-white mb-3`}
-                >
-                  ADRÉNALINE MAX
-                </p>
-                <p className="text-sm md:text-base text-white mb-2">
-                  TENTEZ DE VIVRE L'EXPERIENCE
-                </p>
+              <div className="mb-12 flex justify-center">
+                <div className="inline-block bg-white px-6 py-3 rounded-sm">
+                  <p
+                    className={`${din.className} text-xl md:text-2xl font-bold text-black uppercase`}
+                  >
+                    TENTEZ DE VIVRE L'EXPÉRIENCE <br/>ADRENALINE MAX
+                  </p>
+                </div>
               </div>
               
               <form onSubmit={handleSubmit}>
@@ -202,7 +201,7 @@ export default function HomePage() {
                     />
                     <div className="flex-1 text-left">
                       <label className="text-white text-sm md:text-base leading-tight block">
-                        J'atteste ne pas avoir de contre indication médicale pour participer à l'Adrénaline MAX
+                        j’atteste ne pas avoir de contre indication médicales
                       </label>
                       <div className="text-gray-300 text-xs mt-1 leading-tight">
                         ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)
