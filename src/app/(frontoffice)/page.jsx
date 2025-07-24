@@ -166,7 +166,7 @@ export default function HomePage() {
             </div>
 
             {/* ÉNORME espace pour voir l'arrière-plan */}
-            <div className="flex-grow-[40]"></div>
+            <div className="flex-grow-[12]"></div>
 
             {/* Bloc titre descendu beaucoup plus */}
            <div className="flex-shrink-0 mb-2 flex justify-center">
@@ -180,12 +180,12 @@ export default function HomePage() {
 
 
             {/* Petit espace entre titre et formulaire */}
-            <div className="flex-grow-[4]"></div>
+            <div className="flex-grow-[5]"></div>
 
             {/* Formulaire en bas */}
             <div className="w-full max-w-md mx-auto flex-shrink-0 pb-1">
               <form onSubmit={handleSubmit}>
-                <div className="space-y-2 px-3 mt-2">
+                <div className="space-y-2 px-3 mb-2">
                   <div className="flex gap-3 w-full">
                     <input
                       type="checkbox"
