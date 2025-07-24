@@ -172,7 +172,7 @@ export default function HomePage() {
            <div className="flex-shrink-0 mb-2 flex justify-center">
   <div className="inline-block bg-white px-2 py-1 rounded-sm text-center">
     <p className={`${din.className} text-sm md:text-base font-bold text-black uppercase leading-tight`}>
-      <span className="block">TENTEZ DE VIVRE L'EXPÉRIENCE</span>
+      <span className="block">TENTEZ DE VIVRE L'EXPÉRIENCE</span> 
       <span className="block">ADRENALINE MAX</span>
     </p>
   </div>
