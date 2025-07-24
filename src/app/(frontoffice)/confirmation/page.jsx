@@ -97,7 +97,7 @@ export default function ConfirmationPage() {
       `}
     >
       <div className="max-w-md w-full mx-auto flex flex-col items-center justify-center text-center">
-        <LogoHeader date={formattedDate} venue={data?.data?.tours[0].name} />
+        <LogoHeader date={formattedDate} venue={data?.data?.tours[0].nextEvent.venue} />
 
         <div className="w-full mb-8">
           <h2 className={`font-din text-2xl font-bold mb-6`}>

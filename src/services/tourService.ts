@@ -228,6 +228,7 @@ export class TourService {
               id: true,
               city: true,
               venue: true,
+              placement: true,
               eventDate: true,
               endDate: true,
               status: true

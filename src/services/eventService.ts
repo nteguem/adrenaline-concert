@@ -37,7 +37,8 @@ export class EventService {
           venue: data.venue,    
           eventDate: new Date(data.eventDate),       
           endDate: new Date(data?.endDate),       
-          status: data.status,
+          status: data.status || 'en_attente', // Valeur par défaut si status n'est pas fourni
+          placement: data.placement || [], // Ajouter le champ placement avec valeur par défaut
         },
       });
       
@@ -58,8 +59,15 @@ export class EventService {
     try {
       const body = await request.json();
       
+      // DEBUG: Log pour vérifier les données reçues
+      console.log("=== DEBUG EVENT SERVICE ===");
+      console.log("Body received:", body);
+      console.log("Placement field:", body.placement);
+      console.log("==========================");
+      
       // Validation des champs requis (sans tourId car il sera récupéré automatiquement)
-      const requiredFields: (keyof Omit<EventCreateInput, 'tourId'>)[] = ['city', 'venue','eventDate', 'status','endDate'];
+      // status et placement sont maintenant optionnels
+      const requiredFields: (keyof Omit<EventCreateInput, 'tourId' | 'status' | 'placement'>)[] = ['city', 'venue','eventDate', 'endDate'];
       const missingFields = requiredFields.filter(field => !body[field]);
       
       if (missingFields.length > 0) {
@@ -71,7 +79,8 @@ export class EventService {
         venue: body.venue,
         eventDate: body.eventDate,
         endDate: body?.endDate,
-        status: body.status,
+        status: body.status, // Optionnel
+        placement: body.placement, // Optionnel
       };
       
       // Le tourId sera récupéré automatiquement dans createEvent
@@ -130,6 +139,7 @@ export class EventService {
             eventDate: true,
             endDate: true,
             status: true,
+            placement: true, // Ajouter placement dans la sélection
           }
         }),
         prisma.event.count({
@@ -222,6 +232,7 @@ export class EventService {
       if (data.status !== undefined) updateData.status = data.status;
       if (data.eventDate !== undefined) updateData.eventDate = new Date(data.eventDate);
       if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
+      if (data.placement !== undefined) updateData.placement = data.placement; // Ajouter placement
       
       // Mettre à jour l'événement
       const updatedEvent = await prisma.event.update({
@@ -233,7 +244,8 @@ export class EventService {
           venue: true,
           eventDate: true,
           endDate: true,
-          status: true
+          status: true,
+          placement: true, // Inclure placement dans la réponse
         }
       });
       
@@ -259,7 +271,7 @@ export class EventService {
       const body = await request.json();
       
       // Validation de base - au moins un champ à mettre à jour doit être présent
-      const updateFields = ['city', 'venue', 'eventDate', 'status','endDate'];
+      const updateFields = ['city', 'venue', 'eventDate', 'status','endDate', 'placement'];
       const hasUpdateFields = updateFields.some(field => body[field] !== undefined);
       
       if (!hasUpdateFields) {
@@ -274,6 +286,7 @@ export class EventService {
       if (body.eventDate !== undefined) updateInput.eventDate = body.eventDate;
       if (body.status !== undefined) updateInput.status = body.status;
       if (body.endDate !== undefined) updateInput.endDate = body.endDate;
+      if (body.placement !== undefined) updateInput.placement = body.placement; // Ajouter placement
       
       const updatedEvent = await this.updateEvent(id, updateInput);
       
@@ -294,7 +307,8 @@ export class EventService {
           venue: true,
           eventDate: true,
           endDate: true,
-          status: true
+          status: true,
+          placement: true, // Ajouter placement dans la sélection
         }
       });
       
@@ -407,6 +421,7 @@ export class EventService {
           eventDate: true,
           endDate: true,
           status: true,
+          placement: true, // Ajouter placement dans la sélection
           createdAt: true,
         }
       });

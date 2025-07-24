@@ -31,7 +31,7 @@ export default function HomePage() {
     message: "",
     type: "error",
   });
-  
+
   const closeModal = () => {
     setErrorModal({ ...errorModal, isOpen: false });
   };
@@ -120,7 +120,7 @@ export default function HomePage() {
   const handleClick = () => {
     // Ne rien faire si le bouton est désactivé
     if (isButtonDisabled) return;
-    
+
     setIsClicked(true);
     router.push("/video");
   };
@@ -130,17 +130,17 @@ export default function HomePage() {
 
   return (
     <main
-      style={{ paddingTop: '150px' }}
+      style={{ paddingTop: "150px" }}
       className={`
         ${din.variable} 
-        min-h-screen 
+        h-screen 
         bg-black 
         dnb-bg 
         flex 
-        items-center 
-        justify-center 
+        flex-col
         p-2 
         md:p-4
+        overflow-hidden
       `}
     >
       <div
@@ -150,32 +150,42 @@ export default function HomePage() {
         mx-auto 
         flex 
         flex-col 
-        items-center 
-        justify-center 
-        text-center
+        h-full
       "
       >
         {!isLoggedIn ? (
           <Login handle={setIsLoggedIn} />
         ) : (
           <>
-            <LogoHeader
-              date={formattedDate}
-              venue={data?.data?.tours[0]?.name}
-            />
-            <div className="w-full max-w-md mx-auto -mt-8">
-              <div className="mb-12 flex justify-center">
-                <div className="inline-block bg-white px-6 py-3 rounded-sm">
-                  <p
-                    className={`${din.className} text-xl md:text-2xl font-bold text-black uppercase`}
-                  >
-                    TENTEZ DE VIVRE L'EXPÉRIENCE <br/>ADRENALINE MAX
-                  </p>
-                </div>
-              </div>
-              
+            {/* LogoHeader en haut */}
+            <div className="flex-shrink-0">
+              <LogoHeader
+                date={formattedDate}
+                venue={data?.data?.tours[0]?.nextEvent.venue}
+              />
+            </div>
+
+            {/* ÉNORME espace pour voir l'arrière-plan */}
+            <div className="flex-grow-[40]"></div>
+
+            {/* Bloc titre descendu beaucoup plus */}
+           <div className="flex-shrink-0 mb-2 flex justify-center">
+  <div className="inline-block bg-white px-2 py-1 rounded-sm text-center">
+    <p className={`${din.className} text-sm md:text-base font-bold text-black uppercase leading-tight`}>
+      <span className="block">TENTEZ DE VIVRE L'EXPÉRIENCE</span>
+      <span className="block">ADRENALINE MAX</span>
+    </p>
+  </div>
+</div>
+
+
+            {/* Petit espace entre titre et formulaire */}
+            <div className="flex-grow-[4]"></div>
+
+            {/* Formulaire en bas */}
+            <div className="w-full max-w-md mx-auto flex-shrink-0 pb-1">
               <form onSubmit={handleSubmit}>
-                <div className="space-y-3 px-3 mb-4 mt-14">
+                <div className="space-y-2 px-3 mt-2">
                   <div className="flex gap-3 w-full">
                     <input
                       type="checkbox"
@@ -185,8 +195,9 @@ export default function HomePage() {
                       className="mt-0.5 flex-shrink-0 w-4 h-4"
                     />
                     <div className="flex-1 text-left">
-                      <label className="text-white text-sm md:text-base leading-tight block">
-                        Je certifie avoir + de 18 ans pour participer au concours
+                      <label className="text-white text-xs md:text-sm leading-tight block">
+                        Je certifie avoir + de 18 ans pour participer au
+                        concours
                       </label>
                     </div>
                   </div>
@@ -200,15 +211,16 @@ export default function HomePage() {
                       className="mt-0.5 flex-shrink-0 w-4 h-4"
                     />
                     <div className="flex-1 text-left">
-                      <label className="text-white text-sm md:text-base leading-tight block">
-                        j’atteste ne pas avoir de contre indication médicales
+                      <label className="text-white text-xs md:text-sm leading-tight block">
+                        j'atteste ne pas avoir de contre indication médicales
                       </label>
                       <div className="text-gray-300 text-xs mt-1 leading-tight">
-                        ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)
+                        ( problèmes cardiaques, épilepsie, mobilité réduite,
+                        grossesse, vertiges …)
                       </div>
                       <div className="mt-1">
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className="text-blue-400 text-xs underline hover:text-blue-300"
                         >
                           voir les conditions
@@ -226,12 +238,12 @@ export default function HomePage() {
                       className="mt-0.5 flex-shrink-0 w-4 h-4"
                     />
                     <div className="flex-1 text-left">
-                      <label className="text-white text-sm md:text-base leading-tight block">
+                      <label className="text-white text-xs md:text-sm leading-tight block">
                         J'accepte les conditions générales
                       </label>
                       <div className="mt-1">
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className="text-blue-400 text-xs underline hover:text-blue-300"
                         >
                           voir conditions et règlement
@@ -248,10 +260,11 @@ export default function HomePage() {
                     max-w-[300px] 
                     mx-auto 
                     transition-colors 
-                    ${isButtonDisabled 
-                      ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60" 
-                      : isClicked 
-                        ? "bg-blue-400" 
+                    ${
+                      isButtonDisabled
+                        ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60"
+                        : isClicked
+                        ? "bg-blue-400"
                         : ""
                     }
                   `}
@@ -263,7 +276,7 @@ export default function HomePage() {
           </>
         )}
       </div>
-      
+
       <PopupModal
         isOpen={errorModal.isOpen}
         onClose={closeModal}

@@ -3,11 +3,10 @@ import { v2 as cloudinary } from 'cloudinary';
 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
-// Configure Cloudinary
 cloudinary.config({
     cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY ,
-    api_secret: process.env.CLOUDINARY_API_SECRET ,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 export class OcrService {
@@ -19,10 +18,6 @@ export class OcrService {
         details?: string;
     }> {
         try {
-            console.log('=== DEBUT ANALYSE OCR ===');
-            console.log('Fichier reçu:', file.name, file.type, file.size);
-
-            // 1. Vérification basique du fichier
             if (!file) {
                 return {
                     success: false,
@@ -31,55 +26,25 @@ export class OcrService {
                 };
             }
 
-            // 2. Conversion du fichier en base64
+            // Conversion du fichier en base64
             const arrayBuffer = await file.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             const base64Data = buffer.toString('base64');
             
-            // Déterminer le type MIME correctement
-            let mimeType = 'image/jpeg'; // par défaut
+            // Déterminer le type MIME
+            let mimeType = file.type || 'image/jpeg';
             
-            // Vérifier le type MIME réel du fichier, pas juste l'extension
-            if (file.type) {
-                // Utiliser le type MIME du fichier si disponible
-                mimeType = file.type;
-            } else {
-                // Fallback sur l'extension si pas de type MIME
-                const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-                if (fileExt === 'png') mimeType = 'image/png';
-                else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
-                else if (fileExt === 'webp') mimeType = 'image/webp';
-                else if (fileExt === 'gif') mimeType = 'image/gif';
-                else if (fileExt === 'bmp') mimeType = 'image/bmp';
-                else if (fileExt === 'tiff' || fileExt === 'tif') mimeType = 'image/tiff';
-                else if (fileExt === 'svg') mimeType = 'image/svg+xml';
-                else if (fileExt === 'pdf') mimeType = 'application/pdf';
-            }
-
-            // Vérification additionnelle : détecter le type via les magic bytes
+            // Détection par magic bytes
             const uint8Array = new Uint8Array(arrayBuffer.slice(0, 8));
             if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
                 mimeType = 'image/png';
             } else if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8) {
                 mimeType = 'image/jpeg';
-            } else if (uint8Array[0] === 0x47 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46) {
-                mimeType = 'image/gif';
-            } else if (uint8Array[0] === 0x52 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x46) {
-                mimeType = 'image/webp';
             } else if (uint8Array[0] === 0x25 && uint8Array[1] === 0x50 && uint8Array[2] === 0x44 && uint8Array[3] === 0x46) {
                 mimeType = 'application/pdf';
-            } else if (uint8Array[0] === 0x42 && uint8Array[1] === 0x4D) {
-                mimeType = 'image/bmp';
-            } else if ((uint8Array[0] === 0x49 && uint8Array[1] === 0x49) || (uint8Array[0] === 0x4D && uint8Array[1] === 0x4D)) {
-                mimeType = 'image/tiff';
             }
 
-            console.log('Fichier:', file.name);
-            console.log('Type MIME fichier:', file.type);
-            console.log('Type MIME détecté:', mimeType);
-            console.log('Magic bytes:', Array.from(uint8Array).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '));
-
-            // Vérification que le type de fichier est supporté
+            // Vérification du type supporté
             const supportedTypes = [
                 'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 
                 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml',
@@ -89,12 +54,12 @@ export class OcrService {
             if (!supportedTypes.includes(mimeType)) {
                 return {
                     success: false,
-                    message: 'Type de fichier non supporté. Veuillez utiliser JPG, PNG, PDF, WEBP, GIF, BMP, TIFF ou SVG.',
+                    message: 'Type de fichier non supporté.',
                     errorType: 'UNSUPPORTED_FILE_TYPE'
                 };
             }
 
-            // 3. Upload vers Cloudinary pour stockage
+            // Upload vers Cloudinary
             let ticketUrl = '';
             try {
                 const uploadResult = await new Promise((resolve, reject) => {
@@ -112,87 +77,57 @@ export class OcrService {
                 });
                 
                 ticketUrl = (uploadResult as any)?.secure_url || '';
-                console.log('Upload Cloudinary réussi:', ticketUrl);
             } catch (uploadError) {
-                console.error('Erreur upload Cloudinary:', uploadError);
-                // On continue même si l'upload échoue
+                // Continue même si l'upload échoue
             }
 
-            // 4. Appel à l'API Claude
-            console.log('=== PREPARATION APPEL CLAUDE ===');
-            console.log('API Key présente:', !!CLAUDE_API_KEY);
-            console.log('API Key début:', CLAUDE_API_KEY?.substring(0, 10) + '...');
-            
-            // Préparation du contenu selon le type de fichier
-            let contentData;
-            if (mimeType === 'application/pdf') {
-                // Pour les PDFs, Claude peut les traiter directement
-                contentData = {
-                    type: "document",
-                    source: {
-                        type: "base64",
-                        media_type: mimeType,
-                        data: base64Data
-                    }
-                };
-            } else {
-                // Pour les images
-                contentData = {
-                    type: "image",
-                    source: {
-                        type: "base64",
-                        media_type: mimeType,
-                        data: base64Data
-                    }
-                };
-            }
+            // Préparation du contenu pour Claude
+            const contentData = mimeType === 'application/pdf' ? {
+                type: "document",
+                source: {
+                    type: "base64",
+                    media_type: mimeType,
+                    data: base64Data
+                }
+            } : {
+                type: "image",
+                source: {
+                    type: "base64",
+                    media_type: mimeType,
+                    data: base64Data
+                }
+            };
             
             const claudePayload = {
-                model: "claude-sonnet-4-20250514", // Claude Sonnet 4 (nom correct)
+                model: "claude-sonnet-4-20250514",
                 max_tokens: 1024,
-                system: `Tu es un analyseur de billets de concert. Analyse l'image ou le document PDF et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur.
+                system: `Tu es un analyseur de billets de concert. Analyse l'image ou le document et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur.
 
-RÈGLES STRICTES:
+RÈGLES:
 1. Si ce n'est PAS un billet de concert: réponds "NOT_TICKET"
 2. Si c'est une photo de personne: réponds "PHOTO_PERSONNE" 
-3. Si c'est un billet de concert VALIDE: réponds avec un objet JSON contenant les informations trouvées
-4. Pour les PDFs: analyse toutes les pages pour extraire les informations de placement
-
-Format JSON attendu (inclure SEULEMENT les champs que tu trouves):
-{
-  "porte": "valeur trouvée",
-  "rang": "valeur trouvée", 
-  "place": "valeur trouvée",
-  "bloc": "valeur trouvée",
-  "gradin": "valeur trouvée",
-  "chaise": "valeur trouvée",
-  "siege": "valeur trouvée",
-  "entree": "valeur trouvée",
-  "niveau": "valeur trouvée",
-  "parterre": "valeur trouvée",
-  "tribune": "valeur trouvée"
-}
+3. Si c'est un billet valide: réponds avec un objet JSON contenant TOUTES les informations de placement que tu trouves
 
 IMPORTANT: 
-- Extraire UNIQUEMENT les valeurs, pas les labels
-- Si tu ne trouves aucune information de placement: réponds "INVALID_TICKET"
-- Pas de texte explicatif, SEULEMENT le JSON ou le message d'erreur`,
+- Retourne un objet JSON avec TOUTES les informations de placement trouvées
+- Utilise les noms de champs EXACTS que tu vois sur le billet
+- Extrais UNIQUEMENT les valeurs, pas les labels
+- Si aucune info de placement: réponds "INVALID_TICKET"
+- Pas de texte explicatif, SEULEMENT le JSON
+
+Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord"}`,
 
                 messages: [{
                     role: "user",
                     content: [
                         {
                             type: "text",
-                            text: "Analyse ce billet (image ou PDF) et réponds selon les règles définies."
+                            text: "Analyse ce billet et extrais TOUTES les informations de placement avec leurs noms exacts."
                         },
                         contentData
                     ]
                 }]
             };
-
-            console.log('Payload préparé, taille data base64:', base64Data.length);
-            console.log('Type de contenu:', mimeType === 'application/pdf' ? 'document' : 'image');
-            console.log('URL API:', 'https://api.anthropic.com/v1/messages');
 
             const response = await axios({
                 method: 'post',
@@ -203,24 +138,12 @@ IMPORTANT:
                     'anthropic-version': '2023-06-01'
                 },
                 data: claudePayload,
-                timeout: 45000, // 45 secondes de timeout (plus long pour les PDFs)
-                validateStatus: function (status) {
-                    // Accepter toutes les réponses pour les analyser
-                    return true;
-                }
+                timeout: 45000,
+                validateStatus: () => true
             });
-
-            console.log('=== REPONSE CLAUDE ===');
-            console.log('Status:', response.status);
-            console.log('Headers:', response.headers);
-            console.log('Data:', JSON.stringify(response.data, null, 2));
             
-            // 5. Traitement de la réponse
+            // Traitement de la réponse
             if (response.status !== 200) {
-                console.error('=== ERREUR API CLAUDE ===');
-                console.error('Status:', response.status);
-                console.error('Response data:', response.data);
-                
                 return {
                     success: false,
                     message: `Erreur API Claude (${response.status})`,
@@ -231,26 +154,20 @@ IMPORTANT:
 
             const assistantMessage = response?.data?.content?.[0];
             if (!assistantMessage?.text) {
-                console.error('=== REPONSE CLAUDE VIDE ===');
-                console.error('Structure response.data:', Object.keys(response.data || {}));
-                console.error('Content complet:', response.data?.content);
-                
                 return {
                     success: false,
                     message: "L'API n'a pas retourné de réponse",
-                    errorType: 'NO_AI_RESPONSE',
-                    details: `Structure reçue: ${JSON.stringify(response.data)}`
+                    errorType: 'NO_AI_RESPONSE'
                 };
             }
 
             const responseText = assistantMessage.text.trim();
-            console.log('Réponse Claude:', responseText);
 
-            // 6. Gestion des cas d'erreur
+            // Gestion des cas d'erreur
             if (responseText === 'NOT_TICKET') {
                 return {
                     success: false,
-                    message: "L'image ou le document n'est pas un billet de concert valide",
+                    message: "L'image n'est pas un billet de concert valide",
                     errorType: 'NOT_TICKET'
                 };
             }
@@ -266,18 +183,16 @@ IMPORTANT:
             if (responseText === 'INVALID_TICKET') {
                 return {
                     success: false,
-                    message: "Le billet ne contient pas les informations de placement nécessaires",
+                    message: "Le billet ne contient pas d'informations de placement",
                     errorType: 'INVALID_TICKET'
                 };
             }
 
-            // 7. Parsing du JSON
+            // Parsing du JSON
             let ticketData;
             try {
-                // Nettoyer la réponse si nécessaire
                 let jsonText = responseText;
                 if (!jsonText.startsWith('{')) {
-                    // Chercher le premier { et dernier }
                     const start = jsonText.indexOf('{');
                     const end = jsonText.lastIndexOf('}');
                     if (start !== -1 && end !== -1) {
@@ -286,19 +201,16 @@ IMPORTANT:
                 }
                 
                 ticketData = JSON.parse(jsonText);
-                console.log('Données extraites:', ticketData);
                 
             } catch (parseError) {
-                console.error('Erreur parsing JSON:', parseError);
                 return {
                     success: false,
                     message: "Format de réponse invalide de l'IA",
-                    errorType: 'PARSE_ERROR',
-                    details: `Réponse reçue: ${responseText.substring(0, 100)}...`
+                    errorType: 'PARSE_ERROR'
                 };
             }
 
-            // 8. Validation et nettoyage des données
+            // Nettoyage et validation des données
             const cleanedData: Record<string, string> = {};
             
             // Ajouter l'URL du billet si disponible
@@ -306,23 +218,17 @@ IMPORTANT:
                 cleanedData.ticketUrl = ticketUrl;
             }
 
-            // Nettoyer et valider chaque champ
-            const validFields = [
-                'porte', 'rang', 'place', 'bloc', 'gradin', 
-                'chaise', 'siege', 'entree', 'niveau', 
-                'parterre', 'tribune'
-            ];
-
-            for (const field of validFields) {
+            // Nettoyer et valider TOUS les champs retournés par l'IA
+            Object.keys(ticketData).forEach(field => {
                 if (ticketData[field]) {
                     const value = String(ticketData[field]).trim();
                     if (value && value !== '' && value !== 'null' && value !== 'undefined') {
                         cleanedData[field] = value;
                     }
                 }
-            }
+            });
 
-            // 9. Vérification finale
+            // Vérification finale
             if (Object.keys(cleanedData).filter(key => key !== 'ticketUrl').length === 0) {
                 return {
                     success: false,
@@ -331,93 +237,52 @@ IMPORTANT:
                 };
             }
 
-            console.log('=== ANALYSE REUSSIE ===');
-            console.log('Données finales:', cleanedData);
-
             return {
                 success: true,
                 data: cleanedData
             };
 
         } catch (error: any) {
-            console.error('=== ERREUR OCR COMPLETE ===');
-            console.error('Type erreur:', typeof error);
-            console.error('Message:', error.message);
-            console.error('Stack:', error.stack);
-            
-            // Logs détaillés pour les erreurs axios
             if (error.response) {
-                console.error('=== ERREUR RESPONSE ===');
-                console.error('Status:', error.response.status);
-                console.error('Status Text:', error.response.statusText);
-                console.error('Headers:', error.response.headers);
-                console.error('Data:', error.response.data);
-                console.error('Config URL:', error.config?.url);
-                console.error('Config Method:', error.config?.method);
-                console.error('Config Headers:', error.config?.headers);
-                
                 const status = error.response.status;
                 const errorData = error.response.data;
                 
-                if (status === 400) {
-                    return {
-                        success: false,
-                        message: "Erreur dans la requête envoyée à l'API d'analyse",
-                        errorType: 'API_BAD_REQUEST',
-                        details: `Status 400 - Data: ${JSON.stringify(errorData)}`
-                    };
-                } else if (status === 401) {
+                if (status === 401) {
                     return {
                         success: false,
                         message: "Erreur d'authentification avec le service d'analyse",
-                        errorType: 'API_AUTH_ERROR',
-                        details: `Status 401 - Vérifiez votre clé API Claude`
-                    };
-                } else if (status === 404) {
-                    return {
-                        success: false,
-                        message: "URL de l'API introuvable",
-                        errorType: 'API_NOT_FOUND',
-                        details: `Status 404 - URL: ${error.config?.url} - Data: ${JSON.stringify(errorData)}`
+                        errorType: 'API_AUTH_ERROR'
                     };
                 } else if (status === 429) {
                     return {
                         success: false,
                         message: "Trop de requêtes, veuillez réessayer dans quelques instants",
-                        errorType: 'API_RATE_LIMIT',
-                        details: `Status 429 - Data: ${JSON.stringify(errorData)}`
+                        errorType: 'API_RATE_LIMIT'
                     };
                 } else if (status >= 500) {
                     return {
                         success: false,
-                        message: "Erreur temporaire du service d'analyse, veuillez réessayer",
-                        errorType: 'API_SERVER_ERROR',
-                        details: `Status ${status} - Data: ${JSON.stringify(errorData)}`
+                        message: "Erreur temporaire du service d'analyse",
+                        errorType: 'API_SERVER_ERROR'
                     };
                 } else {
                     return {
                         success: false,
-                        message: `Erreur API inconnue (${status})`,
-                        errorType: 'API_UNKNOWN_ERROR',
-                        details: `Status ${status} - Data: ${JSON.stringify(errorData)}`
+                        message: `Erreur API (${status})`,
+                        errorType: 'API_UNKNOWN_ERROR'
                     };
                 }
             } else if (error.request) {
-                console.error('=== ERREUR REQUEST ===');
-                console.error('Request:', error.request);
                 return {
                     success: false,
                     message: "Impossible de joindre le service d'analyse",
-                    errorType: 'NETWORK_ERROR',
-                    details: `Erreur réseau: ${error.message} - Code: ${error.code || 'N/A'}`
+                    errorType: 'NETWORK_ERROR'
                 };
             } else {
-                console.error('=== ERREUR SETUP ===');
                 return {
                     success: false,
                     message: "Erreur de configuration",
-                    errorType: 'SETUP_ERROR',
-                    details: `Erreur: ${error.message}`
+                    errorType: 'SETUP_ERROR'
                 };
             }
         }
