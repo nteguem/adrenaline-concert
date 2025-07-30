@@ -10,7 +10,7 @@ cloudinary.config({
 });
 
 export class OcrService {
-    static async analyzeTicket(file: File): Promise<{
+    static async analyzeTicket(file: File, eventDate?: string): Promise<{
         success: boolean;
         message?: string;
         data?: Record<string, string>;
@@ -81,6 +81,21 @@ export class OcrService {
                 // Continue même si l'upload échoue
             }
 
+            // Préparation de la date attendue pour validation
+            let expectedDateString = '';
+            if (eventDate) {
+                try {
+                    const date = new Date(eventDate);
+                    expectedDateString = date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit', 
+                        year: 'numeric'
+                    });
+                } catch (dateError) {
+                    // Continue sans validation de date si erreur de parsing
+                }
+            }
+
             // Préparation du contenu pour Claude
             const contentData = mimeType === 'application/pdf' ? {
                 type: "document",
@@ -98,15 +113,17 @@ export class OcrService {
                 }
             };
             
-            const claudePayload = {
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 1024,
-                system: `Tu es un analyseur de billets de concert. Analyse l'image ou le document et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur.
+            const systemPrompt = `Tu es un analyseur de billets de concert. Analyse l'image ou le document et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur.
 
 RÈGLES:
 1. Si ce n'est PAS un billet de concert: réponds "NOT_TICKET"
 2. Si c'est une photo de personne: réponds "PHOTO_PERSONNE" 
-3. Si c'est un billet valide: réponds avec un objet JSON contenant TOUTES les informations de placement que tu trouves
+3. Si c'est un billet valide: réponds avec un objet JSON contenant TOUTES les informations de placement que tu trouves ET la date du billet
+
+${expectedDateString ? `VALIDATION DE DATE OBLIGATOIRE:
+- La date attendue de l'événement est: ${expectedDateString}
+- Si la date sur le billet ne correspond PAS à cette date: réponds "WRONG_DATE"
+- Compare soigneusement les dates (jour/mois/année)` : ''}
 
 IMPORTANT: 
 - Retourne un objet JSON avec TOUTES les informations de placement trouvées
@@ -115,14 +132,18 @@ IMPORTANT:
 - Si aucune info de placement: réponds "INVALID_TICKET"
 - Pas de texte explicatif, SEULEMENT le JSON
 
-Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord"}`,
+Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": "15/03/2024"}`;
 
+            const claudePayload = {
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 1024,
+                system: systemPrompt,
                 messages: [{
                     role: "user",
                     content: [
                         {
                             type: "text",
-                            text: "Analyse ce billet et extrais TOUTES les informations de placement avec leurs noms exacts."
+                            text: "Analyse ce billet et extrais TOUTES les informations de placement avec leurs noms exacts. Vérifie aussi que la date correspond à l'événement attendu."
                         },
                         contentData
                     ]
@@ -180,6 +201,14 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord"}`,
                 };
             }
 
+            if (responseText === 'WRONG_DATE') {
+                return {
+                    success: false,
+                    message: `Ce billet n'est pas pour la bonne date. Date attendue: ${expectedDateString}`,
+                    errorType: 'WRONG_EVENT_DATE'
+                };
+            }
+
             if (responseText === 'INVALID_TICKET') {
                 return {
                     success: false,
@@ -228,8 +257,12 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord"}`,
                 }
             });
 
-            // Vérification finale
-            if (Object.keys(cleanedData).filter(key => key !== 'ticketUrl').length === 0) {
+            // Vérification finale (exclure ticketUrl et date de la validation des infos de placement)
+            const placementFields = Object.keys(cleanedData).filter(key => 
+                key !== 'ticketUrl' && key !== 'date'
+            );
+            
+            if (placementFields.length === 0) {
                 return {
                     success: false,
                     message: "Aucune information de placement trouvée sur le billet",

@@ -2,8 +2,9 @@
 import React, { useState } from "react";
 
 export default function Login({ handle }) {
-  const [email, setEmail] = useState(null);
-  const [pass, setPass] = useState(null);
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  
   const getData = (e) => {
     const { name, value } = e.target;
     if (name === "email") {
@@ -15,12 +16,32 @@ export default function Login({ handle }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email === "teste.dupont@gmail.com" && pass === "tested") {
+    
+    // Vérification que les champs ne sont pas vides
+    if (!email || !pass) {
+      console.log("Email ou mot de passe manquant");
+      return;
+    }
+    
+    // Conversion en minuscules pour email ET mot de passe
+    const emailLowerCase = email.toLowerCase();
+    const passLowerCase = pass.toLowerCase();
+    const referenceEmail = "teste.dupont@gmail.com";
+    const referencePass = "tested";
+    
+    console.log("Email saisi:", emailLowerCase);
+    console.log("Pass saisi:", passLowerCase);
+    
+    if (emailLowerCase === referenceEmail && passLowerCase === referencePass) {
+      console.log("Connexion réussie !");
       handle(true);
+    } else {
+      console.log("Identifiants incorrects");
     }
 
     // You can add your login logic here.
   };
+  
   return (
     <section>
       <form onSubmit={handleSubmit}>
@@ -79,14 +100,12 @@ export default function Login({ handle }) {
                 padding: "10px",
                 borderRadius: "5px",
               }}
-              //   onClick={handleSubmit}
             >
               Se connecter
             </button>
           </div>
         </div>
       </form>
-      {/* <pre>{JSON.stringify(session, null, 2)}</pre> */}
     </section>
   );
 }

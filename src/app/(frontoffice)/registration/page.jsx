@@ -59,7 +59,7 @@ export default function RegistrationPage() {
     if (data?.data?.tours[0]?.nextEvent?.placement) {
       const placementFields = data.data.tours[0].nextEvent.placement;
       const initialPlacementData = {};
-      
+       
       placementFields.forEach(field => {
         initialPlacementData[field] = "";
       });
@@ -125,7 +125,7 @@ export default function RegistrationPage() {
     return output;
   };
 
-  const years = range(1990, getYear(new Date()) + 1, 1);
+  const years = range(1950, getYear(new Date()) + 1, 1);
   const months = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
@@ -195,68 +195,49 @@ export default function RegistrationPage() {
     });
   };
 
-  const handleFileSelect = async (dataUrl, fileName = "") => {
-    setTicketImage(dataUrl);
-    if (fileName) {
-      setTicketFileName(fileName);
+// Modification dans handleFileSelect
+const handleFileSelect = async (dataUrl, fileName = "") => {
+  setTicketImage(dataUrl);
+  if (fileName) {
+    setTicketFileName(fileName);
+  }
+  setOcrLoad(true);
+  setOcrErrorMessage("");
+  setOcrStatus(null);
+  setOcrStatusMessage("");
+
+  uploadAttemptsRef.current++;
+  const attempts = uploadAttemptsRef.current;
+
+  try {
+    const formData = new FormData();
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    formData.append("file", blob, fileName || "uploaded-image.png");
+    
+    // AJOUT : Passer la date de l'événement pour validation
+    if (data?.data?.tours[0]?.nextEvent?.eventDate) {
+      formData.append("eventDate", data.data.tours[0].nextEvent.eventDate);
     }
-    setOcrLoad(true);
-    setOcrErrorMessage("");
-    setOcrStatus(null);
-    setOcrStatusMessage("");
 
-    uploadAttemptsRef.current++;
-    const attempts = uploadAttemptsRef.current;
+    const apiResponse = await fetch("/api/ocr", {
+      method: "POST",
+      body: formData,
+    });
 
-    try {
-      const formData = new FormData();
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      formData.append("file", blob, fileName || "uploaded-image.png");
+    const result = await apiResponse.json();
 
-      const apiResponse = await fetch("/api/ocr", {
-        method: "POST",
-        body: formData,
-      });
+    if (!apiResponse.ok || !result?.success) {
+      setOcrLoad(false);
 
-      const result = await apiResponse.json();
-
-      if (!apiResponse.ok || !result?.success) {
-        setOcrLoad(false);
-
-        if (attempts >= 2) {
-          setOcrFailed(true);
-          setOcrStatus("error");
-          setOcrStatusMessage("le billet n'a pas été reconnu");
-        } else {
-          setOcrStatus("error");
-          setOcrStatusMessage("le billet n'a pas été reconnu");
-          setOcrErrorMessage(
-            "L'analyse du billet n'a pas pu s'effectuer correctement"
-          );
-        }
+      // NOUVEAU : Gestion spécifique de l'erreur de date
+      if (result?.errorType === 'WRONG_EVENT_DATE') {
+        setOcrStatus("error");
+        setOcrStatusMessage("Date incorrecte sur le billet");
+        setOcrErrorMessage(result.message || "Ce billet n'est pas pour la bonne date d'événement");
+        setOcrFailed(true);
         return;
       }
-
-      // SUCCES OCR - Prendre TOUS les champs sauf ticketUrl
-      const ocrPlacementData = {};
-      if (result?.data) {
-        Object.keys(result.data).forEach(key => {
-          if (key !== 'ticketUrl') {
-            ocrPlacementData[key] = result.data[key];
-          }
-        });
-      }
-      
-      setOcrData(result?.data);
-      setPlacementData(ocrPlacementData);
-      setOcrLoad(false);
-      setOcrStatus("success");
-      setOcrStatusMessage("");
-      setOcrErrorMessage("");
-      setOcrFailed(false);
-    } catch (error) {
-      setOcrLoad(false);
 
       if (attempts >= 2) {
         setOcrFailed(true);
@@ -266,11 +247,45 @@ export default function RegistrationPage() {
         setOcrStatus("error");
         setOcrStatusMessage("le billet n'a pas été reconnu");
         setOcrErrorMessage(
-          "L'analyse du billet n'a pas pu s'effectuer correctement"
+          result.message || "L'analyse du billet n'a pas pu s'effectuer correctement"
         );
       }
+      return;
     }
-  };
+
+    // SUCCES OCR - Prendre TOUS les champs sauf ticketUrl et date
+    const ocrPlacementData = {};
+    if (result?.data) {
+      Object.keys(result.data).forEach(key => {
+        if (key !== 'ticketUrl' && key !== 'date') {
+          ocrPlacementData[key] = result.data[key];
+        }
+      });
+    }
+    
+    setOcrData(result?.data);
+    setPlacementData(ocrPlacementData);
+    setOcrLoad(false);
+    setOcrStatus("success");
+    setOcrStatusMessage("");
+    setOcrErrorMessage("");
+    setOcrFailed(false);
+  } catch (error) {
+    setOcrLoad(false);
+
+    if (attempts >= 2) {
+      setOcrFailed(true);
+      setOcrStatus("error");
+      setOcrStatusMessage("le billet n'a pas été reconnu");
+    } else {
+      setOcrStatus("error");
+      setOcrStatusMessage("le billet n'a pas été reconnu");
+      setOcrErrorMessage(
+        "L'analyse du billet n'a pas pu s'effectuer correctement"
+      );
+    }
+  }
+};
 
   const calculateAge = (birthDate) => {
     const today = new Date();
@@ -463,46 +478,50 @@ export default function RegistrationPage() {
     );
   };
 
-  // NOUVEAU : Formulaire de placement dynamique
-  const DynamicPlacementForm = () => {
-    if (!ocrFailed) return null;
+// NOUVEAU : Formulaire de placement dynamique avec labels au-dessus
+const DynamicPlacementForm = () => {
+  if (!ocrFailed) return null;
 
-    const placementFields = data?.data?.tours[0]?.nextEvent?.placement || [];
-    
-    if (placementFields.length === 0) {
-      return (
-        <div className="mt-6 mb-4">
-          <p className="text-white text-sm mb-4 text-center">
-            Aucun champ de placement configuré pour cet événement.
-          </p>
-        </div>
-      );
-    }
-
+  const placementFields = data?.data?.tours[0]?.nextEvent?.placement || [];
+  
+  if (placementFields.length === 0) {
     return (
       <div className="mt-6 mb-4">
         <p className="text-white text-sm mb-4 text-center">
-          MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
+          Aucun champ de placement configuré pour cet événement.
         </p>
+      </div>
+    );
+  }
 
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2 justify-start">
-            {placementFields.map((field, index) => (
+  return (
+    <div className="mt-6 mb-4">
+      <p className="text-white text-sm mb-4 text-center">
+        MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
+      </p>
+
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2 justify-start">
+          {placementFields.map((field, index) => (
+            <div key={field} className="flex flex-col">
+              <label className="text-white text-xs mb-1 font-medium">
+                {field.toUpperCase()}
+              </label>
               <Input
-                key={field}
-                placeholder={field.toUpperCase()}
+                placeholder=""
                 name={field}
                 value={placementData[field] || ""}
                 onChange={handlePlacementChange}
                 className="h-10 w-20 text-sm px-2"
-                required={true} // Tous les champs sont obligatoires maintenant
+                required={true}
               />
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderFormStep = () => {
     switch (formStep) {
@@ -694,75 +713,95 @@ export default function RegistrationPage() {
             </div>
           </form>
         );
-      case 2:
-        return (
-          <form onSubmit={handleSubmit}>
-            <div className="mb-8">
-              {ticketImage && <TicketPreview />}
-              <div className="text-center text-sm mb-4">
-                {ocrFailed ? (
-                  <div>
-                    <p className="text-orange-600 font-medium mb-2">
-                      Informations saisies manuellement
-                    </p>
-                    <div className="text-left">
-                      {Object.entries(placementData)
-                        .filter(([key, value]) => value && value.trim() !== "")
-                        .map(([key, value]) => (
-                          <p key={key}>
-                            {key.toUpperCase()} : {value}
-                          </p>
-                        ))}
-                    </div>
-                  </div>
-                ) : ocrData ? (
-                  <div>
-                    <p className="text-blue-600 font-medium mb-2">
-                      Informations du billet analysées automatiquement
-                    </p>
-                    <div className="text-left">
-                      {Object.entries(placementData)
-                        .filter(([key, value]) => value && value.trim() !== "")
-                        .map(([key, value]) => (
-                          <p key={key}>
-                            {key.toUpperCase()} : {value}
-                          </p>
-                        ))}
-
-                      {Object.entries(placementData).filter(
-                        ([key, value]) => value && value.trim() !== ""
-                      ).length === 0 && (
-                        <p>Informations du billet en cours de traitement</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-blue-600 font-medium">
-                    Informations du billet en cours de traitement
-                  </p>
-                )}
+case 2:
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="mb-8">
+        {ticketImage && <TicketPreview />}
+        
+        {/* Section interactive de récap/modification */}
+        <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
+          <div className="text-center mb-2">
+            {ocrFailed ? (
+              <div className="flex items-center justify-center mb-1">
+                <svg className="w-4 h-4 text-orange-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <p className="text-orange-400 font-medium text-sm">
+                  Informations saisies manuellement
+                </p>
               </div>
+            ) : (
+              <div className="flex items-center justify-center mb-1">
+                <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <p className="text-green-400 font-medium text-sm">
+                  Informations analysées automatiquement
+                </p>
+              </div>
+            )}
+          </div>
 
-              {ocrErrorMessage && (
-                <div className="text-center mt-4">
-                  <p className="text-red-500 text-sm">{ocrErrorMessage}</p>
+          {/* Message d'aide */}
+          <div className="text-center mb-2">
+            <p className="text-gray-300 text-xs flex items-center justify-center">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+              </svg>
+              Vous pouvez modifier ces informations si nécessaire
+            </p>
+          </div>
+
+          {/* Champs de placement éditables */}
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(placementData)
+              .filter(([key, value]) => value && value.trim() !== "")
+              .map(([key, value]) => (
+                <div key={key} className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors">
+                  <label className="text-white font-medium text-xs uppercase block mb-1">
+                    {key}
+                  </label>
+                  <Input
+                    name={key}
+                    value={value}
+                    onChange={handlePlacementChange}
+                    className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full"
+                  />
                 </div>
-              )}
-            </div>
-            <div className="mt-8 flex justify-between items-center space-x-4">
-              <Button
-                onClick={() => setFormStep(1)}
-                variant="secondary"
-                className="flex-1 !bg-white !text-black"
-              >
-                MODIFIER MES INFORMATIONS
-              </Button>
-              <Button type="submit" className="flex-1">
-                VALIDER
-              </Button>
-            </div>
-          </form>
-        );
+              ))}
+
+            {Object.entries(placementData).filter(
+              ([key, value]) => value && value.trim() !== ""
+            ).length === 0 && (
+              <div className="col-span-3 text-center py-2">
+                <p className="text-gray-400 italic text-xs">Aucune information de placement disponible</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {ocrErrorMessage && (
+          <div className="text-center mt-4">
+            <p className="text-red-500 text-sm">{ocrErrorMessage}</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-8 flex justify-between items-center space-x-4">
+        <Button
+          onClick={() => setFormStep(1)}
+          variant="secondary"
+          className="flex-1 !bg-white !text-black"
+        >
+          MODIFIER MES INFORMATIONS
+        </Button>
+        <Button type="submit" className="flex-1">
+          VALIDER
+        </Button>
+      </div>
+    </form>
+  );
       default:
         return null;
     }

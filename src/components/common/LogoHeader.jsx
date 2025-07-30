@@ -13,7 +13,7 @@ const LogoHeader = ({ venue, date }) => {
         TOUR
       </span> */}
       {(venue || date) && (
-        <div className="text-center text-lg">
+        <div className="text-center text-3xl">
           {date && venue ? `${date} | ${venue}` : date || venue}
         </div>
       )}

@@ -262,7 +262,7 @@ export default function HomePage() {
                     transition-colors 
                     ${
                       isButtonDisabled
-                        ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60"
+                        ? "bg-gray-500 text-gray-300 cursor-not-allowed"
                         : isClicked
                         ? "bg-blue-400"
                         : ""

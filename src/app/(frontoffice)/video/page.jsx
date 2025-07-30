@@ -111,16 +111,17 @@ export default function VideoPage() {
             VIDEO MATT QUI TEASE SUR L’EXPERIENCE
           </div>
           <div className="w-full aspect-video bg-black relative">
-            <iframe
-              width="100%"
-              height="100%"
-              src="https://www.youtube.com/embed/8KtxwR0plj0?autoplay=1&mute=1&enablejsapi=1"
-              title="Mat pokora adrenaline tour"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              onEnded={handleVideoEnd}
-            ></iframe>
+         <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/8KtxwR0plj0?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&modestbranding=1&enablejsapi=1&iv_load_policy=3"
+                  title="Mat pokora adrenaline tour"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  onEnded={handleVideoEnd}
+                  style={{ pointerEvents: 'none' }}
+                />
           </div>
         </div>
 
