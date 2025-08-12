@@ -12,14 +12,7 @@ import {
 } from '@/models/vainqueurModel';
 import { NextRequest } from 'next/server';
 
-
 export class TirageService {
-  /**
-   * Effectue un tirage au sort parmi les participants d'un événement
-   * @param data Les données du tirage (eventId et nombreVainqueurs)
-   * @returns Les résultats du tirage avec les vainqueurs sélectionnés
-   */
-
   static async handleCreateTirage(request: NextRequest) {
     try {
         const body = await request.json();
@@ -41,13 +34,13 @@ export class TirageService {
             return tirageResult;
         }
 
-        // Return the complete result directly
         return tirageResult;
 
     } catch (error) {
         return apiErrorHandler(error);
     }
-}
+  }
+
   static async faireTirage(data: TirageRequest): Promise<{ [key: string]: any }> {
     try {
       if (!data.eventId) {
@@ -94,7 +87,6 @@ export class TirageService {
             where: { tirageid: existingTirage.id }
           });
           
-
           // Mettre à jour le tirage existant
           nouveauTirage = await tx.tirage.update({
             where: { id: existingTirage.id },
@@ -114,18 +106,18 @@ export class TirageService {
           });
         }
 
-        // Créer les nouveaux vainqueurs
+        // Créer les nouveaux vainqueurs (données minimales, le reste via jointure)
         const vainqueursData = vainqueurs.map((participant, index) => ({
-          participantId: participant.id,
+          participantId: participant.id, // ← CLÉ PRINCIPALE pour la jointure
           email: participant.email,
           prenom_participant: participant.prenom,
           nom_participant: participant.nom,
           tirageid: nouveauTirage.id,
           rang: index + 1,
-          porte: participant.porte?? '',
-          place: participant.place?? '', 
-          ticketUrl: participant.ticketUrl?? '',    
-          ticketInfo: participant.textInfo?? '',   
+          porte: participant.porte ?? '',
+          place: participant.place ?? '', 
+          ticketUrl: participant.ticketUrl ?? '',    
+          ticketInfo: participant.textInfo ?? '',   
         }));
 
         // Créer les vainqueurs en base de données
@@ -133,9 +125,24 @@ export class TirageService {
           data: vainqueursData,
         });
 
-        // Récupérer les vainqueurs avec plus de détails
+        // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
         const vainqueursComplets = await tx.vainqueur.findMany({
           where: { tirageid: nouveauTirage.id },
+          include: {
+            participant: { // ← JOINTURE AVEC PARTICIPANT
+              select: {
+                id: true,
+                nom: true,
+                prenom: true,
+                email: true,
+                phone: true,           // ← RÉCUPÉRÉ VIA JOINTURE
+                dateNaissance: true,   // ← RÉCUPÉRÉ VIA JOINTURE
+                placement: true,       // ← RÉCUPÉRÉ VIA JOINTURE
+                ticketUrl: true,
+                textInfo: true,
+              }
+            }
+          },
           select: {
             id: true,
             prenom_participant: true,
@@ -146,6 +153,7 @@ export class TirageService {
             ticketInfo: true,
             porte: true,
             place: true,
+            participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
           },
           orderBy: { rang: 'asc' }
         });
@@ -164,84 +172,89 @@ export class TirageService {
       return successResponse({
         message,
         code: 201,
-        // tirage: result.tirage,
-        // vainqueurs: result.vainqueurs
+        tirage: result.tirage,
+        vainqueurs: result.vainqueurs // ← DONNÉES ENRICHIES AVEC JOINTURE
       }, undefined, 201);
 
     } catch (error) {
       console.error("Erreur lors du tirage au sort:", error);
       return apiErrorHandler(error);
     }
-}
-
-static async getAllTiragesWithEvents() {
-  try {
-    const tirages = await prisma.tirage.findMany({
-      orderBy: {
-        dateTirage: 'desc'
-      },
-      select: {
-        id: true,
-        eventId: true,
-        dateTirage: true,
-        nombreVainqueur: true,
-        createdAt: true
-      }
-    });
-
-    // Get associated events for each tirage
-    const tiragesWithEvents = await Promise.all(
-      tirages.map(async (tirage) => {
-        const event = await prisma.event.findUnique({
-          where: { id: tirage.eventId },
-          select: {
-            id: true,
-            city: true,
-            venue: true,
-            eventDate: true,
-            endDate: true,
-            status: true
-          }
-        });
-
-        return {
-          ...tirage,
-          event: event || null
-        };
-      })
-    );
-
-    return successResponse({
-      message: `${tirages.length} tirages trouvés`,
-      tirages: tiragesWithEvents
-    });
-
-  } catch (error) {
-    console.error("Erreur lors de la récupération des tirages:", error);
-    return apiErrorHandler(error);
   }
-}
 
-  /**
-   * Récupère tous les tirages avec leurs vainqueurs associés
-   * @returns Liste de tous les tirages avec leurs vainqueurs
-   */
-static async getAllTiragesWithWinners() {
+  static async getAllTiragesWithEvents() {
     try {
-      // Fix the syntax error in the query
+      const tirages = await prisma.tirage.findMany({
+        orderBy: {
+          dateTirage: 'desc'
+        },
+        select: {
+          id: true,
+          eventId: true,
+          dateTirage: true,
+          nombreVainqueur: true,
+          createdAt: true
+        }
+      });
+
+      const tiragesWithEvents = await Promise.all(
+        tirages.map(async (tirage) => {
+          const event = await prisma.event.findUnique({
+            where: { id: tirage.eventId },
+            select: {
+              id: true,
+              city: true,
+              venue: true,
+              eventDate: true,
+              endDate: true,
+              status: true
+            }
+          });
+
+          return {
+            ...tirage,
+            event: event || null
+          };
+        })
+      );
+
+      return successResponse({
+        message: `${tirages.length} tirages trouvés`,
+        tirages: tiragesWithEvents
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des tirages:", error);
+      return apiErrorHandler(error);
+    }
+  }
+
+  static async getAllTiragesWithWinners() {
+    try {
       const tirages = await prisma.tirage.findMany({
         orderBy: {
           dateTirage: 'desc'
         }
       });
 
-      // Get all winners for each tirage
       const tiragesWithDetails = await Promise.all(
         tirages.map(async (tirage) => {
           try {
+            // ← JOINTURE : Récupérer les vainqueurs avec les données des participants
             const vainqueurs = await prisma.vainqueur.findMany({
               where: {
                 tirageid: tirage.id
+              },
+              include: {
+                participant: { // ← JOINTURE AVEC PARTICIPANT
+                  select: {
+                    phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
+                    dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
+                    placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
+                    ticketUrl: true,
+                    textInfo: true,
+                  }
+                }
               },
               select: {
                 id: true,
@@ -253,6 +266,7 @@ static async getAllTiragesWithWinners() {
                 ticketInfo: true,
                 porte: true,
                 place: true,
+                participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
               },
               orderBy: {
                 rang: 'asc'
@@ -292,103 +306,119 @@ static async getAllTiragesWithWinners() {
       console.error("Erreur lors de la récupération des tirages:", error);
       return apiErrorHandler(error);
     }
-}
-
-static async getWinnersByEventId(eventId: string) {
-  try {
-    // First get the tirage for this event
-    const tirage = await prisma.tirage.findFirst({
-      where: {
-        eventId: eventId
-      }
-    });
-
-    if (!tirage) {
-      return errorResponse('Aucun tirage trouvé pour cet événement', 404);
-    }
-
-    // Get the winners for this tirage
-    const vainqueurs = await prisma.vainqueur.findMany({
-      where: {
-        tirageid: tirage.id
-      },
-      select: {
-        id: true,
-        prenom_participant: true,
-        nom_participant: true,
-        email: true,
-        rang: true,
-        ticketUrl: true,
-        ticketInfo: true,
-        porte: true,
-        place: true,
-      },
-      orderBy: {
-        rang: 'asc'
-      }
-    });
-
-    return successResponse({
-      message: `${vainqueurs.length} vainqueurs trouvés`,
-      tirage: tirage,
-      vainqueurs: vainqueurs
-    });
-
-  } catch (error) {
-    console.error("Erreur lors de la récupération des vainqueurs:", error);
-    return apiErrorHandler(error);
   }
-}
 
-static async getWinnersByTirageId(tirageId: string) {
-  try {
-    const vainqueurs = await prisma.vainqueur.findMany({
-      where: {
-        tirageid: tirageId
-      },
-      select: {
-        id: true,
-        prenom_participant: true,
-        nom_participant: true,
-        email: true,
-        rang: true,
-        ticketUrl: true,
-        ticketInfo: true,
-        porte: true,
-        place: true,
-      },
-      orderBy: {
-        rang: 'asc'
+  static async getWinnersByEventId(eventId: string) {
+    try {
+      const tirage = await prisma.tirage.findFirst({
+        where: {
+          eventId: eventId
+        }
+      });
+
+      if (!tirage) {
+        return errorResponse('Aucun tirage trouvé pour cet événement', 404);
       }
-    });
 
-    if (!vainqueurs.length) {
-      return errorResponse('Aucun vainqueur trouvé pour ce tirage', 404);
+      // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
+      const vainqueurs = await prisma.vainqueur.findMany({
+        where: {
+          tirageid: tirage.id
+        },
+        include: {
+          participant: { // ← JOINTURE AVEC PARTICIPANT
+            select: {
+              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
+              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES  
+              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
+              ticketUrl: true,
+              textInfo: true,
+            }
+          }
+        },
+        select: {
+          id: true,
+          prenom_participant: true,
+          nom_participant: true,
+          email: true,
+          rang: true,
+          ticketUrl: true,
+          ticketInfo: true,
+          porte: true,
+          place: true,
+          participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
+        },
+        orderBy: {
+          rang: 'asc'
+        }
+      });
+
+      return successResponse({
+        message: `${vainqueurs.length} vainqueurs trouvés`,
+        tirage: tirage,
+        vainqueurs: vainqueurs
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des vainqueurs:", error);
+      return apiErrorHandler(error);
     }
-
-    return successResponse({
-      message: `${vainqueurs.length} vainqueurs trouvés`,
-      vainqueurs: vainqueurs
-    });
-
-  } catch (error) {
-    console.error("Erreur lors de la récupération des vainqueurs:", error);
-    return apiErrorHandler(error);
   }
-}
 
-  /**
-   * Sélectionne aléatoirement des vainqueurs parmi une liste de participants
-   * @param participants Liste des participants
-   * @param nombreVainqueurs Nombre de vainqueurs à sélectionner
-   * @returns Liste des vainqueurs sélectionnés
-   */
+  static async getWinnersByTirageId(tirageId: string) {
+    try {
+      // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
+      const vainqueurs = await prisma.vainqueur.findMany({
+        where: {
+          tirageid: tirageId
+        },
+        include: {
+          participant: { // ← JOINTURE AVEC PARTICIPANT
+            select: {
+              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
+              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
+              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
+              ticketUrl: true,
+              textInfo: true,
+            }
+          }
+        },
+        select: {
+          id: true,
+          prenom_participant: true,
+          nom_participant: true,
+          email: true,
+          rang: true,
+          ticketUrl: true,
+          ticketInfo: true,
+          porte: true,
+          place: true,
+          participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
+        },
+        orderBy: {
+          rang: 'asc'
+        }
+      });
+
+      if (!vainqueurs.length) {
+        return errorResponse('Aucun vainqueur trouvé pour ce tirage', 404);
+      }
+
+      return successResponse({
+        message: `${vainqueurs.length} vainqueurs trouvés`,
+        vainqueurs: vainqueurs
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des vainqueurs:", error);
+      return apiErrorHandler(error);
+    }
+  }
+
   static selectionnerVainqueurs(participants: any[], nombreVainqueurs: number): any[] {
-    // Créer une copie pour ne pas modifier l'original
     const participantsDisponibles = [...participants];
     const vainqueurs: any[] = [];
 
-    // S'assurer que le nombre de vainqueurs ne dépasse pas le nombre de participants
     const nbVainqueursEffectif = Math.min(nombreVainqueurs, participantsDisponibles.length);
 
     // Algorithme de Fisher-Yates pour un mélange aléatoire efficace
@@ -398,10 +428,8 @@ static async getWinnersByTirageId(tirageId: string) {
         [participantsDisponibles[j], participantsDisponibles[i]];
     }
 
-    // Prendre les n premiers éléments du tableau mélangé
     return participantsDisponibles.slice(0, nbVainqueursEffectif);
   }
-
 
   static async getTiragesByEventId(eventId: string) {
     try {
@@ -436,9 +464,6 @@ static async getWinnersByTirageId(tirageId: string) {
       return apiErrorHandler(error);
     }
   }
-
-  
-
 }
 
 export default TirageService;

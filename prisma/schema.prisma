@@ -21,44 +21,51 @@ model User {
 }
 
 model tirage {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
   eventId         String
   dateTirage      DateTime
   nombreVainqueur Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  vainqueurs      vainqueur[] // ← RELATION AJOUTÉE
 }
 
 model vainqueur {
-  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  id                 String      @id @default(auto()) @map("_id") @db.ObjectId
   tirageid           String
   participantId      String
   nom_participant    String
   prenom_participant String
-  email              String   @unique
+  email              String
   rang               Int
   porte              String
   place              String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
   ticketUrl          String
   ticketInfo         String
+  
+  // ← RELATIONS AJOUTÉES
+  tirage             tirage      @relation(fields: [tirageid], references: [id])
+  participant        participant @relation(fields: [participantId], references: [id])
 }
 
 model participant {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
   nom           String
   prenom        String
   eventId       String
   dateNaissance DateTime
   email         String
   phone         String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   placement     Json?
   ticketUrl     String?
   textInfo      String?
+  
+  // ← RELATION AJOUTÉE
+  vainqueurs    vainqueur[] // Un participant peut être vainqueur plusieurs fois
 }
 
 model Tour {
@@ -80,5 +87,5 @@ model Event {
   eventDate DateTime
   endDate   DateTime
   status    String
-  placement String[] @default([]) 
+  placement String[] @default([])
 }
