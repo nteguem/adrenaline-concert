@@ -128,8 +128,17 @@ export class TirageService {
         // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
         const vainqueursComplets = await tx.vainqueur.findMany({
           where: { tirageid: nouveauTirage.id },
-          include: {
-            participant: { // ← JOINTURE AVEC PARTICIPANT
+          select: {
+            id: true,
+            prenom_participant: true,
+            nom_participant: true,
+            email: true,
+            rang: true,
+            ticketUrl: true,
+            ticketInfo: true,
+            porte: true,
+            place: true,
+            participant: { // ← SÉLECTION IMBRIQUÉE AU LIEU D'INCLUDE
               select: {
                 id: true,
                 nom: true,
@@ -142,18 +151,6 @@ export class TirageService {
                 textInfo: true,
               }
             }
-          },
-          select: {
-            id: true,
-            prenom_participant: true,
-            nom_participant: true,
-            email: true,
-            rang: true,
-            ticketUrl: true,
-            ticketInfo: true,
-            porte: true,
-            place: true,
-            participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
           },
           orderBy: { rang: 'asc' }
         });
@@ -245,17 +242,6 @@ export class TirageService {
               where: {
                 tirageid: tirage.id
               },
-              include: {
-                participant: { // ← JOINTURE AVEC PARTICIPANT
-                  select: {
-                    phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
-                    dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
-                    placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-                    ticketUrl: true,
-                    textInfo: true,
-                  }
-                }
-              },
               select: {
                 id: true,
                 prenom_participant: true,
@@ -266,7 +252,15 @@ export class TirageService {
                 ticketInfo: true,
                 porte: true,
                 place: true,
-                participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
+                participant: { // ← SÉLECTION IMBRIQUÉE
+                  select: {
+                    phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
+                    dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
+                    placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
+                    ticketUrl: true,
+                    textInfo: true,
+                  }
+                }
               },
               orderBy: {
                 rang: 'asc'
@@ -325,17 +319,6 @@ export class TirageService {
         where: {
           tirageid: tirage.id
         },
-        include: {
-          participant: { // ← JOINTURE AVEC PARTICIPANT
-            select: {
-              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
-              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES  
-              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-              ticketUrl: true,
-              textInfo: true,
-            }
-          }
-        },
         select: {
           id: true,
           prenom_participant: true,
@@ -346,7 +329,15 @@ export class TirageService {
           ticketInfo: true,
           porte: true,
           place: true,
-          participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
+          participant: { // ← SÉLECTION IMBRIQUÉE
+            select: {
+              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
+              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES  
+              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
+              ticketUrl: true,
+              textInfo: true,
+            }
+          }
         },
         orderBy: {
           rang: 'asc'
@@ -372,17 +363,6 @@ export class TirageService {
         where: {
           tirageid: tirageId
         },
-        include: {
-          participant: { // ← JOINTURE AVEC PARTICIPANT
-            select: {
-              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
-              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
-              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-              ticketUrl: true,
-              textInfo: true,
-            }
-          }
-        },
         select: {
           id: true,
           prenom_participant: true,
@@ -393,7 +373,15 @@ export class TirageService {
           ticketInfo: true,
           porte: true,
           place: true,
-          participant: true, // ← INCLURE LES DONNÉES DU PARTICIPANT
+          participant: { // ← SÉLECTION IMBRIQUÉE
+            select: {
+              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
+              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
+              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
+              ticketUrl: true,
+              textInfo: true,
+            }
+          }
         },
         orderBy: {
           rang: 'asc'
