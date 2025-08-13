@@ -1,13 +1,12 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import LogoHeader from "@/components/common/LogoHeader";
 import Input from "@/components/common/Input";
 import Checkbox from "@/components/common/Checkbox";
 import FileUpload from "@/components/common/FileUpload";
 import Button from "@/components/common/Button";
 import PopupModal from "@/components/common/PopupModal";
-import { din } from "@/styles/fonts";
+import { din, evangelion } from "@/styles/fonts";
 import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
@@ -15,7 +14,141 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getYear, getMonth } from "date-fns";
 
+// Hook pour vérifier l'email en temps réel
+const useEmailCheck = (email, eventId) => {
+  const fetcher = async ([url, email, eventId]) => {
+    if (!email || !eventId || !email.includes('@')) {
+      return null;
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.toLowerCase().trim(), eventId })
+    });
+    
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.success ? data.data : null;
+  };
+
+  // Valide l'email avant de faire la requête
+  const shouldCheck = useMemo(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email) && eventId;
+  }, [email, eventId]);
+
+  const { data, error, isLoading } = useSWR(
+    shouldCheck ? ['/api/check-participant', email, eventId] : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 3000, // Cache 3 secondes
+      errorRetryCount: 1,
+    }
+  );
+
+  return {
+    isChecking: isLoading,
+    participantExists: data?.exists || false,
+    participantData: data?.participant || null,
+    error: error || null
+  };
+};
+
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
+
+// Header intégré dans la page
+const IntegratedHeader = ({ venue, date, city }) => {
+  const subtitleText = date && venue ? `${date} | ${city} - ${venue}` : date || venue;
+  
+  // Calcul intelligent de la taille de police selon la longueur du texte
+  const getFontSize = (text) => {
+    if (!text) return 'text-3xl';
+    const length = text.length;
+    if (length <= 20) return 'text-3xl';
+    if (length <= 30) return 'text-2xl';
+    if (length <= 40) return 'text-xl';
+    if (length <= 50) return 'text-lg';
+    return 'text-base';
+  };
+
+  return (
+    <div className="w-full flex flex-col items-center py-6 mb-8">
+      <h1
+        className={`${evangelion.className} text-6xl text-white mb-1 space-x-0 text-center`}
+      >
+        ADRENALINE TOUR
+      </h1>
+      {(venue || date || city) && (
+        <div className={`text-center ${getFontSize(subtitleText)} text-white whitespace-nowrap px-4 max-w-full`}>
+          <span className="inline-block" style={{ 
+            transform: subtitleText && subtitleText.length > 50 ? 'scaleX(0.9)' : 'scaleX(1)',
+            transformOrigin: 'center'
+          }}>
+            {subtitleText}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// COMPOSANT DÉPLACÉ EN DEHORS - C'EST LA SOLUTION !
+const DynamicPlacementForm = React.memo(({ 
+  ocrFailed, 
+  placementFields, 
+  placementData, 
+  handlePlacementChange 
+}) => {
+  if (!ocrFailed) return null;
+  
+  if (placementFields.length === 0) {
+    return (
+      <div className="mt-6 mb-4">
+        <p className="text-white text-sm mb-4 text-center">
+          Aucun champ de placement configuré pour cet événement.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 mb-4">
+      <p className="text-white text-sm mb-4 text-center">
+        MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
+      </p>
+
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2 justify-start">
+          {placementFields.map((field) => (
+            <div key={`placement-field-${field}`} className="flex flex-col">
+              <label 
+                htmlFor={`input-${field}`}
+                className="text-white text-xs mb-1 font-medium"
+              >
+                {field.toUpperCase()}
+              </label>
+              <Input
+                id={`input-${field}`}
+                placeholder=""
+                name={field}
+                value={placementData[field] || ""}
+                onChange={handlePlacementChange}
+                className="h-10 w-20 text-sm px-2"
+                required={true}
+                autoComplete="off"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+DynamicPlacementForm.displayName = 'DynamicPlacementForm';
 
 export default function RegistrationPage() {
   const router = useRouter();
@@ -54,6 +187,13 @@ export default function RegistrationPage() {
   const fileUploadKeyRef = useRef(0);
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
 
+  // Hook de vérification email - utilise le bon eventId
+  const eventIds = data?.data?.tours[0]?.id;
+  const { isChecking, participantExists, participantData } = useEmailCheck(
+    formData.email, 
+    eventIds
+  );
+
   // Initialiser les champs de placement dynamiques
   useEffect(() => {
     if (data?.data?.tours[0]?.nextEvent?.placement) {
@@ -67,6 +207,20 @@ export default function RegistrationPage() {
       setPlacementData(initialPlacementData);
     }
   }, [data]);
+
+  // Mémoriser les champs de placement
+  const placementFields = useMemo(() => {
+    return data?.data?.tours[0]?.nextEvent?.placement || [];
+  }, [data]);
+
+  // Handler optimisé avec useCallback
+  const handlePlacementChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setPlacementData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
 
   // Vérifier si les champs de placement obligatoires sont remplis
   const hasRequiredPlacementFields = () => {
@@ -156,7 +310,7 @@ export default function RegistrationPage() {
 
   if (error) return <LoadingObject text={"Failed to load"} />;
   if (data) {
-    eventId = data.data?.tours[0]?.nextEvent.id;
+    eventId = data.data?.tours[0]?.id; // Utilise le bon eventId ici aussi
     if (data?.data?.tours.length > 0) {
       if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate))
         return <LoadingObject text={"le formulaire est clôturé"} />;
@@ -174,7 +328,7 @@ export default function RegistrationPage() {
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
   else {
-    eventId = data.data?.tours[0]?.nextEvent?.id;
+    eventId = data.data?.tours[0]?.id; // Et ici aussi
     formattedDate = customdateFormat(data.data?.tours[0]?.nextEvent);
   }
 
@@ -186,58 +340,79 @@ export default function RegistrationPage() {
     });
   };
 
-  // Handler pour les champs de placement dynamiques
-  const handlePlacementChange = (e) => {
-    const { name, value } = e.target;
-    setPlacementData({
-      ...placementData,
-      [name]: value,
-    });
-  };
-
-// Modification dans handleFileSelect
-const handleFileSelect = async (dataUrl, fileName = "") => {
-  setTicketImage(dataUrl);
-  if (fileName) {
-    setTicketFileName(fileName);
-  }
-  setOcrLoad(true);
-  setOcrErrorMessage("");
-  setOcrStatus(null);
-  setOcrStatusMessage("");
-
-  uploadAttemptsRef.current++;
-  const attempts = uploadAttemptsRef.current;
-
-  try {
-    const formData = new FormData();
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
-    formData.append("file", blob, fileName || "uploaded-image.png");
-    
-    // AJOUT : Passer la date de l'événement pour validation
-    if (data?.data?.tours[0]?.nextEvent?.eventDate) {
-      formData.append("eventDate", data.data.tours[0].nextEvent.eventDate);
+  const handleFileSelect = async (dataUrl, fileName = "") => {
+    setTicketImage(dataUrl);
+    if (fileName) {
+      setTicketFileName(fileName);
     }
+    setOcrLoad(true);
+    setOcrErrorMessage("");
+    setOcrStatus(null);
+    setOcrStatusMessage("");
 
-    const apiResponse = await fetch("/api/ocr", {
-      method: "POST",
-      body: formData,
-    });
+    uploadAttemptsRef.current++;
+    const attempts = uploadAttemptsRef.current;
 
-    const result = await apiResponse.json();
+    try {
+      const formData = new FormData();
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      formData.append("file", blob, fileName || "uploaded-image.png");
+      
+      if (data?.data?.tours[0]?.nextEvent?.eventDate) {
+        formData.append("eventDate", data.data.tours[0].nextEvent.eventDate);
+      }
 
-    if (!apiResponse.ok || !result?.success) {
-      setOcrLoad(false);
+      const apiResponse = await fetch("/api/ocr", {
+        method: "POST",
+        body: formData,
+      });
 
-      // NOUVEAU : Gestion spécifique de l'erreur de date
-      if (result?.errorType === 'WRONG_EVENT_DATE') {
-        setOcrStatus("error");
-        setOcrStatusMessage("Date incorrecte sur le billet");
-        setOcrErrorMessage(result.message || "Ce billet n'est pas pour la bonne date d'événement");
-        setOcrFailed(true);
+      const result = await apiResponse.json();
+
+      if (!apiResponse.ok || !result?.success) {
+        setOcrLoad(false);
+
+        if (result?.errorType === 'WRONG_EVENT_DATE') {
+          setOcrStatus("error");
+          setOcrStatusMessage("Date incorrecte sur le billet");
+          setOcrErrorMessage(result.message || "Ce billet n'est pas pour la bonne date d'événement");
+          setOcrFailed(true);
+          return;
+        }
+
+        if (attempts >= 2) {
+          setOcrFailed(true);
+          setOcrStatus("error");
+          setOcrStatusMessage("le billet n'a pas été reconnu");
+        } else {
+          setOcrStatus("error");
+          setOcrStatusMessage("le billet n'a pas été reconnu");
+          setOcrErrorMessage(
+            result.message || "L'analyse du billet n'a pas pu s'effectuer correctement"
+          );
+        }
         return;
       }
+
+      const ocrPlacementData = {};
+      if (result?.data) {
+        Object.keys(result.data).forEach(key => {
+          if (key !== 'ticketUrl' && key !== 'date') {
+            ocrPlacementData[key] = result.data[key];
+          }
+        });
+      }
+      
+      setOcrData(result?.data);
+      setPlacementData(ocrPlacementData);
+      setOcrLoad(false);
+      setOcrStatus("success");
+      setOcrStatusMessage("");
+      setOcrErrorMessage("");
+      setOcrFailed(false);
+    } catch (error) {
+      setOcrLoad(false);
 
       if (attempts >= 2) {
         setOcrFailed(true);
@@ -247,45 +422,11 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
         setOcrStatus("error");
         setOcrStatusMessage("le billet n'a pas été reconnu");
         setOcrErrorMessage(
-          result.message || "L'analyse du billet n'a pas pu s'effectuer correctement"
+          "L'analyse du billet n'a pas pu s'effectuer correctement"
         );
       }
-      return;
     }
-
-    // SUCCES OCR - Prendre TOUS les champs sauf ticketUrl et date
-    const ocrPlacementData = {};
-    if (result?.data) {
-      Object.keys(result.data).forEach(key => {
-        if (key !== 'ticketUrl' && key !== 'date') {
-          ocrPlacementData[key] = result.data[key];
-        }
-      });
-    }
-    
-    setOcrData(result?.data);
-    setPlacementData(ocrPlacementData);
-    setOcrLoad(false);
-    setOcrStatus("success");
-    setOcrStatusMessage("");
-    setOcrErrorMessage("");
-    setOcrFailed(false);
-  } catch (error) {
-    setOcrLoad(false);
-
-    if (attempts >= 2) {
-      setOcrFailed(true);
-      setOcrStatus("error");
-      setOcrStatusMessage("le billet n'a pas été reconnu");
-    } else {
-      setOcrStatus("error");
-      setOcrStatusMessage("le billet n'a pas été reconnu");
-      setOcrErrorMessage(
-        "L'analyse du billet n'a pas pu s'effectuer correctement"
-      );
-    }
-  }
-};
+  };
 
   const calculateAge = (birthDate) => {
     const today = new Date();
@@ -336,6 +477,17 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
         isOpen: true,
         title: "Email invalide",
         message: "Veuillez entrer une adresse email valide.",
+        type: "error",
+      });
+      return false;
+    }
+
+    // Nouvelle validation participant existant
+    if (participantExists) {
+      setErrorModal({
+        isOpen: true,
+        title: "Email déjà utilisé",
+        message: `Cet email est déjà inscrit à cet événement${participantData ? ` (${participantData.prenom} ${participantData.nom})` : ''}.`,
         type: "error",
       });
       return false;
@@ -478,51 +630,6 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
     );
   };
 
-// NOUVEAU : Formulaire de placement dynamique avec labels au-dessus
-const DynamicPlacementForm = () => {
-  if (!ocrFailed) return null;
-
-  const placementFields = data?.data?.tours[0]?.nextEvent?.placement || [];
-  
-  if (placementFields.length === 0) {
-    return (
-      <div className="mt-6 mb-4">
-        <p className="text-white text-sm mb-4 text-center">
-          Aucun champ de placement configuré pour cet événement.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-6 mb-4">
-      <p className="text-white text-sm mb-4 text-center">
-        MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
-      </p>
-
-      <div className="space-y-2">
-        <div className="flex flex-wrap gap-2 justify-start">
-          {placementFields.map((field, index) => (
-            <div key={field} className="flex flex-col">
-              <label className="text-white text-xs mb-1 font-medium">
-                {field.toUpperCase()}
-              </label>
-              <Input
-                placeholder=""
-                name={field}
-                value={placementData[field] || ""}
-                onChange={handlePlacementChange}
-                className="h-10 w-20 text-sm px-2"
-                required={true}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
   const renderFormStep = () => {
     switch (formStep) {
       case 1:
@@ -630,14 +737,43 @@ const DynamicPlacementForm = () => {
               onChange={handleInputChange}
               className="h-50 w-full"
             />
-            <Input
-              type="email"
-              placeholder="ADRESSE MAIL"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="h-50 w-full"
-            />
+            <div className="relative">
+              <Input
+                type="email"
+                placeholder="ADRESSE MAIL"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`h-50 w-full ${participantExists ? 'border-red-500 bg-red-50' : ''}`}
+              />
+              
+              {/* Indicateur de vérification */}
+              {isChecking && formData.email.includes('@') && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+              
+              {/* Message d'erreur en temps réel */}
+              {participantExists && !isChecking && (
+                <div className="mt-2 text-red-600 text-sm animate-fade-in">
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span>
+                      Cet email est déjà inscrit à cet événement
+                      {participantData && (
+                        <span className="block text-xs mt-1">
+                          {participantData.prenom} {participantData.nom} - 
+                          Inscrit le {new Date(participantData.createdAt).toLocaleDateString('fr-FR')}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <Checkbox
               label="J'ACCEPTE DE RECEVOIR DES INFORMATIONS CONCERNANT ADRENALINE TOUR"
@@ -671,7 +807,6 @@ const DynamicPlacementForm = () => {
                       setOcrFailed(false);
                       setOcrStatus(null);
                       setOcrStatusMessage("");
-                      // Reset placement data
                       const resetPlacementData = {};
                       Object.keys(placementData).forEach(key => {
                         resetPlacementData[key] = "";
@@ -686,8 +821,13 @@ const DynamicPlacementForm = () => {
               )}
             </div>
 
-            {/* Formulaire de placement dynamique */}
-            <DynamicPlacementForm />
+            {/* Utilisation du composant externe */}
+            <DynamicPlacementForm 
+              ocrFailed={ocrFailed}
+              placementFields={placementFields}
+              placementData={placementData}
+              handlePlacementChange={handlePlacementChange}
+            />
 
             <div className="mt-4 flex justify-center">
               {ocrLoad ? (
@@ -713,95 +853,92 @@ const DynamicPlacementForm = () => {
             </div>
           </form>
         );
-case 2:
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="mb-8">
-        {ticketImage && <TicketPreview />}
-        
-        {/* Section interactive de récap/modification */}
-        <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
-          <div className="text-center mb-2">
-            {ocrFailed ? (
-              <div className="flex items-center justify-center mb-1">
-                <svg className="w-4 h-4 text-orange-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <p className="text-orange-400 font-medium text-sm">
-                  Informations saisies manuellement
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center mb-1">
-                <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <p className="text-green-400 font-medium text-sm">
-                  Informations analysées automatiquement
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Message d'aide */}
-          <div className="text-center mb-2">
-            <p className="text-gray-300 text-xs flex items-center justify-center">
-              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-              </svg>
-              Vous pouvez modifier ces informations si nécessaire
-            </p>
-          </div>
-
-          {/* Champs de placement éditables */}
-          <div className="grid grid-cols-3 gap-2">
-            {Object.entries(placementData)
-              .filter(([key, value]) => value && value.trim() !== "")
-              .map(([key, value]) => (
-                <div key={key} className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors">
-                  <label className="text-white font-medium text-xs uppercase block mb-1">
-                    {key}
-                  </label>
-                  <Input
-                    name={key}
-                    value={value}
-                    onChange={handlePlacementChange}
-                    className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full"
-                  />
+      case 2:
+        return (
+          <form onSubmit={handleSubmit}>
+            <div className="mb-8">
+              {ticketImage && <TicketPreview />}
+              
+              <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
+                <div className="text-center mb-2">
+                  {ocrFailed ? (
+                    <div className="flex items-center justify-center mb-1">
+                      <svg className="w-4 h-4 text-orange-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-orange-400 font-medium text-sm">
+                        Informations saisies manuellement
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center mb-1">
+                      <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-green-400 font-medium text-sm">
+                        Informations analysées automatiquement
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ))}
 
-            {Object.entries(placementData).filter(
-              ([key, value]) => value && value.trim() !== ""
-            ).length === 0 && (
-              <div className="col-span-3 text-center py-2">
-                <p className="text-gray-400 italic text-xs">Aucune information de placement disponible</p>
+                <div className="text-center mb-2">
+                                      <p className="text-gray-300 text-xs flex items-center justify-center">
+                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
+                    Vous pouvez modifier ces informations si nécessaire
+                  </p>
+                </div>
+
+<div className="grid grid-cols-3 gap-2">
+  {placementFields.map((field) => (
+    <div key={`step2-${field}`} className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors">
+      <label className="text-white font-medium text-xs uppercase block mb-1">
+        {field}
+      </label>
+      <Input
+        name={field}
+        value={placementData[field] || ""} // Utilise la valeur ou string vide
+        onChange={handlePlacementChange}
+        className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full"
+        autoComplete="off"
+      />
+    </div>
+  ))}
+
+  {placementFields.length === 0 && (
+    <div className="col-span-3 text-center py-2">
+      <p className="text-gray-400 italic text-xs">Aucune information de placement disponible</p>
+    </div>
+  )}
+</div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {ocrErrorMessage && (
-          <div className="text-center mt-4">
-            <p className="text-red-500 text-sm">{ocrErrorMessage}</p>
-          </div>
-        )}
-      </div>
-      
+              {ocrErrorMessage && (
+                <div className="text-center mt-4">
+                  <p className="text-red-500 text-sm">{ocrErrorMessage}</p>
+                </div>
+              )}
+            </div>
+            
       <div className="mt-8 flex justify-between items-center space-x-4">
-        <Button
-          onClick={() => setFormStep(1)}
-          variant="secondary"
-          className="flex-1 !bg-white !text-black"
-        >
-          MODIFIER MES INFORMATIONS
-        </Button>
-        <Button type="submit" className="flex-1">
-          VALIDER
-        </Button>
-      </div>
-    </form>
-  );
+  <Button
+    onClick={() => setFormStep(1)}
+    variant="secondary"
+    className="flex-1 !bg-white !text-black h-12 min-h-[48px] flex items-center justify-center"
+  >
+    MODIFIER MES INFORMATIONS
+  </Button>
+  <Button 
+    type="submit" 
+    className="flex-1 h-12 min-h-[48px] flex items-center justify-center"
+  >
+    VALIDER
+  </Button>
+</div>
+          </form>
+        );
       default:
         return null;
     }
@@ -815,11 +952,9 @@ case 2:
       min-h-screen 
       flex-col 
       items-center
-      justify-center
       p-6 
       bg-black 
       dnb-bg
-      pt-24
     `}
     >
       <style jsx>{`
@@ -838,10 +973,14 @@ case 2:
           animation: fade-in 0.3s ease-out;
         }
       `}</style>
+      
       <div className="w-full max-w-md mx-auto">
-        <div className="mb-12">
-          <LogoHeader date={formattedDate} venue={data?.data?.tours[0]?.nextEvent.venue} />
-        </div>
+        {/* Header intégré qui scroll avec le contenu */}
+        <IntegratedHeader 
+          date={formattedDate} 
+          venue={data?.data?.tours[0]?.nextEvent.venue} 
+          city={data?.data?.tours[0]?.nextEvent.city} 
+        />
 
         <div className="w-full">{renderFormStep()}</div>
       </div>

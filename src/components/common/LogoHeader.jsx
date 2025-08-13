@@ -1,7 +1,7 @@
 import React from "react";
 import { evangelion } from "@/styles/fonts";
 
-const LogoHeader = ({ venue, date }) => {
+const LogoHeader = ({ venue, date, city }) => {
   return (
     <div className="fixed top-0 left-0 w-full z-50 flex flex-col items-center py-4">
       <h1
@@ -12,9 +12,9 @@ const LogoHeader = ({ venue, date }) => {
       {/* <span className={`${evangelion.className} text-3xl mb-2 tracking-wide`}>
         TOUR
       </span> */}
-      {(venue || date) && (
+      {(venue || date || city) && (
         <div className="text-center text-3xl">
-          {date && venue ? `${date} | ${venue}` : date || venue}
+          {date && venue ? `${date} | ${city} - ${venue}` : date || venue}
         </div>
       )}
     </div>
