@@ -75,23 +75,36 @@ const IntegratedHeader = ({ venue, date, city }) => {
   };
 
   return (
-    <div className="w-full flex flex-col items-center py-6 mb-8">
-      <h1
-        className={`${evangelion.className} text-6xl text-white mb-1 space-x-0 text-center`}
+<div className="w-full flex flex-col items-center mb-8">
+  <h1
+    className={`${evangelion.className} text-6xl text-white text-center`}
+    style={{
+      whiteSpace: "nowrap", // empêche de couper "ADRENALINE TOUR"
+    }}
+  >
+    ADRENALINE TOUR
+  </h1>
+
+  {(venue || date || city) && (
+    <div
+      className={`text-center ${getFontSize(subtitleText)} text-white whitespace-nowrap  ma-w-full`}
+    >
+      <span
+        className="inline-block"
+        style={{
+          transform:
+            subtitleText && subtitleText.length > 50
+              ? "scaleX(0.9)"
+              : "scaleX(1)",
+          transformOrigin: "center",
+        }}
       >
-        ADRENALINE TOUR
-      </h1>
-      {(venue || date || city) && (
-        <div className={`text-center ${getFontSize(subtitleText)} text-white whitespace-nowrap px-4 max-w-full`}>
-          <span className="inline-block" style={{ 
-            transform: subtitleText && subtitleText.length > 50 ? 'scaleX(0.9)' : 'scaleX(1)',
-            transformOrigin: 'center'
-          }}>
-            {subtitleText}
-          </span>
-        </div>
-      )}
+        {subtitleText}
+      </span>
     </div>
+  )}
+</div>
+
   );
 };
 
@@ -487,7 +500,7 @@ export default function RegistrationPage() {
       setErrorModal({
         isOpen: true,
         title: "Email déjà utilisé",
-        message: `Cet email est déjà inscrit à cet événement${participantData ? ` (${participantData.prenom} ${participantData.nom})` : ''}.`,
+        message: `l’adresse email saisie a déjà été utilisée pour cet évènement `,
         type: "error",
       });
       return false;
@@ -762,13 +775,7 @@ export default function RegistrationPage() {
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     <span>
-                      Cet email est déjà inscrit à cet événement
-                      {participantData && (
-                        <span className="block text-xs mt-1">
-                          {participantData.prenom} {participantData.nom} - 
-                          Inscrit le {new Date(participantData.createdAt).toLocaleDateString('fr-FR')}
-                        </span>
-                      )}
+                     l’adresse email saisie a déjà été utilisée pour cet évènement 
                     </span>
                   </div>
                 </div>

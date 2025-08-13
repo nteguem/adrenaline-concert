@@ -44,16 +44,20 @@ export default function ConfirmationPage() {
       tourDate.getSeconds(),
       0
     );
+    // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
 
   const customdateFormat = (passedDate) => {
+    // console.log(passedDate);
     const date = new Date(passedDate.eventDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const year = date.getUTCFullYear();
+    const year = date.getUTCFullYear(); // Get full year
 
+    // Format to dd.mm.yyyy
     const returnDate = `${day}.${month}.${year}`;
+    // console.log("formatted date:", returnDate);
     return returnDate;
   };
 
@@ -80,6 +84,8 @@ export default function ConfirmationPage() {
     formattedDate = customdateFormat(data.data.tours[0].nextEvent);
   }
 
+  // Effet pour simuler la confetti ou animation de succès
+
   return (
     <main
       className={`
@@ -88,37 +94,32 @@ export default function ConfirmationPage() {
         min-h-screen 
         flex-col 
         items-center 
-        justify-between
+        justify-center
+        p-6 
         bg-black 
         dnb-bg
-        py-8
+        pt-20  // Ajouté pour compenser l'en-tête fixe
       `}
     >
-      {/* En-tête - reste en haut */}
-      <div className="w-full max-w-md mx-auto flex justify-center">
-        <LogoHeader
-          date={formattedDate}
-          venue={data?.data?.tours[0].nextEvent.venue}
-          city={data?.data?.tours[0]?.nextEvent.city}
+      <div className="max-w-md w-full mx-auto flex flex-col items-center justify-center text-center">
+        <LogoHeader 
+          date={formattedDate} 
+          venue={data?.data?.tours[0].nextEvent.venue} 
+          city={data?.data?.tours[0].nextEvent.city} 
         />
-      </div>
 
-      {/* Bloc H2 - remonté vers le logo */}
-      <div className="w-full max-w-md mx-auto flex flex-col items-center text-center -mt-8 sm:-mt-12 md:-mt-16">
-        <h2 className={`font-din text-xl sm:text-2xl md:text-3xl font-bold`}>
-          VOTRE PARTICIPATION A BIEN <br />
-          ÉTÉ PRISE EN COMPTE
-        </h2>
-      </div>
+        <div className="w-full mb-8">
+          <h2 className={`font-din text-2xl font-bold`}>
+            VOTRE PARTICIPATION A BIEN <br/>ÉTÉ PRISE EN COMPTE
+          </h2>
+        </div>
 
-      {/* Bloc du bas - descendu encore plus */}
-      <div className="w-full max-w-md mx-auto flex flex-col items-center text-center mb-4 sm:mb-8 md:mb-12">
-        <div className="text-sm sm:text-base md:text-lg">
+        <div className="text-lg mt-16">
           <p>
             TIRAGE AU SORT CE SOIR UNE HEURE AVANT LE DEBUT DU CONCERT, LES
             GAGNANTS SERONT DIRECTEMENT CONTACTES PAR MAIL ET SMS
           </p>
-          <p className="text-blue-400 mt-2">Bonne chance!</p>
+          <p className="text-blue-400">Bonne chance!</p>
         </div>
       </div>
     </main>

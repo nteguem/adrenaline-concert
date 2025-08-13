@@ -166,11 +166,11 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Espace réduit pour remonter le bloc TENTEZ */}
-            <div className="flex-grow-[4]"></div>
+            {/* ÉNORME espace pour voir l'arrière-plan */}
+            <div className="flex-grow-[20]"></div>
 
-            {/* Bloc titre remonté */}
-           <div className="flex-shrink-0 mb-2 flex justify-center">
+            {/* Bloc titre descendu beaucoup plus */}
+           <div className="flex-shrink-0 flex justify-center">
   <div className="inline-block bg-white px-2 py-1 rounded-sm text-center">
     <p className={`${din.className} text-sm md:text-base font-bold text-black uppercase leading-tight`}>
       <span className="block">TENTEZ DE VIVRE L'EXPÉRIENCE</span> 
@@ -179,8 +179,9 @@ export default function HomePage() {
   </div>
 </div>
 
-            {/* Espace augmenté entre titre et formulaire */}
-            <div className="flex-grow-[10]"></div>
+
+            {/* Petit espace entre titre et formulaire */}
+            <div className="flex-grow-[5]"></div>
 
             {/* Formulaire en bas */}
             <div className="w-full max-w-md mx-auto flex-shrink-0 pb-1">
