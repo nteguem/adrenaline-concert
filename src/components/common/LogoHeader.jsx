@@ -23,21 +23,17 @@ const LogoHeader = ({ venue, date, city }) => {
     <div className="fixed top-0 left-0 w-full z-50">
       <div className="flex flex-col items-center py-2 sm:py-3 md:py-4 px-2">
         
-        {/* Titre principal responsive */}
+        {/* Titre principal avec les MÊMES dimensions que registration */}
         <h1
           className={`
             ${evangelion.className} 
-            text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl
+            text-6xl
             text-white 
-            mb-1 sm:mb-2
+            mb-1
             text-center
-            leading-tight
-            px-1
           `}
           style={{
-            // Ajustement automatique si le texte est trop long
-            transform: window?.innerWidth < 400 ? "scaleX(0.9)" : "scaleX(1)",
-            transformOrigin: "center",
+            whiteSpace: "nowrap",
           }}
         >
           ADRENALINE TOUR
