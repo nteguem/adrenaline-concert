@@ -17,6 +17,8 @@ export class OcrService {
         errorType?: string;
         details?: string;
     }> {
+        let ticketUrl = '';
+        
         try {
             if (!file) {
                 return {
@@ -59,8 +61,7 @@ export class OcrService {
                 };
             }
 
-            // Upload vers Cloudinary
-            let ticketUrl = '';
+            // Upload vers Cloudinary - OBLIGATOIRE maintenant
             try {
                 const uploadResult = await new Promise((resolve, reject) => {
                     const uploadStream = cloudinary.uploader.upload_stream(
@@ -77,8 +78,19 @@ export class OcrService {
                 });
                 
                 ticketUrl = (uploadResult as any)?.secure_url || '';
+                
+                // Si l'upload échoue, on arrête tout
+                if (!ticketUrl) {
+                    throw new Error('Upload Cloudinary failed');
+                }
+                
             } catch (uploadError) {
-                // Continue même si l'upload échoue
+                return {
+                    success: false,
+                    message: "Erreur lors de l'upload du billet",
+                    errorType: 'UPLOAD_ERROR',
+                    details: String(uploadError)
+                };
             }
 
             // Préparation de la date attendue pour validation
@@ -165,55 +177,63 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": 
             
             // Traitement de la réponse
             if (response.status !== 200) {
+                // RETOURNER L'URL MÊME EN CAS D'ERREUR API
                 return {
                     success: false,
-                    message: `Erreur API Claude (${response.status})`,
+                    message: `Erreur API Claude (${response.status}) - Billet enregistré`,
                     errorType: 'API_ERROR',
+                    data: { ticketUrl }, // On retourne quand même l'URL
                     details: JSON.stringify(response.data)
                 };
             }
 
             const assistantMessage = response?.data?.content?.[0];
             if (!assistantMessage?.text) {
+                // RETOURNER L'URL MÊME SI PAS DE RÉPONSE
                 return {
                     success: false,
-                    message: "L'API n'a pas retourné de réponse",
-                    errorType: 'NO_AI_RESPONSE'
+                    message: "L'analyse automatique a échoué - Billet enregistré",
+                    errorType: 'NO_AI_RESPONSE',
+                    data: { ticketUrl } // On retourne quand même l'URL
                 };
             }
 
             const responseText = assistantMessage.text.trim();
 
-            // Gestion des cas d'erreur
+            // Gestion des cas d'erreur - MAIS ON RETOURNE TOUJOURS L'URL
             if (responseText === 'NOT_TICKET') {
                 return {
                     success: false,
-                    message: "L'image n'est pas un billet de concert valide",
-                    errorType: 'NOT_TICKET'
+                    message: "L'image n'est pas un billet de concert valide - Billet enregistré",
+                    errorType: 'NOT_TICKET',
+                    data: { ticketUrl }
                 };
             }
 
             if (responseText === 'PHOTO_PERSONNE') {
                 return {
                     success: false,
-                    message: "L'image est une photo de personne, pas un billet",
-                    errorType: 'PHOTO_PERSONNE'
+                    message: "L'image est une photo de personne, pas un billet - Billet enregistré",
+                    errorType: 'PHOTO_PERSONNE',
+                    data: { ticketUrl }
                 };
             }
 
             if (responseText === 'WRONG_DATE') {
                 return {
                     success: false,
-                    message: `Ce billet n'est pas pour la bonne date. Date attendue: ${expectedDateString}`,
-                    errorType: 'WRONG_EVENT_DATE'
+                    message: `Ce billet n'est pas pour la bonne date. Date attendue: ${expectedDateString} - Billet enregistré`,
+                    errorType: 'WRONG_EVENT_DATE',
+                    data: { ticketUrl }
                 };
             }
 
             if (responseText === 'INVALID_TICKET') {
                 return {
                     success: false,
-                    message: "Le billet ne contient pas d'informations de placement",
-                    errorType: 'INVALID_TICKET'
+                    message: "Le billet ne contient pas d'informations de placement - Billet enregistré",
+                    errorType: 'INVALID_TICKET',
+                    data: { ticketUrl }
                 };
             }
 
@@ -232,20 +252,20 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": 
                 ticketData = JSON.parse(jsonText);
                 
             } catch (parseError) {
+                // RETOURNER L'URL MÊME EN CAS D'ERREUR DE PARSING
                 return {
                     success: false,
-                    message: "Format de réponse invalide de l'IA",
-                    errorType: 'PARSE_ERROR'
+                    message: "Format de réponse invalide de l'IA - Billet enregistré",
+                    errorType: 'PARSE_ERROR',
+                    data: { ticketUrl }
                 };
             }
 
             // Nettoyage et validation des données
             const cleanedData: Record<string, string> = {};
             
-            // Ajouter l'URL du billet si disponible
-            if (ticketUrl) {
-                cleanedData.ticketUrl = ticketUrl;
-            }
+            // Ajouter l'URL du billet TOUJOURS
+            cleanedData.ticketUrl = ticketUrl;
 
             // Nettoyer et valider TOUS les champs retournés par l'IA
             Object.keys(ticketData).forEach(field => {
@@ -263,19 +283,24 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": 
             );
             
             if (placementFields.length === 0) {
+                // MÊME SI AUCUNE INFO DE PLACEMENT, ON RETOURNE L'URL
                 return {
                     success: false,
-                    message: "Aucune information de placement trouvée sur le billet",
-                    errorType: 'NO_PLACEMENT_INFO'
+                    message: "Aucune information de placement trouvée sur le billet - Billet enregistré",
+                    errorType: 'NO_PLACEMENT_INFO',
+                    data: { ticketUrl }
                 };
             }
 
             return {
                 success: true,
-                data: cleanedData
+                data: cleanedData // Contient ticketUrl + données de placement
             };
 
         } catch (error: any) {
+            // RETOURNER L'URL MÊME EN CAS D'ERREUR GÉNÉRALE (si elle existe)
+            const baseErrorData = ticketUrl ? { ticketUrl } : undefined;
+            
             if (error.response) {
                 const status = error.response.status;
                 const errorData = error.response.data;
@@ -283,39 +308,45 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": 
                 if (status === 401) {
                     return {
                         success: false,
-                        message: "Erreur d'authentification avec le service d'analyse",
-                        errorType: 'API_AUTH_ERROR'
+                        message: "Erreur d'authentification avec le service d'analyse - Billet enregistré",
+                        errorType: 'API_AUTH_ERROR',
+                        data: baseErrorData
                     };
                 } else if (status === 429) {
                     return {
                         success: false,
-                        message: "Trop de requêtes, veuillez réessayer dans quelques instants",
-                        errorType: 'API_RATE_LIMIT'
+                        message: "Trop de requêtes, veuillez réessayer dans quelques instants - Billet enregistré",
+                        errorType: 'API_RATE_LIMIT',
+                        data: baseErrorData
                     };
                 } else if (status >= 500) {
                     return {
                         success: false,
-                        message: "Erreur temporaire du service d'analyse",
-                        errorType: 'API_SERVER_ERROR'
+                        message: "Erreur temporaire du service d'analyse - Billet enregistré",
+                        errorType: 'API_SERVER_ERROR',
+                        data: baseErrorData
                     };
                 } else {
                     return {
                         success: false,
-                        message: `Erreur API (${status})`,
-                        errorType: 'API_UNKNOWN_ERROR'
+                        message: `Erreur API (${status}) - Billet enregistré`,
+                        errorType: 'API_UNKNOWN_ERROR',
+                        data: baseErrorData
                     };
                 }
             } else if (error.request) {
                 return {
                     success: false,
-                    message: "Impossible de joindre le service d'analyse",
-                    errorType: 'NETWORK_ERROR'
+                    message: "Impossible de joindre le service d'analyse - Billet enregistré",
+                    errorType: 'NETWORK_ERROR',
+                    data: baseErrorData
                 };
             } else {
                 return {
                     success: false,
-                    message: "Erreur de configuration",
-                    errorType: 'SETUP_ERROR'
+                    message: "Erreur de configuration - Billet enregistré",
+                    errorType: 'SETUP_ERROR',
+                    data: baseErrorData
                 };
             }
         }

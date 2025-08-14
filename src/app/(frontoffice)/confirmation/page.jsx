@@ -90,37 +90,38 @@ export default function ConfirmationPage() {
     <main
       className={`
         ${din.variable} 
-        flex 
         min-h-screen 
-        flex-col 
-        items-center 
-        justify-center
-        p-6 
         bg-black 
         dnb-bg
-        pt-20  // Ajouté pour compenser l'en-tête fixe
+        pt-20
+        relative
       `}
     >
-      <div className="max-w-md w-full mx-auto flex flex-col items-center justify-center text-center">
+      {/* HEADER EN HAUT */}
+      <div className="flex justify-center pt-8">
         <LogoHeader 
           date={formattedDate} 
           venue={data?.data?.tours[0].nextEvent.venue} 
           city={data?.data?.tours[0].nextEvent.city} 
         />
+      </div>
 
-        <div className="w-full mb-8">
-          <h2 className={`font-din text-2xl font-bold`}>
+      {/* BLOC CENTRÉ : Message confirmation */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md w-full text-center" style={{ top: '62%' }}>
+        <div className="w-full">
+          <h2 className={`font-din text-2xl font-bold text-white`}>
             VOTRE PARTICIPATION A BIEN <br/>ÉTÉ PRISE EN COMPTE
           </h2>
         </div>
+      </div>
 
-        <div className="text-lg mt-16">
-          <p>
-            TIRAGE AU SORT CE SOIR UNE HEURE AVANT LE DEBUT DU CONCERT, LES
-            GAGNANTS SERONT DIRECTEMENT CONTACTES PAR MAIL ET SMS
-          </p>
-          <p className="text-blue-400">Bonne chance!</p>
-        </div>
+      {/* BLOC EN BAS : Tirage au sort */}
+      <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 max-w-md w-full text-center text-lg text-white px-6">
+        <p>
+          TIRAGE AU SORT CE SOIR UNE HEURE AVANT LE DEBUT DU CONCERT, LES
+          GAGNANTS SERONT DIRECTEMENT CONTACTES PAR MAIL ET SMS
+        </p>
+        <p className="text-blue-400 mt-2">Bonne chance!</p>
       </div>
     </main>
   );
