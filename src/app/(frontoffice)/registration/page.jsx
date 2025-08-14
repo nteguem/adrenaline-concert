@@ -201,10 +201,9 @@ export default function RegistrationPage() {
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
 
   // Hook de vérification email - utilise le bon eventId
-  const eventIds = data?.data?.tours[0]?.nextEvent?.id || null;
   const { isChecking, participantExists, participantData } = useEmailCheck(
     formData.email, 
-    eventIds
+    data?.data?.tours[0]?.nextEvent.id
   );
 
   // Initialiser les champs de placement dynamiques
