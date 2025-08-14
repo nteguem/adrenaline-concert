@@ -552,7 +552,7 @@ export default function RegistrationPage() {
       dateNaissance: formatDate(formData.dateNaissance),
       email: formData.email,
       phone: formData.phone,
-      eventId: eventId,
+      eventId: data?.data?.tours[0]?.nextEvent.id,
       placementValues: placementValues,
       ticketUrl: ocrData?.ticketUrl || "",
       textInfo: ocrFailed ? "Billet rempli manuellement après échec OCR" : ""
