@@ -5,12 +5,13 @@ const LogoHeader = ({ venue, date, city }) => {
   const subtitleText =
     date && venue ? `${date} | ${city} - ${venue}` : date || venue || "";
 
-  // EXACTEMENT la même fonction que registration
+  // Fonction améliorée pour diminuer plus la taille des textes longs
   const getFontSize = (text) => {
     if (!text) return "text-3xl";
-    if (text.length > 50) return "text-lg";
-    if (text.length > 30) return "text-2xl";
-    return "text-3xl";
+    if (text.length > 70) return "text-sm";   // Très long = très petit
+    if (text.length > 50) return "text-base"; // Long = petit
+    if (text.length > 30) return "text-lg";   // Moyen = moyen
+    return "text-2xl";                        // Court = grand
   };
 
   return (
@@ -24,21 +25,27 @@ const LogoHeader = ({ venue, date, city }) => {
           ADRENALINE TOUR
         </h1>
 
-        {/* EXACTEMENT le même sous-titre que registration */}
+        {/* Sous-titre responsive qui s'adapte sans se couper */}
         {subtitleText && (
-          <div
-            className={`text-center ${getFontSize(subtitleText)} text-white whitespace-nowrap px-4 max-w-full`}
-            style={{
-              transform:
-                subtitleText.length > 60
-                  ? "scaleX(0.85)"
-                  : subtitleText.length > 45
-                  ? "scaleX(0.9)"
-                  : "scaleX(1)",
-              transformOrigin: "center",
-            }}
-          >
-            {subtitleText}
+          <div className="w-full flex justify-center px-2">
+            <div
+              className={`text-center ${getFontSize(subtitleText)} text-white max-w-full leading-tight`}
+              style={{
+                transform:
+                  subtitleText.length > 60
+                    ? "scaleX(0.75)"
+                    : subtitleText.length > 45
+                    ? "scaleX(0.85)"
+                    : subtitleText.length > 30
+                    ? "scaleX(0.9)"
+                    : "scaleX(1)",
+                transformOrigin: "center",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+              }}
+            >
+              {subtitleText}
+            </div>
           </div>
         )}
       </div>
