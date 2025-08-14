@@ -118,9 +118,8 @@ const IntegratedHeader = ({ venue, date, city }) => {
 
 // COMPOSANT DÉPLACÉ EN DEHORS - C'EST LA SOLUTION !
 const DynamicPlacementForm = React.memo(
-  ({ ocrFailed, placementFields, placementData, handlePlacementChange }) => {
-    if (!ocrFailed) return null;
-
+  ({ ocrFailed, placementFields, placementData, handlePlacementChange,ticketImage  }) => {
+if (!ticketImage) return null;
     if (placementFields.length === 0) {
       return (
         <div className="mt-6 mb-4">
@@ -882,6 +881,8 @@ export default function RegistrationPage() {
               placementFields={placementFields}
               placementData={placementData}
               handlePlacementChange={handlePlacementChange}
+                ticketImage={ticketImage}
+
             />
 
             <div className="mt-4 flex justify-center">
@@ -934,22 +935,30 @@ export default function RegistrationPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center mb-1">
-                      <svg
-                        className="w-4 h-4 text-green-500 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <p className="text-green-400 font-medium text-sm">
-                        Informations analysées automatiquement
-                      </p>
-                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+  {Object.keys(placementData).length > 0 ? 
+    Object.keys(placementData).map((field) => (
+      <div key={`step2-${field}`} className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors">
+        <label className="text-white font-medium text-xs uppercase block mb-1">
+          {field}
+        </label>
+        <Input
+          name={field}
+          value={placementData[field] || ""}
+          onChange={handlePlacementChange}
+          className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full"
+          autoComplete="off"
+        />
+      </div>
+    )) : (
+      <div className="col-span-3 text-center py-2">
+        <p className="text-gray-400 italic text-xs">
+          Aucune information de placement disponible
+        </p>
+      </div>
+    )
+  }
+</div>
                   )}
                 </div>
 
@@ -981,21 +990,13 @@ export default function RegistrationPage() {
                       </label>
                       <Input
                         name={field}
-                        value={placementData[field] || ""} // Utilise la valeur ou string vide
+                        value={placementData[field] || ""}
                         onChange={handlePlacementChange}
                         className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full"
                         autoComplete="off"
                       />
                     </div>
                   ))}
-
-                  {placementFields.length === 0 && (
-                    <div className="col-span-3 text-center py-2">
-                      <p className="text-gray-400 italic text-xs">
-                        Aucune information de placement disponible
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
