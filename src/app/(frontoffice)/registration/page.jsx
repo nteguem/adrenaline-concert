@@ -387,8 +387,8 @@ export default function RegistrationPage() {
       const blob = await response.blob();
       formData.append("file", blob, fileName || "uploaded-image.png");
 
-      if (data?.data?.tours[0]?.nextEvent?.eventDate) {
-        formData.append("eventDate", data.data.tours[0].nextEvent.eventDate);
+      if (data?.data?.tours[0]?.nextEvent?.endDate) {
+        formData.append("endDate", data.data.tours[0].nextEvent.endDate);
       }
 
       const apiResponse = await fetch("/api/ocr", {
