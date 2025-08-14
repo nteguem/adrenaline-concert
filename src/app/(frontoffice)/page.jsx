@@ -63,7 +63,7 @@ export default function HomePage() {
   };
 
   const customdateFormat = (passedDate) => {
-    const date = new Date(passedDate?.eventDate);
+    const date = new Date(passedDate?.endDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const year = date.getUTCFullYear();

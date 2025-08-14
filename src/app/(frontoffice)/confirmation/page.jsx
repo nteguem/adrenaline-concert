@@ -50,7 +50,7 @@ export default function ConfirmationPage() {
 
   const customdateFormat = (passedDate) => {
     // console.log(passedDate);
-    const date = new Date(passedDate.eventDate);
+    const date = new Date(passedDate.endDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const year = date.getUTCFullYear(); // Get full year
