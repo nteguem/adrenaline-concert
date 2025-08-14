@@ -54,7 +54,7 @@ model participant {
   id            String      @id @default(auto()) @map("_id") @db.ObjectId
   nom           String
   prenom        String
-  eventId       String
+  eventId       String      @db.ObjectId
   dateNaissance DateTime
   email         String
   phone         String
@@ -63,9 +63,8 @@ model participant {
   placement     Json?
   ticketUrl     String?
   textInfo      String?
-  
-  // ← RELATION AJOUTÉE
-  vainqueurs    vainqueur[] // Un participant peut être vainqueur plusieurs fois
+  event         Event       @relation(fields: [eventId], references: [id]) 
+  vainqueurs    vainqueur[]
 }
 
 model Tour {
@@ -79,13 +78,14 @@ model Tour {
 }
 
 model Event {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  tourId    String
-  city      String
-  createdAt DateTime @default(now())
-  venue     String
-  eventDate DateTime
-  endDate   DateTime
-  status    String
-  placement String[] @default([])
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  tourId       String
+  city         String
+  createdAt    DateTime     @default(now())
+  venue        String
+  eventDate    DateTime
+  endDate      DateTime
+  status       String
+  placement    String[]     @default([])
+  participants participant[] 
 }

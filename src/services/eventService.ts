@@ -93,7 +93,7 @@ export class EventService {
   }
 
   // Récupérer tous les événements avec pagination et recherche
-  static async getEvents(options: PaginationOptions = {}): Promise<{
+static async getEvents(options: PaginationOptions = {}): Promise<{
     events: any[];
     tour: any | null;
     pagination: {
@@ -102,17 +102,11 @@ export class EventService {
       page: number;
       limit: number;
     }
-  }> {
-    const {
-      page = 1,
-      limit = 10,
-      search = '',
-    } = options;
-    
+}> {
+    const { page = 1, limit = 10, search = '' } = options;
     const skip = (page - 1) * limit;
     
     try {
-      // Construire la condition de recherche
       const whereCondition: Prisma.EventWhereInput = search
         ? {
             OR: [
@@ -123,7 +117,6 @@ export class EventService {
           }
         : {};
       
-      // Récupérer les événements avec pagination
       const [events, total] = await Promise.all([
         prisma.event.findMany({
           where: whereCondition,
@@ -139,24 +132,29 @@ export class EventService {
             eventDate: true,
             endDate: true,
             status: true,
-            placement: true, // Ajouter placement dans la sélection
+            placement: true,
+            _count: {
+              select: {
+                participants: true
+              }
+            }
           }
         }),
         prisma.event.count({
           where: whereCondition,
         }),
       ]);
+
+      const eventsWithCount = events.map(event => ({
+        ...event,
+        totalParticipants: event._count.participants
+      }));
       
-      // Récupérer les informations de tour (si le modèle Tour existe)
       let tour = null;
       try {
-        // Vérifier si le modèle Tour existe dans votre schéma Prisma
         if ('tour' in prisma) {
-          // @ts-ignore - Ignorer l'erreur TypeScript si le modèle Tour n'est pas reconnu
           tour = await prisma.tour.findFirst({
-            orderBy: {
-              createdAt: 'desc'
-            },
+            orderBy: { createdAt: 'desc' },
             select: {
               id: true,
               name: true,
@@ -169,11 +167,10 @@ export class EventService {
         }
       } catch (error) {
         console.warn('Erreur lors de la récupération des informations de tour:', error);
-        // Ne pas faire échouer la requête principale si tour n'existe pas
       }
       
       return {
-        events,
+        events: eventsWithCount,
         tour,
         pagination: {
           total,
@@ -186,7 +183,7 @@ export class EventService {
       console.error('Erreur lors de la récupération des événements:', error);
       throw error;
     }
-  }
+}
   
   
   // Gérer la récupération de tous les événements
@@ -297,58 +294,61 @@ export class EventService {
   }
   
   // Obtenir un événement par son ID
-  static async getEventById(id: string): Promise<{ [key: string]: any }> {
-    try {
-      const event = await prisma.event.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          city: true,
-          venue: true,
-          eventDate: true,
-          endDate: true,
-          status: true,
-          placement: true, // Ajouter placement dans la sélection
+static async getEventById(id: string): Promise<{ [key: string]: any }> {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        city: true,
+        venue: true,
+        eventDate: true,
+        endDate: true,
+        status: true,
+        placement: true,
+        _count: {
+          select: {
+            participants: true
+          }
         }
-      });
-      
-      if (!event) {
-        throw new Error(`Événement avec l'ID ${id} non trouvé`);
       }
-      
-      // Récupérer les informations de tour (si le modèle Tour existe)
-      let tour = null;
-      try {
-        // Vérifier si le modèle Tour existe dans votre schéma Prisma
-        if ('tour' in prisma) {
-          // @ts-ignore - Ignorer l'erreur TypeScript si le modèle Tour n'est pas reconnu
-          tour = await prisma.tour.findFirst({
-            orderBy: {
-              createdAt: 'desc'
-            },
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              status: true
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('Erreur lors de la récupération des informations de tour:', error);
-      }
-      
-      return {
-        event,
-        tour
-      };
-    } catch (error) {
-      console.error('Erreur lors de la récupération de l\'événement:', error);
-      throw error;
+    });
+    
+    if (!event) {
+      throw new Error(`Événement avec l'ID ${id} non trouvé`);
     }
+    
+    let tour = null;
+    try {
+      if ('tour' in prisma) {
+        tour = await prisma.tour.findFirst({
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            status: true
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Erreur lors de la récupération des informations de tour:', error);
+    }
+    
+    return {
+      event: {
+        ...event,
+        totalParticipants: event._count.participants
+      },
+      tour
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'événement:', error);
+    throw error;
   }
+}
   
   // Gérer la récupération d'un événement par ID
   static async handleGetEventById(request: NextRequest, { params }: { params: { id: string } }) {
@@ -407,51 +407,44 @@ export class EventService {
     }
   }
 
-  static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
-    try {
-      const events = await prisma.event.findMany({
-        orderBy: {
-          eventDate: 'asc'  // Order by most recent events first
-        },
-        select: {
-          id: true,
-          tourId: true,
-          city: true,
-          venue: true,
-          eventDate: true,
-          endDate: true,
-          status: true,
-          placement: true, // Ajouter placement dans la sélection
-          createdAt: true,
+static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
+  try {
+    const events = await prisma.event.findMany({
+      orderBy: {
+        eventDate: 'asc'
+      },
+      select: {
+        id: true,
+        tourId: true,
+        city: true,
+        venue: true,
+        eventDate: true,
+        endDate: true,
+        status: true,
+        placement: true,
+        createdAt: true,
+        _count: {
+          select: {
+            participants: true
+          }
         }
-      });
+      }
+    });
 
-      // Get participant counts for each event
-      const eventsWithCounts = await Promise.all(
-        events.map(async (event) => {
-          const count = await prisma.participant.count({
-            where: {
-              eventId: event.id
-            }
-          });
-          
-          return {
-            ...event,
-            participantCount: count
-          };
-        })
-      );
+    const eventsWithCount = events.map(event => ({
+      ...event,
+      totalParticipants: event._count.participants
+    }));
 
-      return {
-        events: eventsWithCounts,
-        message: 'Events retrieved successfully'
-      };
-    } catch (error) {
-      console.error('Error fetching events with participants:', error);
-      throw error;
-    }
+    return {
+      events: eventsWithCount,
+      message: 'Events retrieved successfully'
+    };
+  } catch (error) {
+    console.error('Error fetching events with participants:', error);
+    throw error;
   }
-
+}
   static async handleGetEventsWithParticipants(request: NextRequest) {
     try {
       const result = await this.getEventsWithParticipants();
