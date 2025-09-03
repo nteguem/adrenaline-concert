@@ -46,22 +46,18 @@ body {
   }
 }
 
-/* Background optimisé pour performance mobile avec image statique */
+/* Background optimisé pour Matt Pokora */
 .dnb-bg {
   background-image: url('/background.webp'); 
-  background-size: cover;
-  background-position: center center;
+  
+  background-size: cover; /* Couvre tout l'écran */
+  background-position: center center; /* Centre l'image */
   background-repeat: no-repeat;
-  background-attachment: fixed; /* Fixe sur desktop */
+  background-attachment: fixed; /* Fixe le background lors du scroll */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   image-rendering: pixelated;
-  min-height: 100vh;
-  position: relative;
-  /* Améliore les performances de rendu */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
+  min-height: 100vh; /* Assure une hauteur minimale */
 }
 
 /* Animation du logo DnB avec effet de glitch (conservé) */
@@ -250,91 +246,37 @@ input.h-50 {
   }
 }
 
-/* Pour le contenu qui doit défiler par-dessus */
-.content-overlay {
-  position: relative;
-  z-index: 1;
-  background: transparent;
-  min-height: 100vh;
-}
-
-/* Media queries optimisées pour mobile avec priorité performance */
+/* Media queries optimisées pour mobile */
 @media (max-width: 768px) {
   .dnb-bg {
-    background-attachment: scroll; /* Désactive fixed sur mobile pour les performances */
-    background-image: none; /* Retire l'image du conteneur principal */
-  }
-  
-  /* Crée un pseudo-élément fixe pour l'image sur mobile */
-  .dnb-bg::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('/background.webp');
-    background-size: cover;
+    background-size: cover; /* Garde le cover sur mobile */
     background-position: center center;
-    background-repeat: no-repeat;
-    z-index: -1;
-    will-change: transform; /* Optimise l'animation */
-    transform: translateZ(0); /* Force l'accélération matérielle */
+    background-attachment: scroll; /* Scroll au lieu de fixed pour de meilleures performances sur mobile */
   }
   
+  /* Ajustements pour les petits écrans */
   body {
     font-size: 16px; /* Évite le zoom automatique sur iOS */
-    -webkit-overflow-scrolling: touch; /* Améliore le scroll sur iOS */
   }
 }
 
 @media (max-width: 480px) {
-  .dnb-bg::before {
-    background-position: center top;
-    /* Optimisation supplémentaire pour les petits écrans */
-    background-size: cover;
-    transform: translate3d(0, 0, 0); /* Force le GPU */
-  }
-}
-
-/* Desktop et tablettes - garde l'effet fixed */
-@media (min-width: 769px) {
   .dnb-bg {
-    background-attachment: fixed; /* Image fixe sur desktop */
+    background-position: center top; /* Privilégie le haut de l'image sur très petits écrans */
   }
 }
 
 /* Pour les écrans très larges (desktop) */
 @media (min-width: 1920px) {
   .dnb-bg {
-    background-size: cover;
+    background-size: cover; /* Maintient le cover même sur grands écrans */
   }
 }
 
 /* Pour les écrans en orientation paysage sur mobile */
 @media (max-width: 768px) and (orientation: landscape) {
-  .dnb-bg::before {
+  .dnb-bg {
     background-position: center center;
     background-size: cover;
-    height: 100vh; /* Force la hauteur viewport */
   }
-}
-
-/* Optimisation pour les appareils avec écran haute densité */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .dnb-bg,
-  .dnb-bg::before {
-    /* Vous pourriez utiliser une version @2x de votre image ici */
-    /* background-image: url('/background@2x.webp'); */
-  }
-}
-
-/* Préchargement de l'image pour de meilleures performances */
-.dnb-bg-preload {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  background-image: url('/background.webp');
 }
