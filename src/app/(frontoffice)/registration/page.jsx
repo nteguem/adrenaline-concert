@@ -97,6 +97,7 @@ export default function RegistrationPage() {
   const [ocrLoad, setOcrLoad] = useState(false);
   const [ocrStatus, setOcrStatus] = useState(null);
   const [ocrStatusMessage, setOcrStatusMessage] = useState("");
+  const [isPlacementEditable, setIsPlacementEditable] = useState(false);
   const uploadAttemptsRef = useRef(0);
 
   const { data, error } = useSWR("/api/tours/tour_event", fetcher);
@@ -142,14 +143,14 @@ export default function RegistrationPage() {
         return true;
       }
       
-      // Vérifier que TOUS les champs requis sont remplis
-      const result = placementFields.every(field => {
+      // Vérifier qu'AU MOINS UN champ requis est rempli (au lieu de TOUS)
+      const result = placementFields.some(field => {
         const value = placementData[field];
         const isValid = value && value.trim() !== "";
         console.log(`Champ ${field}: "${value}" -> ${isValid}`);
         return isValid;
       });
-      console.log("Résultat final des champs manuels:", result);
+      console.log("Résultat final des champs manuels (au moins un):", result);
       return result;
     }
     
@@ -314,7 +315,7 @@ export default function RegistrationPage() {
     
     if (!placementValid) {
       console.log("ÉCHEC: Données de placement invalides");
-      setErrorModal({ isOpen: true, title: "Informations manquantes", message: "Veuillez renseigner tous les champs de placement obligatoires.", type: "error" });
+      setErrorModal({ isOpen: true, title: "Informations manquantes", message: "Veuillez renseigner au moins un champ de placement obligatoire.", type: "error" });
       return false;
     }
 
@@ -513,7 +514,7 @@ export default function RegistrationPage() {
             {ticketImage && ocrFailed && placementFields.length > 0 && (
               <div className="mt-6 mb-4">
                 <p className="text-white text-sm mb-4 text-center">
-                  MERCI DE RENSEIGNER MANUELLEMENT LES DÉTAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
+                  MERCI DE RENSEIGNER AU MOINS UN DÉTAIL DE PLACEMENT FIGURANT SUR VOTRE BILLET
                 </p>
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2 justify-start">
@@ -524,7 +525,7 @@ export default function RegistrationPage() {
                         </label>
                         <Input
                           id={`input-${field}`} placeholder="" name={field} value={placementData[field] || ""}
-                          onChange={handlePlacementChange} className="h-10 w-20 text-sm px-2" required={true} autoComplete="off"
+                          onChange={handlePlacementChange} className="h-10 w-20 text-sm px-2" autoComplete="off"
                         />
                       </div>
                     ))}
@@ -567,12 +568,22 @@ export default function RegistrationPage() {
                 </div>
 
                 <div className="text-center mb-2">
-                  <p className="text-gray-300 text-xs flex items-center justify-center">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                    </svg>
-                    Vous pouvez modifier ces informations si nécessaire
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsPlacementEditable(!isPlacementEditable)}
+                    className="text-gray-300 text-xs flex items-center justify-center hover:text-white transition-colors cursor-pointer"
+                  >
+                    {isPlacementEditable ? (
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    Je modifie mes informations si besoin
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -581,8 +592,15 @@ export default function RegistrationPage() {
                       <div key={`step2-${field}`} className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors">
                         <label className="text-white font-medium text-xs uppercase block mb-1">{field}</label>
                         <Input
-                          name={field} value={placementData[field] || ""} onChange={handlePlacementChange}
-                          className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full"
+                          name={field} 
+                          value={placementData[field] || ""} 
+                          onChange={handlePlacementChange}
+                          disabled={!isPlacementEditable}
+                          className={`h-8 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full ${
+                            isPlacementEditable 
+                              ? "bg-gray-700 border-gray-600 hover:bg-gray-600" 
+                              : "bg-gray-800 border-gray-700 cursor-not-allowed opacity-60"
+                          }`}
                           autoComplete="off"
                         />
                       </div>
@@ -601,7 +619,7 @@ export default function RegistrationPage() {
             <div className="mt-8 flex justify-between items-center space-x-4">
               <Button onClick={() => setFormStep(1)} variant="secondary"
                 className="flex-1 !bg-white !text-black h-12 min-h-[48px] flex items-center justify-center">
-                MODIFIER MES INFORMATIONS
+                RETOUR
               </Button>
               <Button type="submit" className="flex-1 h-12 min-h-[48px] flex items-center justify-center">
                 VALIDER
