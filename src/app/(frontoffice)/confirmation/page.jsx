@@ -44,21 +44,16 @@ export default function ConfirmationPage() {
       tourDate.getSeconds(),
       0
     );
-    // console.log("hasreached:", currentDate > tourDate);
     return currentDate > tourDate;
   };
 
   const customdateFormat = (passedDate) => {
-    // console.log(passedDate);
     const date = new Date(passedDate.endDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const year = date.getUTCFullYear(); // Get full year
+    const year = date.getUTCFullYear();
 
-    // Format to dd.mm.yyyy
-    const returnDate = `${day}.${month}.${year}`;
-    // console.log("formatted date:", returnDate);
-    return returnDate;
+    return `${day}.${month}.${year}`;
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
@@ -84,8 +79,6 @@ export default function ConfirmationPage() {
     formattedDate = customdateFormat(data.data.tours[0].nextEvent);
   }
 
-  // Effet pour simuler la confetti ou animation de succès
-
   return (
     <main
       className={`
@@ -95,6 +88,8 @@ export default function ConfirmationPage() {
         dnb-bg
         pt-20
         relative
+        flex flex-col
+        justify-between
       `}
     >
       {/* HEADER EN HAUT */}
@@ -107,16 +102,14 @@ export default function ConfirmationPage() {
       </div>
 
       {/* BLOC CENTRÉ : Message confirmation */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-md w-full text-center" style={{ top: '62%' }}>
-        <div className="w-full">
-          <h2 className={`font-din text-2xl font-bold text-white`}>
-            VOTRE PARTICIPATION A BIEN <br/>ÉTÉ PRISE EN COMPTE
-          </h2>
-        </div>
+      <div className="flex flex-col items-center text-center px-4 mt-16">
+        <h2 className={`font-din text-2xl font-bold text-white`}>
+          VOTRE PARTICIPATION A BIEN <br/>ÉTÉ PRISE EN COMPTE
+        </h2>
       </div>
 
       {/* BLOC EN BAS : Tirage au sort */}
-      <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 max-w-md w-full text-center text-lg text-white px-6">
+      <div className="text-center text-lg text-white px-6 pb-24">
         <p>
           TIRAGE AU SORT CE SOIR UNE HEURE AVANT LE DEBUT DU CONCERT, LES
           GAGNANTS SERONT DIRECTEMENT CONTACTES PAR MAIL ET SMS

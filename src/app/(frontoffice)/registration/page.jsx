@@ -200,69 +200,46 @@ export default function RegistrationPage() {
     setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
   };
 
-  const handleFileSelect = async (dataUrl, fileName = "") => {
-    setTicketImage(dataUrl);
-    if (fileName) setTicketFileName(fileName);
-    setOcrLoad(true);
-    setOcrStatus(null);
-    setOcrStatusMessage("");
+const handleFileSelect = async (dataUrl, fileName = "") => {
+  setTicketImage(dataUrl);
+  if (fileName) setTicketFileName(fileName);
+  setOcrLoad(true);
+  setOcrStatus(null);
+  setOcrStatusMessage("");
 
-    uploadAttemptsRef.current++;
-    const attempts = uploadAttemptsRef.current;
+  uploadAttemptsRef.current++;
+  const attempts = uploadAttemptsRef.current;
 
-    try {
-      const formData = new FormData();
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      formData.append("file", blob, fileName || "uploaded-image.png");
+  try {
+    const formData = new FormData();
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    formData.append("file", blob, fileName || "uploaded-image.png");
 
-      if (data?.data?.tours[0]?.nextEvent?.endDate) {
-        formData.append("endDate", data.data.tours[0].nextEvent.endDate);
-      }
+    if (data?.data?.tours[0]?.nextEvent?.endDate) {
+      formData.append("endDate", data.data.tours[0].nextEvent.endDate);
+    }
 
-      const apiResponse = await fetch("/api/ocr", { method: "POST", body: formData });
-      const result = await apiResponse.json();
+    const apiResponse = await fetch("/api/ocr", { method: "POST", body: formData });
+    const result = await apiResponse.json();
 
-      if (!apiResponse.ok || !result?.success) {
-        setOcrLoad(false);
+    if (!apiResponse.ok || !result?.success) {
+      setOcrLoad(false);
 
-        if (result?.errorType === "WRONG_EVENT_DATE") {
-          setOcrStatus("error");
-          setOcrStatusMessage("Date incorrecte sur le billet");
-          setOcrFailed(true);
-          return;
-        }
-
+      // Pour WRONG_EVENT_DATE, on applique aussi la règle des 2 tentatives
+      if (result?.errorType === "WRONG_EVENT_DATE") {
         if (attempts >= 2) {
           setOcrFailed(true);
           setOcrStatus("error");
-          setOcrStatusMessage("le billet n'a pas été reconnu");
+          setOcrStatusMessage("Date incorrecte sur le billet");
         } else {
           setOcrStatus("error");
-          setOcrStatusMessage("le billet n'a pas été reconnu");
+          setOcrStatusMessage("Date incorrecte sur le billet");
         }
         return;
       }
 
-      // OCR réussi
-      const ocrPlacementData = {};
-      if (result?.data) {
-        Object.keys(result.data).forEach((key) => {
-          if (key !== "ticketUrl" && key !== "date") {
-            ocrPlacementData[key] = result.data[key];
-          }
-        });
-      }
-
-      setOcrData(result?.data);
-      setPlacementData(ocrPlacementData);
-      setOcrLoad(false);
-      setOcrStatus("success");
-      setOcrStatusMessage("");
-      setOcrFailed(false);
-
-    } catch (error) {
-      setOcrLoad(false);
+      // Pour les autres erreurs
       if (attempts >= 2) {
         setOcrFailed(true);
         setOcrStatus("error");
@@ -271,9 +248,38 @@ export default function RegistrationPage() {
         setOcrStatus("error");
         setOcrStatusMessage("le billet n'a pas été reconnu");
       }
+      return;
     }
-  };
 
+    // OCR réussi
+    const ocrPlacementData = {};
+    if (result?.data) {
+      Object.keys(result.data).forEach((key) => {
+        if (key !== "ticketUrl" && key !== "date") {
+          ocrPlacementData[key] = result.data[key];
+        }
+      });
+    }
+
+    setOcrData(result?.data);
+    setPlacementData(ocrPlacementData);
+    setOcrLoad(false);
+    setOcrStatus("success");
+    setOcrStatusMessage("");
+    setOcrFailed(false);
+
+  } catch (error) {
+    setOcrLoad(false);
+    if (attempts >= 2) {
+      setOcrFailed(true);
+      setOcrStatus("error");
+      setOcrStatusMessage("le billet n'a pas été reconnu");
+    } else {
+      setOcrStatus("error");
+      setOcrStatusMessage("le billet n'a pas été reconnu");
+    }
+  }
+};
   const calculateAge = (birthDate) => {
     const today = new Date();
     const birth = new Date(birthDate);
@@ -495,26 +501,26 @@ export default function RegistrationPage() {
                 <TicketPreview />
               )}
 
-              {ticketImage && !ocrFailed && (
-                <div className="flex justify-center mt-2">
-                  <button type="button" onClick={() => {
-                    setTicketImage(null); setOcrData(null); setOcrLoad(false); setOcrFailed(false);
-                    setOcrStatus(null); setOcrStatusMessage("");
-                    const resetPlacementData = {};
-                    Object.keys(placementData).forEach((key) => { resetPlacementData[key] = ""; });
-                    setPlacementData(resetPlacementData);
-                  }} className="text-sm text-blue-500 hover:text-blue-700">
-                    Réessayer
-                  </button>
-                </div>
-              )}
+             {ticketImage && !ocrFailed && ocrStatus !== "success" && (
+  <div className="flex justify-center mt-2">
+    <button type="button" onClick={() => {
+      setTicketImage(null); setOcrData(null); setOcrLoad(false); setOcrFailed(false);
+      setOcrStatus(null); setOcrStatusMessage("");
+      const resetPlacementData = {};
+      Object.keys(placementData).forEach((key) => { resetPlacementData[key] = ""; });
+      setPlacementData(resetPlacementData);
+    }} className="text-sm text-blue-500 hover:text-blue-700">
+      Réessayer
+    </button>
+  </div>
+)}
             </div>
 
             {/* Champs de placement - SEULEMENT si OCR a échoué après 2 tentatives */}
             {ticketImage && ocrFailed && placementFields.length > 0 && (
               <div className="mt-6 mb-4">
                 <p className="text-white text-sm mb-4 text-center">
-                  MERCI DE RENSEIGNER AU MOINS UN DÉTAIL DE PLACEMENT FIGURANT SUR VOTRE BILLET
+                  MERCI DE RENSEIGNER LES DETAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
                 </p>
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2 justify-start">
@@ -555,65 +561,97 @@ export default function RegistrationPage() {
             <div className="mb-8">
               {ticketImage && <TicketPreview />}
 
-              <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
-                <div className="text-center mb-2">
-                  {ocrFailed ? (
-                    <div className="flex items-center justify-center mb-1">
-                      <svg className="w-4 h-4 text-orange-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <p className="text-orange-400 font-medium text-sm">Informations saisies manuellement</p>
-                    </div>
-                  ) : null}
-                </div>
+            <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
+  {/* Bloc Informations saisies manuellement (aligné à gauche) */}
+  <div className="mb-2">
+    {ocrFailed ? (
+      <div className="flex items-center mb-1">
+        <svg
+          className="w-4 h-4 text-orange-500 mr-1"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <p className="text-orange-400 font-medium text-sm">
+          Informations saisies manuellement
+        </p>
+      </div>
+    ) : null}
+  </div>
 
-                <div className="text-center mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlacementEditable(!isPlacementEditable)}
-                    className="text-gray-300 text-xs flex items-center justify-center hover:text-white transition-colors cursor-pointer"
-                  >
-                    {isPlacementEditable ? (
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                    Je modifie mes informations si besoin
-                  </button>
-                </div>
+  {/* Bouton centré */}
+  <div className="flex justify-center mb-2">
+    <button
+      type="button"
+      onClick={() => setIsPlacementEditable(!isPlacementEditable)}
+      className="text-gray-300 text-xs flex items-center hover:text-white transition-colors cursor-pointer"
+    >
+      {isPlacementEditable ? (
+        <svg
+          className="w-3 h-3 mr-1"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
+        </svg>
+      ) : (
+        <svg
+          className="w-3 h-3 mr-1"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 616 0z"
+            clipRule="evenodd"
+          />
+        </svg>
+      )}
+      Je modifie mes informations si besoin
+    </button>
+  </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.keys(placementData).length > 0 ? 
-                    Object.keys(placementData).map((field) => (
-                      <div key={`step2-${field}`} className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors">
-                        <label className="text-white font-medium text-xs uppercase block mb-1">{field}</label>
-                        <Input
-                          name={field} 
-                          value={placementData[field] || ""} 
-                          onChange={handlePlacementChange}
-                          disabled={!isPlacementEditable}
-                          className={`h-8 text-white focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full ${
-                            isPlacementEditable 
-                              ? "bg-gray-700 border-gray-600 hover:bg-gray-600" 
-                              : "bg-gray-800 border-gray-700 cursor-not-allowed opacity-60"
-                          }`}
-                          autoComplete="off"
-                        />
-                      </div>
-                    )) : (
-                      <div className="col-span-3 text-center py-2">
-                        <p className="text-gray-400 italic text-xs">
-                          Aucune information de placement disponible
-                        </p>
-                      </div>
-                    )
-                  }
-                </div>
-              </div>
+  {/* Grille des champs */}
+  <div className="grid grid-cols-3 gap-2">
+    {Object.keys(placementData).length > 0 ? (
+      Object.keys(placementData).map((field) => (
+        <div
+          key={`step2-${field}`}
+          className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors"
+        >
+          <label className="text-white font-medium text-xs uppercase block mb-1">
+            {field}
+          </label>
+       <Input
+  name={field}
+  value={placementData[field] || ""}
+  onChange={handlePlacementChange}
+  disabled={!isPlacementEditable}
+  className={`h-8 focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full ${
+    isPlacementEditable
+      ? "bg-white text-black border-gray-300 hover:bg-gray-50"
+      : "bg-gray-800 text-white border-gray-700 cursor-not-allowed opacity-60"
+  }`}
+  autoComplete="off"
+/>
+
+        </div>
+      ))
+    ) : (
+      <div className="col-span-3 text-center py-2">
+        <p className="text-gray-400 italic text-xs">
+          Aucune information de placement disponible
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+
             </div>
 
             <div className="mt-8 flex justify-between items-center space-x-4">
