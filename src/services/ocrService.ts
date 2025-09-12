@@ -124,27 +124,45 @@ export class OcrService {
                     data: base64Data
                 }
             };
-            
-            const systemPrompt = `Tu es un analyseur de billets de concert. Analyse l'image ou le document et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur.
+            const systemPrompt = `Tu es un analyseur de billets de concert spécialisé. Analyse l'image ou le document et réponds UNIQUEMENT avec un objet JSON ou un message d'erreur spécifique.
 
-RÈGLES:
+RÈGLES DE VALIDATION:
 1. Si ce n'est PAS un billet de concert: réponds "NOT_TICKET"
 2. Si c'est une photo de personne: réponds "PHOTO_PERSONNE" 
-3. Si c'est un billet valide: réponds avec un objet JSON contenant TOUTES les informations de placement que tu trouves ET la date du billet
+3. Si c'est un billet valide: extrait les informations et réponds avec un JSON
 
 ${expectedDateString ? `VALIDATION DE DATE OBLIGATOIRE:
 - La date attendue de l'événement est: ${expectedDateString}
 - Si la date sur le billet ne correspond PAS à cette date: réponds "WRONG_DATE"
 - Compare soigneusement les dates (jour/mois/année)` : ''}
 
-IMPORTANT: 
-- Retourne un objet JSON avec TOUTES les informations de placement trouvées
-- Utilise les noms de champs EXACTS que tu vois sur le billet
-- Extrais UNIQUEMENT les valeurs, pas les labels
-- Si aucune info de placement: réponds "INVALID_TICKET"
-- Pas de texte explicatif, SEULEMENT le JSON
+MISSION: Extrais SEULEMENT les informations qui indiquent OÙ s'asseoir dans la salle.
 
-Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": "15/03/2024"}`;
+AUTORISÉ À EXTRAIRE:
+- Section/Zone: PARTERRE, TRIBUNE, FOSSE, PELOUSE, BALCON
+- Rang/Rangée: RANG, ROW, RANGÉE + numéro
+- Place/Siège: PLACE, SEAT, CHAISE, SIÈGE, FAUTEUIL + numéro/lettre
+- Bloc/Secteur: BLOC, BLOCK + lettre/numéro
+- Porte d'accès: PORTE, DOOR + numéro/lettre
+- Niveau: NIVEAU, ÉTAGE + numéro
+
+STRICTEMENT INTERDIT D'EXTRAIRE:
+- Prix, montants, EUR, €, coûts, tarifs
+- Heures (20H00, 19:30, etc.)
+- Noms d'artistes ou tournées
+- Lieux/salles/venues
+- Catégories de prix (Or, VIP, Premium - sauf si c'est une zone de placement)
+- Mots comme "Normal", "Standard"
+- Dates (sauf pour validation)
+
+RÈGLE ABSOLUE:
+Si tu vois un prix, une heure, un nom d'artiste ou lieu → NE L'EXTRAIS PAS
+Ne garde que ce qui répond à la question "Où dois-je m'asseoir ?"
+
+N'INCLUS PAS la date dans le JSON final - elle n'est pas une information de placement.
+
+Si aucune information de placement trouvée: réponds "INVALID_TICKET"
+Pas de texte explicatif, SEULEMENT le JSON ou le code d'erreur`;
 
             const claudePayload = {
                 model: "claude-sonnet-4-20250514",
@@ -261,13 +279,13 @@ Exemple: {"rang": "A", "place": "12", "zone": "VIP", "secteur": "Nord", "date": 
                 };
             }
 
-            // Nettoyage et validation des données
+            // Nettoyage et validation des données - CONSERVE LES NOMS ORIGINAUX
             const cleanedData: Record<string, string> = {};
             
             // Ajouter l'URL du billet TOUJOURS
             cleanedData.ticketUrl = ticketUrl;
 
-            // Nettoyer et valider TOUS les champs retournés par l'IA
+            // Nettoyer et valider TOUS les champs retournés par l'IA (sans mapping forcé)
             Object.keys(ticketData).forEach(field => {
                 if (ticketData[field]) {
                     const value = String(ticketData[field]).trim();
