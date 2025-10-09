@@ -15,6 +15,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
       lang="fr"
+      suppressHydrationWarning
       className={`${din.variable} ${evangelion.variable} overflow-hidden`}
     >
       <body className="bg-black text-white">{children}</body>

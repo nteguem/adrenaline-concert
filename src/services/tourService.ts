@@ -213,16 +213,15 @@ export class TourService {
       // Get events for each tour and sort them
       const toursWithEvents = await Promise.all(
         tours.map(async (tour) => {
-          // Get only the first upcoming event
+          // Get the first event that is ongoing or upcoming (endDate not passed)
+          const now = new Date();
           const event = await prisma.event.findFirst({
             where: {
               tourId: tour.id,
-              eventDate: {
-                gte: new Date(new Date().setHours(0, 0, 0, 0))// Only future events
-              }
+              endDate: { gte: now },
             },
             orderBy: {
-              eventDate: 'asc' // Get the closest upcoming event
+              eventDate: 'asc',
             },
             select: {
               id: true,
@@ -231,8 +230,8 @@ export class TourService {
               placement: true,
               eventDate: true,
               endDate: true,
-              status: true
-            }
+              status: true,
+            },
           });
 
           return {

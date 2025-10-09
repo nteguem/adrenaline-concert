@@ -25,16 +25,17 @@ const FileUpload = ({
   }, []);
 
   const checkCameraSupport = () => {
-    // Vérifier si on est en HTTPS ou localhost
-    const isSecureContext = window.location.protocol === 'https:' || 
-                           window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1';
-    
-    // Vérifier si l'API existe
-    const hasMediaDevices = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
-    
-    // Support caméra = contexte sécurisé + API disponible
-    setCameraSupported(isSecureContext && hasMediaDevices);
+    // Contexte sécurisé (https, localhost) + API disponible
+    const isSecure =
+      (typeof window !== 'undefined' && window.isSecureContext) ||
+      window.location.protocol === 'https:' ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    const hasMediaDevices =
+      typeof navigator !== 'undefined' &&
+      !!navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function';
+    setCameraSupported(Boolean(isSecure && hasMediaDevices));
   };
 
   const handleButtonClick = () => {
@@ -77,12 +78,17 @@ const FileUpload = ({
         constraints.video.facingMode = "environment";
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Lier explicitement la méthode pour éviter "Illegal invocation"
+      const getUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      const stream = await getUM(constraints);
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        const p = videoRef.current.play?.();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
       }
     } catch (error) {
       console.error("Erreur accès caméra:", error);

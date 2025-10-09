@@ -158,19 +158,17 @@ export default function RegistrationPage() {
     return false;
   };
 
-  // Vérifications d'état de la page
-  const hasDatePassed = (startDate) => {
-    const currentDate = new Date();
-    const tourDate = new Date(startDate);
-    tourDate.setHours(tourDate.getHours(), tourDate.getMinutes(), tourDate.getSeconds(), 0);
-    return currentDate < tourDate;
-  };
-
-  const hasDateEnd = (endDate) => {
-    const currentDate = new Date();
-    const tourDate = new Date(endDate);
-    tourDate.setHours(tourDate.getHours(), tourDate.getMinutes(), tourDate.getSeconds(), 0);
-    return currentDate > tourDate;
+  // Afficher si (Date.now <= endDate) ET (eventDate <= Date.now)
+  const shouldShowForm = (eventISO, endISO) => {
+    if (!eventISO || !endISO) return false;
+    const now = Date.now();
+    const startTs = Date.parse(eventISO);
+    const endTs = Date.parse(endISO);
+    console.log('[REG] dates', { nowISO: new Date(now).toISOString(), eventISO, endISO, startTs, endTs });
+    if (Number.isNaN(startTs) || Number.isNaN(endTs)) return false;
+    const cond = now <= endTs && startTs <= now;
+    console.log('[REG] condition (now<=end) && (start<=now) =>', cond);
+    return cond;
   };
 
   const customdateFormat = (passedDate) => {
@@ -186,12 +184,10 @@ export default function RegistrationPage() {
   if (!data) return <LoadingObject text={"Loading ..."} />;
 
   if (data?.data?.tours.length === 0) return <LoadingObject text={"le formulaire est clôturé"} />;
-  if (hasDateEnd(data?.data?.tours[0]?.nextEvent.endDate)) return <LoadingObject text={"le formulaire est clôturé"} />;
-  if (hasDatePassed(data?.data?.tours[0]?.nextEvent.eventDate)) {
-    const tourDate = new Date(data?.data?.tours[0]?.nextEvent.eventDate);
-    tourDate.setHours(8, 0, 0, 0);
-    return <Countdown startDate={tourDate} />;
-  }
+  const evt = data?.data?.tours[0]?.nextEvent;
+  const showForm = shouldShowForm(evt?.eventDate, evt?.endDate);
+  console.log('[REG] show form?', showForm, evt);
+  if (!showForm) return <LoadingObject text={"le formulaire est clôturé"} />;
 
   const formattedDate = customdateFormat(data.data?.tours[0]?.nextEvent);
 
