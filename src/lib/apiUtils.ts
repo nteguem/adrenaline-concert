@@ -23,7 +23,12 @@ export interface ApiError extends Error {
 }
 
 // Fonction pour créer une réponse de succès
-export function successResponse<T>(data: T, pagination?: ApiResponse['pagination'], status = 200): NextResponse {
+export function successResponse<T>(
+  data: T,
+  pagination?: ApiResponse['pagination'],
+  status = 200,
+  headers?: Record<string, string>
+): NextResponse {
   const response: ApiResponse<T> = {
     success: true,
     data,
@@ -33,7 +38,7 @@ export function successResponse<T>(data: T, pagination?: ApiResponse['pagination
     response.pagination = pagination;
   }
   
-  return NextResponse.json(response, { status });
+  return NextResponse.json(response, { status, headers });
 }
 
 // Fonction pour créer une réponse d'erreur
@@ -51,6 +56,11 @@ export function errorResponse(message: string, status = 400): NextResponse {
 export function apiErrorHandler(error: unknown): NextResponse {
   console.error('API Error:', error);
   
+  const errMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : '');
+  if (typeof errMsg === 'string' && /Server selection timeout|No available servers|ReplicaSetNoPrimary|I\/?O error|timed out/i.test(errMsg)) {
+    return errorResponse('Base de données indisponible', 503);
+  }
+  
   // Erreur avec message personnalisé
   if (error instanceof Error) {
     const apiError = error as ApiError;
@@ -60,6 +70,10 @@ export function apiErrorHandler(error: unknown): NextResponse {
   
   // Erreur Prisma (gérée dans db.ts)
   if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' && error.code.startsWith('P')) {
+    const maybeMsg = (error as any)?.message ?? '';
+    if (typeof maybeMsg === 'string' && /Server selection timeout|No available servers|ReplicaSetNoPrimary|I\/?O error|timed out/i.test(maybeMsg)) {
+      return errorResponse('Base de données indisponible', 503);
+    }
     return errorResponse('Erreur de base de données', 500);
   }
   

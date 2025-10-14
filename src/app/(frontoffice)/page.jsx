@@ -17,7 +17,13 @@ export default function HomePage() {
   const router = useRouter();
   const [isClicked, setIsClicked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 15000,
+    errorRetryCount: 1,
+    keepPreviousData: true,
+  });
   const [formData, setFormData] = useState({
     confirmePresence: false,
     age: false,
@@ -62,8 +68,6 @@ export default function HomePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Vérifier que toutes les conditions sont acceptées (sans acc)
     if (!formData.age || !formData.santéOk || !formData.cgu) {
       setErrorModal({
         isOpen: true,
@@ -101,15 +105,22 @@ export default function HomePage() {
   }
 
   const handleClick = () => {
-    // Ne rien faire si le bouton est désactivé
-    if (isButtonDisabled) return;
-
+    // Valider uniquement au clic
+    if (!formData.age || !formData.santéOk || !formData.cgu) {
+      setErrorModal({
+        isOpen: true,
+        title: "Conditions non acceptées",
+        message: "Veuillez accepter toutes les conditions pour continuer.",
+        type: "error",
+      });
+      return;
+    }
     setIsClicked(true);
     router.push("/video");
   };
 
-  // Vérifier si les 3 checkboxes sont cochées pour griser le bouton
-  const isButtonDisabled = !formData.age || !formData.santéOk || !formData.cgu;
+  // Ne pas désactiver le bouton en temps réel; validation au clic uniquement
+  const isButtonDisabled = false;
 
   return (
     <main className={`${din.variable} min-h-screen bg-black dnb-bg`}>
@@ -185,12 +196,14 @@ export default function HomePage() {
                           ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)
                         </div>
                         <div className="mt-1">
-                          <button
-                            type="button"
+                          <a
+                            href="/conditions"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-blue-400 text-xs underline hover:text-blue-300 transition-colors"
                           >
                             voir les conditions
-                          </button>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -209,12 +222,14 @@ export default function HomePage() {
                           J'accepte les conditions générales
                         </label>
                         <div className="mt-1">
-                          <button
-                            type="button"
+                          <a
+                            href="/reglement"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-blue-400 text-xs underline hover:text-blue-300 transition-colors"
                           >
                             voir conditions et règlement
-                          </button>
+                          </a>
                         </div>
                       </div>
                     </div>

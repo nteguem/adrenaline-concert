@@ -1,5 +1,5 @@
 // src/services/tirageService.ts
-import { prisma } from '@/lib/db';
+import { prisma, ensurePrismaConnected, isValidObjectId } from '@/lib/db';
 import { successResponse, errorResponse, apiErrorHandler } from '@/lib/apiUtils';
 import {
     TirageRequest,
@@ -15,6 +15,7 @@ import { NextRequest } from 'next/server';
 export class TirageService {
   static async handleCreateTirage(request: NextRequest) {
     try {
+        await ensurePrismaConnected();
         const body = await request.json();
 
         // Validate required fields
@@ -43,12 +44,17 @@ export class TirageService {
 
   static async faireTirage(data: TirageRequest): Promise<{ [key: string]: any }> {
     try {
+      await ensurePrismaConnected();
       if (!data.eventId) {
         return errorResponse('ID de l\'événement requis', 400);
       }
 
       if (!data.nombreVainqueurs || data.nombreVainqueurs <= 0) {
         return errorResponse('Nombre de vainqueurs invalide', 400);
+      }
+
+      if (!isValidObjectId(data.eventId)) {
+        return errorResponse('ID de l\'événement invalide', 400);
       }
 
       // 1. Vérifier que l'événement existe
@@ -181,6 +187,7 @@ export class TirageService {
 
   static async getAllTiragesWithEvents() {
     try {
+      await ensurePrismaConnected();
       const tirages = await prisma.tirage.findMany({
         orderBy: {
           dateTirage: 'desc'
@@ -228,6 +235,7 @@ export class TirageService {
 
   static async getAllTiragesWithWinners() {
     try {
+      await ensurePrismaConnected();
       const tirages = await prisma.tirage.findMany({
         orderBy: {
           dateTirage: 'desc'
@@ -304,6 +312,10 @@ export class TirageService {
 
   static async getWinnersByEventId(eventId: string) {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(eventId)) {
+        return errorResponse('ID de l\'événement invalide', 400);
+      }
       const tirage = await prisma.tirage.findFirst({
         where: {
           eventId: eventId
@@ -358,6 +370,10 @@ export class TirageService {
 
   static async getWinnersByTirageId(tirageId: string) {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(tirageId)) {
+        return errorResponse('ID du tirage invalide', 400);
+      }
       // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
       const vainqueurs = await prisma.vainqueur.findMany({
         where: {
@@ -421,6 +437,10 @@ export class TirageService {
 
   static async getTiragesByEventId(eventId: string) {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(eventId)) {
+        return errorResponse('ID de l\'événement invalide', 400);
+      }
       const tirages = await prisma.tirage.findMany({
         where: {
           eventId: eventId

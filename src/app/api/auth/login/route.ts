@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { encode } from 'next-auth/jwt';
-import { prisma } from '@/lib/db';
+import { prisma, ensurePrismaConnected } from '@/lib/db';
 import bcrypt from 'bcrypt';
 
 export async function POST(request: Request) {
   try {
+    await ensurePrismaConnected();
     const body = await request.json();
     const { email, password } = body;
 
@@ -82,10 +83,12 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Erreur de connexion:', error);
+    const message = (error as any)?.statusCode === 503 ? 'Base de données indisponible' : 'Erreur interne du serveur';
+    const code = (error as any)?.statusCode === 503 ? 503 : 500;
     return NextResponse.json({
       success: false,
-      code: 500,
-      message: 'Erreur interne du serveur'
-    }, { status: 500 });
+      code,
+      message
+    }, { status: code });
   }
 }

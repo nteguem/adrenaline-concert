@@ -20,6 +20,18 @@ export function isValidObjectId(id: string): boolean {
   return objectIdPattern.test(id);
 }
 
+// Assurer la disponibilité de la connexion Prisma
+export async function ensurePrismaConnected(): Promise<void> {
+  try {
+    await prisma.$connect();
+  } catch (error) {
+    console.error('Prisma connect error:', error);
+    const e = new Error('Base de données indisponible') as Error & { statusCode?: number };
+    e.statusCode = 503;
+    throw e;
+  }
+}
+
 // Définir un type pour les erreurs Prisma
 interface PrismaError {
   code?: string;

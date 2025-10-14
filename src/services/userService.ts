@@ -1,5 +1,5 @@
 // src/services/userService.ts
-import { prisma } from '@/lib/db';
+import { prisma, ensurePrismaConnected, isValidObjectId } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import bcrypt from 'bcrypt';
@@ -47,6 +47,7 @@ export class UserService {
       : {};
     
     // Récupérer les utilisateurs avec pagination
+    await ensurePrismaConnected();
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where: whereCondition,
@@ -81,6 +82,10 @@ export class UserService {
   
   // Récupérer un utilisateur par son ID
   static async getUserById(id: string): Promise<UserPublic> {
+    await ensurePrismaConnected();
+    if (!isValidObjectId(id)) {
+      throw Object.assign(new Error('ID utilisateur invalide'), { statusCode: 400 });
+    }
     const user = await prisma.user.findUnique({
       where: { id },
     });
@@ -99,6 +104,7 @@ export class UserService {
   // Créer un nouvel utilisateur
   static async createUser(data: UserCreateInput): Promise<UserPublic> {
     // Vérifier si l'email existe déjà
+    await ensurePrismaConnected();
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -106,9 +112,6 @@ export class UserService {
     if (existingUser) {
       throw new Error('Cet email est déjà utilisé');
     }
-
-    console.log('======================',data);
-    
     // Créer l'utilisateur
  
     const newUser = await prisma.user.create({
@@ -133,6 +136,10 @@ export class UserService {
   // Mettre à jour un utilisateur
   static async updateUser(id: string, data: UserUpdateInput): Promise<UserPublic> {
     // Vérifier si l'utilisateur existe
+    await ensurePrismaConnected();
+    if (!isValidObjectId(id)) {
+      throw Object.assign(new Error('ID utilisateur invalide'), { statusCode: 400 });
+    }
     const existingUser = await prisma.user.findUnique({
       where: { id },
     });
@@ -177,6 +184,10 @@ export class UserService {
   // Supprimer un utilisateur
   static async deleteUser(id: string): Promise<void> {
     // Vérifier si l'utilisateur existe
+    await ensurePrismaConnected();
+    if (!isValidObjectId(id)) {
+      throw Object.assign(new Error('ID utilisateur invalide'), { statusCode: 400 });
+    }
     const existingUser = await prisma.user.findUnique({
       where: { id },
     });
@@ -196,6 +207,7 @@ export class UserService {
   // Récupérer tous les utilisateurs
   static async handleGetAllUsers(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const { searchParams } = new URL(request.url);
       const limit = parseInt(searchParams.get('limit') || '10');
       const page = parseInt(searchParams.get('page') || '1');
@@ -212,6 +224,7 @@ export class UserService {
   // Créer un nouvel utilisateur
   static async handleCreateUser(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const body = await request.json();
       
       // Validation des champs requis
@@ -250,7 +263,12 @@ export class UserService {
   // Récupérer un utilisateur par ID
   static async handleGetUserById(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-      const user = await this.getUserById(params.id);
+      await ensurePrismaConnected();
+      const id = params.id;
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID utilisateur invalide', 400);
+      }
+      const user = await this.getUserById(id);
       return successResponse(user);
     } catch (error) {
       return apiErrorHandler(error);
@@ -260,7 +278,12 @@ export class UserService {
   // Mettre à jour un utilisateur (mise à jour complète)
   static async handleUpdateUser(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const body = await request.json();
+      const id = params.id;
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID utilisateur invalide', 400);
+      }
       
       // Validation des champs requis pour une mise à jour complète
       const requiredFields: (keyof UserUpdateInput)[] = ['nom', 'prenom', 'email', 'dateNaissance'];
@@ -282,7 +305,7 @@ export class UserService {
         dateNaissance: body.dateNaissance,
       };
       
-      const updatedUser = await this.updateUser(params.id, updateInput);
+      const updatedUser = await this.updateUser(id, updateInput);
       
       return successResponse(updatedUser);
     } catch (error) {
@@ -293,7 +316,12 @@ export class UserService {
   // Mise à jour partielle d'un utilisateur
   static async handlePartialUpdateUser(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const body = await request.json();
+      const id = params.id;
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID utilisateur invalide', 400);
+      }
       
       // Validation de l'email si fourni
       if (body.email && !validateEmail(body.email)) {
@@ -313,7 +341,12 @@ export class UserService {
   // Supprimer un utilisateur
   static async handleDeleteUser(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-      await this.deleteUser(params.id);
+      await ensurePrismaConnected();
+      const id = params.id;
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID utilisateur invalide', 400);
+      }
+      await this.deleteUser(id);
       
       return successResponse({ message: 'Utilisateur supprimé avec succès' });
     } catch (error) {

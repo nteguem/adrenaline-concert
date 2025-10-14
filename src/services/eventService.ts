@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { prisma, ensurePrismaConnected, isValidObjectId } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import {
@@ -57,13 +57,8 @@ export class EventService {
   // Gérer la création d'un nouveau event
   static async handleCreateEvent(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const body = await request.json();
-      
-      // DEBUG: Log pour vérifier les données reçues
-      console.log("=== DEBUG EVENT SERVICE ===");
-      console.log("Body received:", body);
-      console.log("Placement field:", body.placement);
-      console.log("==========================");
       
       // Validation des champs requis (sans tourId car il sera récupéré automatiquement)
       // status et placement sont maintenant optionnels
@@ -117,6 +112,7 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
           }
         : {};
       
+      // Récupérer les événements sans _count pour éviter le $lookup MongoDB coûteux
       const [events, total] = await Promise.all([
         prisma.event.findMany({
           where: whereCondition,
@@ -133,11 +129,6 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
             endDate: true,
             status: true,
             placement: true,
-            _count: {
-              select: {
-                participants: true
-              }
-            }
           }
         }),
         prisma.event.count({
@@ -145,9 +136,27 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
         }),
       ]);
 
+      // Compter les participants séparément pour chaque événement
+      // Cela évite le problème de $lookup qui charge tous les documents
+      const eventIds = events.map(e => e.id);
+      const participantCounts = await prisma.participant.groupBy({
+        by: ['eventId'],
+        where: {
+          eventId: { in: eventIds }
+        },
+        _count: {
+          id: true
+        }
+      });
+
+      // Créer un map pour un accès rapide aux counts
+      const countMap = new Map(
+        participantCounts.map(pc => [pc.eventId, pc._count.id])
+      );
+
       const eventsWithCount = events.map(event => ({
         ...event,
-        totalParticipants: event._count.participants
+        totalParticipants: countMap.get(event.id) || 0
       }));
       
       let tour = null;
@@ -190,6 +199,7 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
   // Gérer la récupération de tous les événements
   static async handleGetAllEvent(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const { searchParams } = new URL(request.url);
       const limit = parseInt(searchParams.get('limit') || '100');
       const page = parseInt(searchParams.get('page') || '1');
@@ -259,6 +269,7 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
   // Gérer la mise à jour d'un événement
   static async handleUpdateEvent(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
       
       if (!id) {
@@ -294,8 +305,12 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
   }
   
   // Obtenir un événement par son ID
-static async getEventById(id: string): Promise<{ [key: string]: any }> {
+  static async getEventById(id: string): Promise<{ [key: string]: any }> {
   try {
+    await ensurePrismaConnected();
+    if (!isValidObjectId(id)) {
+      throw Object.assign(new Error('ID de l\'événement invalide'), { statusCode: 400 });
+    }
     const event = await prisma.event.findUnique({
       where: { id },
       select: {
@@ -306,17 +321,17 @@ static async getEventById(id: string): Promise<{ [key: string]: any }> {
         endDate: true,
         status: true,
         placement: true,
-        _count: {
-          select: {
-            participants: true
-          }
-        }
       }
     });
     
     if (!event) {
       throw new Error(`Événement avec l'ID ${id} non trouvé`);
     }
+    
+    // Compter les participants séparément
+    const participantCount = await prisma.participant.count({
+      where: { eventId: id }
+    });
     
     let tour = null;
     try {
@@ -340,7 +355,7 @@ static async getEventById(id: string): Promise<{ [key: string]: any }> {
     return {
       event: {
         ...event,
-        totalParticipants: event._count.participants
+        totalParticipants: participantCount
       },
       tour
     };
@@ -353,10 +368,14 @@ static async getEventById(id: string): Promise<{ [key: string]: any }> {
   // Gérer la récupération d'un événement par ID
   static async handleGetEventById(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
       
       if (!id) {
         return errorResponse('ID de l\'événement manquant');
+      }
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID de l\'événement invalide', 400);
       }
       
       const result = await this.getEventById(id);
@@ -393,6 +412,7 @@ static async getEventById(id: string): Promise<{ [key: string]: any }> {
   // Gérer la suppression d'un événement
   static async handleDeleteEvent(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
       
       if (!id) {
@@ -423,17 +443,29 @@ static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
         status: true,
         placement: true,
         createdAt: true,
-        _count: {
-          select: {
-            participants: true
-          }
-        }
       }
     });
 
+    // Compter les participants pour tous les événements en une seule requête
+    const eventIds = events.map(e => e.id);
+    const participantCounts = await prisma.participant.groupBy({
+      by: ['eventId'],
+      where: {
+        eventId: { in: eventIds }
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    // Créer un map pour un accès rapide aux counts
+    const countMap = new Map(
+      participantCounts.map(pc => [pc.eventId, pc._count.id])
+    );
+
     const eventsWithCount = events.map(event => ({
       ...event,
-      totalParticipants: event._count.participants
+      totalParticipants: countMap.get(event.id) || 0
     }));
 
     return {
@@ -447,6 +479,7 @@ static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
 }
   static async handleGetEventsWithParticipants(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const result = await this.getEventsWithParticipants();
       return successResponse(result);
     } catch (error) {

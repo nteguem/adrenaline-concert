@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma, ensurePrismaConnected, isValidObjectId } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 import {
@@ -22,7 +22,7 @@ export class ParticipantService {
         data: {
           nom: data.nom,
           prenom: data.prenom,
-          phone: data?.phone,
+          phone: data.phone ?? "",
           eventId: data.eventId,
           email: data.email,
           dateNaissance: new Date(data.dateNaissance),
@@ -45,6 +45,7 @@ export class ParticipantService {
 
   static async handleCreateParticipant(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const body = await request.json();
 
       const requiredFields: (keyof ParticipantCreateInput)[] = [
@@ -58,6 +59,10 @@ export class ParticipantService {
 
       if (missingFields.length > 0) {
         return errorResponse(`Champs manquants : ${missingFields.join(", ")}`);
+      }
+
+      if (!isValidObjectId(body.eventId)) {
+        return errorResponse("ID de l'événement invalide", 400);
       }
 
       const existingParticipant = await prisma.participant.findFirst({
@@ -77,7 +82,7 @@ export class ParticipantService {
         eventId: body.eventId,
         prenom: body.prenom,
         email: body.email,
-        phone:body.phone,
+        phone: body.phone,
         dateNaissance: body.dateNaissance,
         placementValues: body.placementValues,
         ticketUrl: body.ticketUrl || "",
@@ -100,10 +105,12 @@ export class ParticipantService {
       limit: number;
     };
   }> {
-    const { page = 1, limit = 10, search = "" } = options;
-    const skip = (page - 1) * limit;
+    const { page = 1, limit = 100, search = "" } = options;
+    const sanitizedLimit = Math.min(limit, 500); // Max 500 pour éviter surcharge
+    const skip = (page - 1) * sanitizedLimit;
 
     try {
+      await ensurePrismaConnected();
       const whereCondition: Prisma.participantWhereInput = search
         ? {
             OR: [
@@ -118,8 +125,8 @@ export class ParticipantService {
         prisma.participant.findMany({
           where: whereCondition,
           skip,
-          take: limit,
-          orderBy: { nom: "asc" },
+          take: sanitizedLimit,
+          // Pas de orderBy pour éviter Sort Memory Limit sans index
           select: {
             id: true,
             nom: true,
@@ -128,6 +135,7 @@ export class ParticipantService {
             email: true,
             phone: true,
             dateNaissance: true,
+            createdAt: true,
             placement: true,
             ticketUrl: true,
             textInfo: true,
@@ -140,9 +148,9 @@ export class ParticipantService {
         participants,
         pagination: {
           total,
-          pages: Math.ceil(total / limit),
+          pages: Math.ceil(total / sanitizedLimit),
           page,
-          limit,
+          limit: sanitizedLimit,
         },
       };
     } catch (error) {
@@ -154,7 +162,7 @@ export class ParticipantService {
   static async handleGetAllParticipants(request: NextRequest) {
     try {
       const { searchParams } = new URL(request.url);
-      const limit = parseInt(searchParams.get("limit") || "10");
+      const limit = parseInt(searchParams.get("limit") || "100");
       const page = parseInt(searchParams.get("page") || "1");
       const search = searchParams.get("search") || "";
 
@@ -172,27 +180,44 @@ export class ParticipantService {
     }
   }
 
-  static async getParticipantsByEventId(eventId: string) {
+  static async getParticipantsByEventId(
+    eventId: string,
+    options: { page?: number; limit?: number } = {}
+  ) {
     try {
-      const participants = await prisma.participant.findMany({
-        where: { eventId },
-        select: {
-          id: true,
-          nom: true,
-          prenom: true,
-          email: true,
-          eventId: true,
-          phone:true,
-          dateNaissance: true,
-          createdAt: true,
-          placement: true,
-          ticketUrl: true,
-          textInfo: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      await ensurePrismaConnected();
+      if (!isValidObjectId(eventId)) {
+        return errorResponse("ID de l'événement invalide", 400);
+      }
+      const limit = Math.min(options.limit || 100, 500); // Max 500 pour éviter surcharge
+      const page = options.page || 1;
+      const skip = (page - 1) * limit;
 
-      if (!participants.length) {
+      // SANS orderBy pour éviter Sort Memory Limit (pas d'index en prod)
+      // Les participants seront dans l'ordre d'insertion naturel MongoDB
+      const [participants, total] = await Promise.all([
+        prisma.participant.findMany({
+          where: { eventId },
+          select: {
+            id: true,
+            nom: true,
+            prenom: true,
+            email: true,
+            phone: true,
+            dateNaissance: true,
+            createdAt: true,
+            placement: true,
+            ticketUrl: true,
+            textInfo: true,
+          },
+          // Pas de orderBy = pas de tri en mémoire = pas d'erreur
+          skip,
+          take: limit,
+        }),
+        prisma.participant.count({ where: { eventId } }),
+      ]);
+
+      if (!participants.length && page === 1) {
         return errorResponse(
           "Aucun participant trouvé pour cet événement",
           404
@@ -200,8 +225,14 @@ export class ParticipantService {
       }
 
       return successResponse({
-        message: `${participants.length} participants trouvés`,
-        participants: participants,
+        participants,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit),
+          hasMore: page * limit < total,
+        },
       });
     } catch (error) {
       console.error("Erreur lors de la récupération des participants:", error);
@@ -214,6 +245,10 @@ export class ParticipantService {
     data: ParticipantUpdateInput
   ): Promise<{ [key: string]: any }> {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(id)) {
+        throw Object.assign(new Error("ID du participant invalide"), { statusCode: 400 });
+      }
       const existingParticipant = await prisma.participant.findUnique({
         where: { id },
       });
@@ -265,10 +300,14 @@ export class ParticipantService {
     { params }: { params: { id: string } }
   ) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
 
       if (!id) {
         return errorResponse("ID du participant manquant");
+      }
+      if (!isValidObjectId(id)) {
+        return errorResponse("ID du participant invalide", 400);
       }
 
       const body = await request.json();
@@ -312,6 +351,10 @@ export class ParticipantService {
 
   static async getParticipantById(id: string): Promise<{ [key: string]: any }> {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(id)) {
+        throw Object.assign(new Error("ID du participant invalide"), { statusCode: 400 });
+      }
       const participant = await prisma.participant.findUnique({
         where: { id },
         select: {
@@ -343,6 +386,7 @@ export class ParticipantService {
     { params }: { params: { id: string } }
   ) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
 
       if (!id) {
@@ -359,6 +403,10 @@ export class ParticipantService {
 
   static async deleteParticipant(id: string): Promise<void> {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(id)) {
+        throw Object.assign(new Error("ID du participant invalide"), { statusCode: 400 });
+      }
       const existingParticipant = await prisma.participant.findUnique({
         where: { id },
       });
@@ -381,6 +429,7 @@ export class ParticipantService {
     { params }: { params: { id: string } }
   ) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
 
       if (!id) {

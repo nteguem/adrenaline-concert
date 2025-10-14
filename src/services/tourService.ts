@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { prisma, ensurePrismaConnected, isValidObjectId } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { 
@@ -41,6 +41,7 @@ export class TourService {
   // Gérer la création d'un nouveau tour
   static async handleCreateTour(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const body = await request.json();
       
       // Validation des champs requis
@@ -70,6 +71,10 @@ export class TourService {
   // Mettre à jour une tournée existante
   static async updateTour(id: string, data: TourUpdateInput): Promise<{ [key: string]: any }> {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(id)) {
+        throw Object.assign(new Error(`ID de la tournée invalide`), { statusCode: 400 });
+      }
       // Vérifier si la tournée existe
       const existingTour = await prisma.tour.findUnique({
         where: { id }
@@ -117,10 +122,14 @@ export class TourService {
   // Gérer la mise à jour d'une tournée
   static async handleUpdateTour(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
       
       if (!id) {
         return errorResponse('ID de la tournée manquant');
+      }
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID de la tournée invalide', 400);
       }
       
       const body = await request.json();
@@ -153,6 +162,10 @@ export class TourService {
   // Récupérer une tournée par son ID
   static async getTourById(id: string): Promise<{ [key: string]: any }> {
     try {
+      await ensurePrismaConnected();
+      if (!isValidObjectId(id)) {
+        throw Object.assign(new Error('ID de la tournée invalide'), { statusCode: 400 });
+      }
       const tour = await prisma.tour.findUnique({
         where: { id },
         select: {
@@ -180,10 +193,14 @@ export class TourService {
   // Gérer la récupération d'une tournée par ID
   static async handleGetTourById(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+      await ensurePrismaConnected();
       const id = params.id;
       
       if (!id) {
         return errorResponse('ID de la tournée manquant');
+      }
+      if (!isValidObjectId(id)) {
+        return errorResponse('ID de la tournée invalide', 400);
       }
       
       const tour = await this.getTourById(id);
@@ -196,6 +213,7 @@ export class TourService {
 
   static async getToursWithEvents() {
     try {
+      await ensurePrismaConnected();
       const tours = await prisma.tour.findMany({
         orderBy: {
           startDate: 'desc'
@@ -248,6 +266,8 @@ export class TourService {
       return successResponse({
         message: `${toursWithUpcomingEvents.length} tours trouvés`,
         tours: toursWithUpcomingEvents
+      }, undefined, 200, {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30'
       });
 
     } catch (error) {
@@ -276,6 +296,7 @@ export class TourService {
     const skip = (page - 1) * limit;
     
     try {
+      await ensurePrismaConnected();
       // Construire la condition de recherche
       const whereCondition: Prisma.TourWhereInput = search
         ? {
@@ -329,6 +350,7 @@ export class TourService {
   // Récupérer toutes les tournées
   static async handleGetAllTour(request: NextRequest) {
     try {
+      await ensurePrismaConnected();
       const { searchParams } = new URL(request.url);
       const limit = parseInt(searchParams.get('limit') || '10');
       const page = parseInt(searchParams.get('page') || '1');

@@ -13,7 +13,13 @@ export default function VideoPage() {
   const router = useRouter();
   const [videoEnded, setVideoEnded] = useState(false);
 
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 15000,
+    errorRetryCount: 1,
+    keepPreviousData: true,
+  });
   let formattedDate = null;
 
   // Afficher si (Date.now <= endDate) ET (eventDate <= Date.now)

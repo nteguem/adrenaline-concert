@@ -19,7 +19,13 @@ export default function ConfirmationPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 15000,
+    errorRetryCount: 1,
+    keepPreviousData: true,
+  });
 
   let formattedDate = null;
 

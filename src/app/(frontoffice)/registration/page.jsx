@@ -17,7 +17,7 @@ import { getYear, getMonth } from "date-fns";
 const useEmailCheck = (email, eventId) => {
   const fetcher = async ([url, email, eventId]) => {
     if (!email || !eventId || !email.includes("@")) return null;
-    
+
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52,7 +52,7 @@ const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
 const IntegratedHeader = ({ venue, date, city }) => {
   const subtitleText = date && venue ? `${date} | ${city} - ${venue}` : date || venue;
-  
+
   const getFontSize = (text) => {
     if (!text) return "text-3xl";
     const length = text.length;
@@ -100,8 +100,15 @@ export default function RegistrationPage() {
   const [isPlacementEditable, setIsPlacementEditable] = useState(false);
   const uploadAttemptsRef = useRef(0);
 
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher);
-  const { isChecking, participantExists } = useEmailCheck(formData.email, data?.data?.tours[0]?.nextEvent.id);
+  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 15000,
+    errorRetryCount: 1,
+    keepPreviousData: true,
+  });
+  const isChecking = false;
+  const participantExists = false;
 
   // Initialiser les champs de placement
   useEffect(() => {
@@ -128,13 +135,13 @@ export default function RegistrationPage() {
     console.log("ocrData:", ocrData);
     console.log("placementFields:", placementFields);
     console.log("placementData:", placementData);
-    
+
     // Si OCR a réussi, on a les données
     if (!ocrFailed && ocrData?.ticketUrl) {
       console.log("OCR réussi, retourne true");
       return true;
     }
-    
+
     // Si OCR a échoué, vérifier les champs manuels
     if (ocrFailed) {
       // Si pas de champs configurés, c'est OK
@@ -142,18 +149,18 @@ export default function RegistrationPage() {
         console.log("Pas de champs requis, retourne true");
         return true;
       }
-      
+
       // Vérifier qu'AU MOINS UN champ requis est rempli (au lieu de TOUS)
       const result = placementFields.some(field => {
         const value = placementData[field];
         const isValid = value && value.trim() !== "";
-        console.log(`Champ ${field}: "${value}" -> ${isValid}`);
+        // console.log(`Champ ${field}: "${value}" -> ${isValid}`);
         return isValid;
       });
       console.log("Résultat final des champs manuels (au moins un):", result);
       return result;
     }
-    
+
     console.log("Cas par défaut, retourne false");
     return false;
   };
@@ -164,10 +171,10 @@ export default function RegistrationPage() {
     const now = Date.now();
     const startTs = Date.parse(eventISO);
     const endTs = Date.parse(endISO);
-    console.log('[REG] dates', { nowISO: new Date(now).toISOString(), eventISO, endISO, startTs, endTs });
+    // console.log('[REG] dates', { nowISO: new Date(now).toISOString(), eventISO, endISO, startTs, endTs });
     if (Number.isNaN(startTs) || Number.isNaN(endTs)) return false;
     const cond = now <= endTs && startTs <= now;
-    console.log('[REG] condition (now<=end) && (start<=now) =>', cond);
+    // console.log('[REG] condition (now<=end) && (start<=now) =>', cond);
     return cond;
   };
 
@@ -196,46 +203,76 @@ export default function RegistrationPage() {
     setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
   };
 
-const handleFileSelect = async (dataUrl, fileName = "") => {
-  setTicketImage(dataUrl);
-  if (fileName) setTicketFileName(fileName);
-  setOcrLoad(true);
-  setOcrStatus(null);
-  setOcrStatusMessage("");
+  const handleFileSelect = async (dataUrl, fileName = "") => {
+    setTicketImage(dataUrl);
+    if (fileName) setTicketFileName(fileName);
+    setOcrLoad(true);
+    setOcrStatus(null);
+    setOcrStatusMessage("");
 
-  uploadAttemptsRef.current++;
-  const attempts = uploadAttemptsRef.current;
+    uploadAttemptsRef.current++;
+    const attempts = uploadAttemptsRef.current;
 
-  try {
-    const formData = new FormData();
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
-    formData.append("file", blob, fileName || "uploaded-image.png");
+    try {
+      const formData = new FormData();
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      formData.append("file", blob, fileName || "uploaded-image.png");
 
-    if (data?.data?.tours[0]?.nextEvent?.endDate) {
-      formData.append("endDate", data.data.tours[0].nextEvent.endDate);
-    }
+      if (data?.data?.tours[0]?.nextEvent?.endDate) {
+        formData.append("endDate", data.data.tours[0].nextEvent.endDate);
+      }
 
-    const apiResponse = await fetch("/api/ocr", { method: "POST", body: formData });
-    const result = await apiResponse.json();
+      const apiResponse = await fetch("/api/ocr", { method: "POST", body: formData });
+      const result = await apiResponse.json();
 
-    if (!apiResponse.ok || !result?.success) {
-      setOcrLoad(false);
+      if (!apiResponse.ok || !result?.success) {
+        setOcrLoad(false);
 
-      // Pour WRONG_EVENT_DATE, on applique aussi la règle des 2 tentatives
-      if (result?.errorType === "WRONG_EVENT_DATE") {
+        // Pour WRONG_EVENT_DATE, on applique aussi la règle des 2 tentatives
+        if (result?.errorType === "WRONG_EVENT_DATE") {
+          if (attempts >= 2) {
+            setOcrFailed(true);
+            setOcrStatus("error");
+            setOcrStatusMessage("Date incorrecte sur le billet");
+          } else {
+            setOcrStatus("error");
+            setOcrStatusMessage("Date incorrecte sur le billet");
+          }
+          return;
+        }
+
+        // Pour les autres erreurs
         if (attempts >= 2) {
           setOcrFailed(true);
           setOcrStatus("error");
-          setOcrStatusMessage("Date incorrecte sur le billet");
+          setOcrStatusMessage("le billet n'a pas été reconnu");
         } else {
           setOcrStatus("error");
-          setOcrStatusMessage("Date incorrecte sur le billet");
+          setOcrStatusMessage("le billet n'a pas été reconnu");
         }
         return;
       }
 
-      // Pour les autres erreurs
+      // OCR réussi
+      const ocrPlacementData = {};
+      if (result?.data) {
+        Object.keys(result.data).forEach((key) => {
+          if (key !== "ticketUrl" && key !== "date") {
+            ocrPlacementData[key] = result.data[key];
+          }
+        });
+      }
+
+      setOcrData(result?.data);
+      setPlacementData(ocrPlacementData);
+      setOcrLoad(false);
+      setOcrStatus("success");
+      setOcrStatusMessage("");
+      setOcrFailed(false);
+
+    } catch (error) {
+      setOcrLoad(false);
       if (attempts >= 2) {
         setOcrFailed(true);
         setOcrStatus("error");
@@ -244,38 +281,8 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
         setOcrStatus("error");
         setOcrStatusMessage("le billet n'a pas été reconnu");
       }
-      return;
     }
-
-    // OCR réussi
-    const ocrPlacementData = {};
-    if (result?.data) {
-      Object.keys(result.data).forEach((key) => {
-        if (key !== "ticketUrl" && key !== "date") {
-          ocrPlacementData[key] = result.data[key];
-        }
-      });
-    }
-
-    setOcrData(result?.data);
-    setPlacementData(ocrPlacementData);
-    setOcrLoad(false);
-    setOcrStatus("success");
-    setOcrStatusMessage("");
-    setOcrFailed(false);
-
-  } catch (error) {
-    setOcrLoad(false);
-    if (attempts >= 2) {
-      setOcrFailed(true);
-      setOcrStatus("error");
-      setOcrStatusMessage("le billet n'a pas été reconnu");
-    } else {
-      setOcrStatus("error");
-      setOcrStatusMessage("le billet n'a pas été reconnu");
-    }
-  }
-};
+  };
   const calculateAge = (birthDate) => {
     const today = new Date();
     const birth = new Date(birthDate);
@@ -288,7 +295,7 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
   // VALIDATION COMPLÈTEMENT REECRITE - PLUS DE VÉRIFICATION BILLET
   const validateForm = () => {
     console.log("=== DÉBUT VALIDATION ===");
-    
+
     if (!formData.nom || !formData.prenom || !formData.dateNaissance || !formData.email || !formData.phone) {
       setErrorModal({ isOpen: true, title: "Formulaire incomplet", message: "Merci de remplir toutes les cases.", type: "error" });
       return false;
@@ -314,7 +321,7 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
     // SEULE vérification importante : les données de placement
     const placementValid = hasValidPlacementData();
     console.log("hasValidPlacementData résultat:", placementValid);
-    
+
     if (!placementValid) {
       console.log("ÉCHEC: Données de placement invalides");
       setErrorModal({ isOpen: true, title: "Informations manquantes", message: "Veuillez renseigner au moins un champ de placement obligatoire.", type: "error" });
@@ -326,20 +333,10 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
   };
 
   const isButtonDisabled = () => {
-    // Vérifications de base
-    if (!formData.nom || !formData.prenom || !formData.dateNaissance || !formData.email || !formData.phone || ocrLoad) {
-      return true;
-    }
-    
-    // Si on n'a pas d'image de billet du tout
-    if (!ticketImage) return true;
-    
-    // Vérifier qu'on a des données de placement valides (OCR ou manuel)
-    return !hasValidPlacementData();
+    return ocrLoad;
   };
 
   const handleNextStep = () => {
-    if (isButtonDisabled()) return;
     if (formStep === 1 && validateForm()) setFormStep(2);
   };
 
@@ -350,17 +347,46 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
     const postBody = {
       nom: formData.nom, prenom: formData.prenom, dateNaissance: formatDate(formData.dateNaissance),
       email: formData.email, phone: formData.phone, eventId: data?.data?.tours[0]?.nextEvent.id,
-      placementValues: { ...placementData }, 
+      placementValues: { ...placementData },
       ticketUrl: ocrData?.ticketUrl || ticketImage, // Utiliser l'image si pas d'OCR
       textInfo: ocrFailed ? "Billet rempli manuellement après échec OCR" : "",
     };
 
-    const response = await fetch("/api/participants_fo", {
-      method: "POST",
-      body: JSON.stringify(postBody),
-    });
+    try {
+      const response = await fetch("/api/participants_fo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(postBody),
+      });
 
-    if (formStep === 2) router.push("/confirmation");
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        // ignore json parse errors, we'll fallback to generic message
+      }
+
+      if (!response.ok || payload?.success === false) {
+        const serverMsg = payload?.error || "Une erreur est survenue. Veuillez réessayer.";
+        const isDup = /déjà|existe|already/i.test(serverMsg);
+        setErrorModal({
+          isOpen: true,
+          title: isDup ? "Email déjà utilisé" : "Erreur",
+          message: isDup ? "l'adresse email saisie a déjà été utilisée pour cet évènement" : serverMsg,
+          type: "error",
+        });
+        return;
+      }
+
+      if (formStep === 2) router.push("/confirmation");
+    } catch (err) {
+      setErrorModal({
+        isOpen: true,
+        title: "Erreur réseau",
+        message: "Impossible d'envoyer le formulaire. Vérifiez votre connexion et réessayez.",
+        type: "error",
+      });
+    }
   };
 
   const TicketPreview = () => {
@@ -404,9 +430,8 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
         </div>
 
         {ocrStatusMessage && ocrStatus !== "success" && formStep === 1 && (
-          <div className={`px-4 py-2 text-sm animate-fade-in ${
-            ocrFailed ? "bg-orange-100 text-orange-700 border-t border-orange-200" : "bg-red-100 text-red-700 border-t border-red-200"
-          }`}>
+          <div className={`px-4 py-2 text-sm animate-fade-in ${ocrFailed ? "bg-orange-100 text-orange-700 border-t border-orange-200" : "bg-red-100 text-red-700 border-t border-red-200"
+            }`}>
             {ocrStatusMessage}
           </div>
         )}
@@ -430,18 +455,12 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
           <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }}>
             <Input placeholder="NOM" name="nom" value={formData.nom} onChange={handleInputChange} className="h-50 w-full" />
             <Input placeholder="PRENOM" name="prenom" value={formData.prenom} onChange={handleInputChange} className="mb-0 h-50 w-full" />
-            
+
             <div className="w-full">
               <DatePicker
                 autoComplete="off" selected={formData.dateNaissance}
                 onChange={(date) => {
                   setFormData({ ...formData, dateNaissance: date });
-                  if (date) {
-                    const age = calculateAge(date);
-                    if (age < 18) {
-                      setErrorModal({ isOpen: true, message: "Pour participer à l'expérience, il faut avoir + de 18 ans.", type: "error" });
-                    }
-                  }
                 }}
                 placeholderText="DATE DE NAISSANCE" name="dateNaissance" dateFormat={"dd/MM/yyyy"}
                 renderCustomHeader={({ date, changeYear, changeMonth, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }) => (
@@ -459,29 +478,14 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
                 className="text-gray-700 h-50 w-full rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
-            
+
             <Input placeholder="Numéro de téléphone" name="phone" value={formData.phone} onChange={handleInputChange} className="h-50 w-full" />
-            
+
             <div className="relative">
               <Input
                 type="email" placeholder="ADRESSE MAIL" name="email" value={formData.email} onChange={handleInputChange}
-                className={`h-50 w-full ${participantExists ? "border-red-500 bg-red-50" : ""}`}
+                className="h-50 w-full"
               />
-              {isChecking && formData.email.includes("@") && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-              {participantExists && !isChecking && (
-                <div className="mt-2 text-red-600 text-sm animate-fade-in">
-                  <div className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <span>l'adresse email saisie a déjà été utilisée pour cet évènement</span>
-                  </div>
-                </div>
-              )}
             </div>
 
             <Checkbox
@@ -497,19 +501,19 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
                 <TicketPreview />
               )}
 
-             {ticketImage && !ocrFailed && ocrStatus !== "success" && (
-  <div className="flex justify-center mt-2">
-    <button type="button" onClick={() => {
-      setTicketImage(null); setOcrData(null); setOcrLoad(false); setOcrFailed(false);
-      setOcrStatus(null); setOcrStatusMessage("");
-      const resetPlacementData = {};
-      Object.keys(placementData).forEach((key) => { resetPlacementData[key] = ""; });
-      setPlacementData(resetPlacementData);
-    }} className="text-sm text-blue-500 hover:text-blue-700">
-      Réessayer
-    </button>
-  </div>
-)}
+              {ticketImage && !ocrFailed && ocrStatus !== "success" && (
+                <div className="flex justify-center mt-2">
+                  <button type="button" onClick={() => {
+                    setTicketImage(null); setOcrData(null); setOcrLoad(false); setOcrFailed(false);
+                    setOcrStatus(null); setOcrStatusMessage("");
+                    const resetPlacementData = {};
+                    Object.keys(placementData).forEach((key) => { resetPlacementData[key] = ""; });
+                    setPlacementData(resetPlacementData);
+                  }} className="text-sm text-blue-500 hover:text-blue-700">
+                    Réessayer
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Champs de placement - SEULEMENT si OCR a échoué après 2 tentatives */}
@@ -542,8 +546,8 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
                   <div>Chargement des infos du billet...</div>
                 </div>
               ) : (
-                <Button type="submit" disabled={isButtonDisabled()}
-                  className={`transition-colors ${isButtonDisabled() ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60" : ""}`}>
+                <Button type="submit" disabled={ocrLoad}
+                  className="transition-colors">
                   CONTINUEZ
                 </Button>
               )}
@@ -557,96 +561,92 @@ const handleFileSelect = async (dataUrl, fileName = "") => {
             <div className="mb-8">
               {ticketImage && <TicketPreview />}
 
-            <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
-  {/* Bloc Informations saisies manuellement (aligné à gauche) */}
-  <div className="mb-2">
-    {ocrFailed ? (
-      <div className="flex items-center mb-1">
-        <svg
-          className="w-4 h-4 text-orange-500 mr-1"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path
-            fillRule="evenodd"
-            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <p className="text-orange-400 font-medium text-sm">
-          Informations saisies manuellement
-        </p>
-      </div>
-    ) : null}
-  </div>
+              <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
+                {/* Bloc Informations saisies manuellement (aligné à gauche) */}
+                <div className="mb-2">
+                  {ocrFailed ? (
+                    <div className="flex items-center mb-1">
+                      <svg
+                        className="w-4 h-4 text-orange-500 mr-1"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  ) : null}
+                </div>
 
-  {/* Bouton centré */}
-  <div className="flex justify-center mb-2">
-    <button
-      type="button"
-      onClick={() => setIsPlacementEditable(!isPlacementEditable)}
-      className="text-gray-300 text-xs flex items-center hover:text-white transition-colors cursor-pointer"
-    >
-      {isPlacementEditable ? (
-        <svg
-          className="w-3 h-3 mr-1"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
-        </svg>
-      ) : (
-        <svg
-          className="w-3 h-3 mr-1"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path
-            fillRule="evenodd"
-            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 616 0z"
-            clipRule="evenodd"
-          />
-        </svg>
-      )}
-      Je modifie mes informations si besoin
-    </button>
-  </div>
+                {/* Bouton centré */}
+                <div className="flex justify-center mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPlacementEditable(!isPlacementEditable)}
+                    className="text-gray-300 text-xs flex items-center hover:text-white transition-colors cursor-pointer"
+                  >
+                    {isPlacementEditable ? (
+                      <svg
+                        className="w-3 h-3 mr-1"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-3 h-3 mr-1"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 616 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                    Je modifie mes informations si besoin
+                  </button>
+                </div>
 
-  {/* Grille des champs */}
-  <div className="grid grid-cols-3 gap-2">
-    {Object.keys(placementData).length > 0 ? (
-      Object.keys(placementData).map((field) => (
-        <div
-          key={`step2-${field}`}
-          className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors"
-        >
-          <label className="text-white font-medium text-xs uppercase block mb-1">
-            {field}
-          </label>
-       <Input
-  name={field}
-  value={placementData[field] || ""}
-  onChange={handlePlacementChange}
-  disabled={!isPlacementEditable}
-  className={`h-8 focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full ${
-    isPlacementEditable
-      ? "bg-white text-black border-gray-300 hover:bg-gray-50"
-      : "bg-gray-800 text-white border-gray-700 cursor-not-allowed opacity-60"
-  }`}
-  autoComplete="off"
-/>
+                {/* Grille des champs */}
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.keys(placementData).length > 0 ? (
+                    Object.keys(placementData).map((field) => (
+                      <div
+                        key={`step2-${field}`}
+                        className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors"
+                      >
+                        <label className="text-white font-medium text-xs uppercase block mb-1">
+                          {field}
+                        </label>
+                        <Input
+                          name={field}
+                          value={placementData[field] || ""}
+                          onChange={handlePlacementChange}
+                          disabled={!isPlacementEditable}
+                          className={`h-8 focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full ${isPlacementEditable
+                              ? "bg-white text-black border-gray-300 hover:bg-gray-50"
+                              : "bg-gray-800 text-white border-gray-700 cursor-not-allowed opacity-60"
+                            }`}
+                          autoComplete="off"
+                        />
 
-        </div>
-      ))
-    ) : (
-      <div className="col-span-3 text-center py-2">
-        <p className="text-gray-400 italic text-xs">
-          Aucune information de placement disponible
-        </p>
-      </div>
-    )}
-  </div>
-</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-3 text-center py-2">
+                      <p className="text-gray-400 italic text-xs">
+                        Aucune information de placement disponible
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
             </div>
 
