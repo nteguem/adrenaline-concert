@@ -360,7 +360,7 @@ export class TirageService {
         message: `${vainqueurs.length} vainqueurs trouvés`,
         tirage: tirage,
         vainqueurs: vainqueurs
-      });
+      }, undefined, 200, { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=20' });
 
     } catch (error) {
       console.error("Erreur lors de la récupération des vainqueurs:", error);
