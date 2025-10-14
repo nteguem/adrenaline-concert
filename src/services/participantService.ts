@@ -165,32 +165,6 @@ export class ParticipantService {
       const limit = parseInt(searchParams.get("limit") || "100");
       const page = parseInt(searchParams.get("page") || "1");
       const search = searchParams.get("search") || "";
-      const onlyCount = searchParams.get("onlyCount");
-      const onlyCountFlag = onlyCount === "1" || onlyCount === "true";
-
-      if (onlyCountFlag) {
-        await ensurePrismaConnected();
-        const whereCondition: Prisma.participantWhereInput = search
-          ? {
-              OR: [
-                { nom: { contains: search, mode: "insensitive" } },
-                { prenom: { contains: search, mode: "insensitive" } },
-                { email: { contains: search, mode: "insensitive" } },
-              ],
-            }
-          : {};
-
-        const total = await prisma.participant.count({ where: whereCondition });
-
-        return successResponse(
-          {
-            participants: [],
-          },
-          { total, pages: 1, page: 1, limit: 0 },
-          200,
-          { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=20' }
-        );
-      }
 
       const result = await this.getParticipants({ page, limit, search });
 
@@ -198,9 +172,7 @@ export class ParticipantService {
         {
           participants: result.participants,
         },
-        result.pagination,
-        200,
-        { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=20' }
+        result.pagination
       );
     } catch (error) {
       console.error("Erreur dans handleGetAllParticipants:", error);
@@ -261,7 +233,7 @@ export class ParticipantService {
           pages: Math.ceil(total / limit),
           hasMore: page * limit < total,
         },
-      }, undefined, 200, { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=20' });
+      });
     } catch (error) {
       console.error("Erreur lors de la récupération des participants:", error);
       return apiErrorHandler(error);
