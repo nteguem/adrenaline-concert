@@ -135,7 +135,6 @@ export const connectToDB = async () => {
     if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
       const db = await mongoose.connect(process.env.DATABASE_URL as string);
       connection.isConnected = db.connections[0].readyState;
-      console.log('Connexion à MongoDB établie');
     }
   } catch (error) {
     console.error('Erreur de connexion à MongoDB:', error);

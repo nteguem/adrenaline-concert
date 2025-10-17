@@ -3,23 +3,16 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import HeartbeatButton from "@/components/common/HeartbeatButton";
 import { din } from "@/styles/fonts";
-import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
 import PopupModal from "@/components/common/PopupModal";
+import { useTours } from "@/hooks/useOptimizedSWR";
 
-const fetcher = (...args) => fetch(...args).then((res) => res.json());
 export default function VideoPage() {
   const router = useRouter();
   const [videoEnded, setVideoEnded] = useState(false);
 
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 15000,
-    errorRetryCount: 1,
-    keepPreviousData: true,
-  });
+  const { data, error } = useTours();
   let formattedDate = null;
 
   // Afficher si (Date.now <= endDate) ET (eventDate <= Date.now)
@@ -28,14 +21,11 @@ export default function VideoPage() {
     const now = Date.now();
     const startTs = Date.parse(eventISO);
     const endTs = Date.parse(endISO);
-    console.log('[VIDEO] dates', { nowISO: new Date(now).toISOString(), eventISO, endISO, startTs, endTs });
     if (Number.isNaN(startTs) || Number.isNaN(endTs)) return false;
     const cond = now <= endTs && startTs <= now;
-    console.log('[VIDEO] condition (now<=end) && (start<=now) =>', cond);
     return cond;
   };
   const customdateFormat = (passedDate) => {
-    // console.log(passedDate);
     const date = new Date(passedDate?.eventDate);
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -63,7 +53,6 @@ export default function VideoPage() {
     if (data?.data?.tours.length > 0) {
       const evt = data?.data?.tours[0]?.nextEvent;
       const show = shouldShowForm(evt?.eventDate, evt?.endDate);
-      console.log('[VIDEO] show form?', show, evt);
       if (!show) return <LoadingObject text={"le formulaire est clôturé"} />;
     } else {
       return <LoadingObject text={"le formulaire est clôturé"} />;

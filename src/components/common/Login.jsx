@@ -1,4 +1,4 @@
-// "use client";
+"use client";
 import React, { useState } from "react";
 
 export default function Login({ handle }) {
@@ -19,7 +19,6 @@ export default function Login({ handle }) {
     
     // Vérification que les champs ne sont pas vides
     if (!email || !pass) {
-      console.log("Email ou mot de passe manquant");
       return;
     }
     
@@ -29,17 +28,9 @@ export default function Login({ handle }) {
     const referenceEmail = "teste.dupont@gmail.com";
     const referencePass = "tested";
     
-    console.log("Email saisi:", emailLowerCase);
-    console.log("Pass saisi:", passLowerCase);
-    
     if (emailLowerCase === referenceEmail && passLowerCase === referencePass) {
-      console.log("Connexion réussie !");
       handle(true);
-    } else {
-      console.log("Identifiants incorrects");
     }
-
-    // You can add your login logic here.
   };
   
   return (

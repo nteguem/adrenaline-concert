@@ -3,8 +3,8 @@ import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 // import { cookies } from 'next/headers';
 
-const protectedRoutes = ['/api/events', '/api/tirage', '/api/users', '/api/participants_bo','/api/vainqueurs'];
-const publicRoutes = ['/api/auth', '/login', '/register','/api/tours','/api/participants_fo'];
+const protectedRoutes = ['/api/events', '/api/tirage', '/api/users', '/api/vainqueurs'];
+const publicRoutes = ['/api/auth', '/login', '/register','/api/tours','/api/participants_fo', '/api/participants_bo'];
 
 export async function middleware(request: NextRequest) {
   if (request.method === 'OPTIONS') {
@@ -26,10 +26,8 @@ export async function middleware(request: NextRequest) {
 
   // const cookie = (await cookies()).get("session")?.value;
   // // const session = { userId: cookie };
-  // // console.log("session cookie:", cookie);
 
   // if (isProtectedRoute && !cookie) {
-  //   console.log("session cook:", cookie);
   //   return NextResponse.redirect(new URL("/login", request.nextUrl));
   // }
   
@@ -51,8 +49,6 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
-
-  console.log('Decoded Token:', token);
 
   if (!token) {
     return NextResponse.json({
@@ -88,7 +84,13 @@ export async function middleware(request: NextRequest) {
     }, { status: 403 });
   }
 
-  return NextResponse.next();
+  // Ajouter headers CORS à toutes les réponses
+  const response = NextResponse.next();
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  return response;
 }
 
 export const config = {

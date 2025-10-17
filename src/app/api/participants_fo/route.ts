@@ -10,33 +10,14 @@ export async function GET(request: NextRequest) {
 
 // export async function POST(request: NextRequest) {
 //   try {
-//     console.log('Content-Type:', request.headers.get('content-type'));
     
 //     const data = await request.formData();
     
 //     // Log all entries including file details
 //     Array.from(data.entries()).forEach(([key, value]) => {
 //       if (value instanceof File) {
-//         console.log('File Entry:', key, {
-//           name: value.name,
-//           type: value.type,
-//           size: value.size,
-//           lastModified: value.lastModified
-//         });
-//       } else {
-//         console.log('Form Entry:', key, value);
-//       }
-//     });
 
 //     const file = data.get('file');
-//     console.log('File details:', {
-//       exists: !!file,
-//       type: file ? typeof file : 'none',
-//       isFile: file instanceof File,
-//       name: file instanceof File ? file.name : 'no file',
-//       mimeType: file instanceof File ? file.type : 'none',
-//       size: file instanceof File ? file.size : 0
-//     });
 
 //     return ParticipantService.handleCreateParticipant(request);
 //   } catch (error) {

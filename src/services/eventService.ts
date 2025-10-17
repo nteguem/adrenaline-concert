@@ -211,7 +211,9 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
       return successResponse({
         events: result.events,
         tour: result.tour
-      }, result.pagination);
+      }, result.pagination, 200, {
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+      });
     } catch (error) {
       console.error('Erreur dans handleGetAllEvent:', error);
       return apiErrorHandler(error);
@@ -427,36 +429,77 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
     }
   }
 
-static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
+static async getEventsWithParticipants(options: PaginationOptions = {}): Promise<{
+  events: any[];
+  pagination: {
+    total: number;
+    pages: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+  message: string;
+}> {
+  const { page = 1, limit = 50, search = '' } = options;
+  const skip = (page - 1) * limit;
+  
+  // ✅ LIMITE DE SÉCURITÉ COHÉRENTE avec les autres services
+  const sanitizedLimit = Math.min(limit, 100); // Max 100 comme les autres services
+  
   try {
-    const events = await prisma.event.findMany({
-      orderBy: {
-        eventDate: 'asc'
-      },
-      select: {
-        id: true,
-        tourId: true,
-        city: true,
-        venue: true,
-        eventDate: true,
-        endDate: true,
-        status: true,
-        placement: true,
-        createdAt: true,
-      }
-    });
+    await ensurePrismaConnected();
+    
+    // ✅ CONDITION DE RECHERCHE (cohérent avec getEvents)
+    const whereCondition: Prisma.EventWhereInput = search
+      ? {
+          OR: [
+            { city: { contains: search, mode: 'insensitive' } },
+            { venue: { contains: search, mode: 'insensitive' } },
+            { status: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
 
-    // Compter les participants pour tous les événements en une seule requête
-    const eventIds = events.map(e => e.id);
-    const participantCounts = await prisma.participant.groupBy({
-      by: ['eventId'],
-      where: {
-        eventId: { in: eventIds }
-      },
-      _count: {
-        id: true
-      }
-    });
+    // ✅ REQUÊTE AVEC PAGINATION (comme getEvents)
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where: whereCondition,
+        skip,
+        take: sanitizedLimit,
+        orderBy: {
+          eventDate: 'asc'
+        },
+        select: {
+          id: true,
+          tourId: true,
+          city: true,
+          venue: true,
+          eventDate: true,
+          endDate: true,
+          status: true,
+          placement: true,
+          createdAt: true,
+        }
+      }),
+      prisma.event.count({
+        where: whereCondition,
+      }),
+    ]);
+
+    // ✅ GROUPBY OPTIMISÉ - seulement si on a des événements
+    let participantCounts: any[] = [];
+    if (events.length > 0) {
+      const eventIds = events.map(e => e.id);
+      participantCounts = await (prisma.participant.groupBy as any)({
+        by: ['eventId'],
+        where: {
+          eventId: { in: eventIds }
+        },
+        _count: {
+          id: true
+        }
+      });
+    }
 
     // Créer un map pour un accès rapide aux counts
     const countMap = new Map(
@@ -470,6 +513,13 @@ static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
 
     return {
       events: eventsWithCount,
+      pagination: {
+        total,
+        pages: Math.ceil(total / sanitizedLimit),
+        page,
+        limit: sanitizedLimit,
+        hasMore: page * sanitizedLimit < total
+      },
       message: 'Events retrieved successfully'
     };
   } catch (error) {
@@ -480,7 +530,14 @@ static async getEventsWithParticipants(): Promise<{ [key: string]: any }> {
   static async handleGetEventsWithParticipants(request: NextRequest) {
     try {
       await ensurePrismaConnected();
-      const result = await this.getEventsWithParticipants();
+      
+      // ✅ RÉCUPÉRER LES PARAMÈTRES (comme handleGetAllEvent)
+      const { searchParams } = new URL(request.url);
+      const limit = parseInt(searchParams.get('limit') || '50');
+      const page = parseInt(searchParams.get('page') || '1');
+      const search = searchParams.get('search') || '';
+      
+      const result = await this.getEventsWithParticipants({ page, limit, search });
       return successResponse(result);
     } catch (error) {
       return apiErrorHandler(error);

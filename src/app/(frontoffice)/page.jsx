@@ -4,26 +4,18 @@ import { useRouter } from "next/navigation";
 import LogoHeader from "@/components/common/LogoHeader";
 import HeartbeatButton from "@/components/common/HeartbeatButton";
 import { evangelion, din } from "@/styles/fonts";
-import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
 import Login from "../../components/common/Login";
 import Checkbox from "@/components/common/Checkbox";
 import PopupModal from "@/components/common/PopupModal";
-
-const fetcher = (...args) => fetch(...args).then((res) => res.json());
+import { useTours } from "@/hooks/useOptimizedSWR";
 
 export default function HomePage() {
   const router = useRouter();
   const [isClicked, setIsClicked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 15000,
-    errorRetryCount: 1,
-    keepPreviousData: true,
-  });
+  const { data, error } = useTours();
   const [formData, setFormData] = useState({
     confirmePresence: false,
     age: false,
@@ -50,10 +42,8 @@ export default function HomePage() {
     const now = Date.now();
     const startTs = Date.parse(eventISO);
     const endTs = Date.parse(endISO);
-    // console.log('[HOME] dates', { nowISO: new Date(now).toISOString(), eventISO, endISO, startTs, endTs });
     if (Number.isNaN(startTs) || Number.isNaN(endTs)) return false;
     const cond = now <= endTs && startTs <= now;
-    // console.log('[HOME] condition (now<=end) && (start<=now) =>', cond);
     return cond;
   };
 
@@ -92,7 +82,6 @@ export default function HomePage() {
     if (data?.data?.tours.length > 0) {
       const evt = data?.data?.tours[0]?.nextEvent;
       const show = shouldShowForm(evt?.eventDate, evt?.endDate);
-      // console.log('[HOME] show form?', show, evt);
       if (!show) return <LoadingObject text={"le formulaire est clôturé"} />;
     } else {
       return <LoadingObject text={"le formulaire est clôturé"} />;

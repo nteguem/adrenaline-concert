@@ -323,7 +323,11 @@ export class TirageService {
       });
 
       if (!tirage) {
-        return errorResponse('Aucun tirage trouvé pour cet événement', 404);
+        // Retourner un tableau vide au lieu d'une erreur 404
+        return successResponse({
+          vainqueurs: [],
+          message: 'Aucun tirage trouvé pour cet événement'
+        });
       }
 
       // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants

@@ -3,11 +3,9 @@ import React, { useEffect } from "react";
 import Image from "next/image";
 import { evangelion, din } from "@/styles/fonts";
 import LogoHeader from "@/components/common/LogoHeader";
-import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
-
-const fetcher = (...args) => fetch(...args).then((res) => res.json());
+import { useTours } from "@/hooks/useOptimizedSWR";
 
 export default function ConfirmationPage() {
   useEffect(() => {
@@ -19,13 +17,7 @@ export default function ConfirmationPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 15000,
-    errorRetryCount: 1,
-    keepPreviousData: true,
-  });
+  const { data, error } = useTours();
 
   let formattedDate = null;
 

@@ -7,48 +7,12 @@ import FileUpload from "@/components/common/FileUpload";
 import Button from "@/components/common/Button";
 import PopupModal from "@/components/common/PopupModal";
 import { din, evangelion } from "@/styles/fonts";
-import useSWR from "swr";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getYear, getMonth } from "date-fns";
-
-const useEmailCheck = (email, eventId) => {
-  const fetcher = async ([url, email, eventId]) => {
-    if (!email || !eventId || !email.includes("@")) return null;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.toLowerCase().trim(), eventId }),
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.success ? data.data : null;
-  };
-
-  const shouldCheck = useMemo(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email) && eventId;
-  }, [email, eventId]);
-
-  const { data, error, isLoading } = useSWR(
-    shouldCheck ? ["/api/check-participant", email, eventId] : null,
-    fetcher,
-    { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 3000, errorRetryCount: 1 }
-  );
-
-  return {
-    isChecking: isLoading,
-    participantExists: data?.exists || false,
-    participantData: data?.participant || null,
-    error: error || null,
-  };
-};
-
-const fetcher = (...args) => fetch(...args).then((res) => res.json());
+import { useTours, useEmailCheck } from "@/hooks/useOptimizedSWR";
 
 const IntegratedHeader = ({ venue, date, city }) => {
   const subtitleText = date && venue ? `${date} | ${city} - ${venue}` : date || venue;
@@ -100,15 +64,8 @@ export default function RegistrationPage() {
   const [isPlacementEditable, setIsPlacementEditable] = useState(false);
   const uploadAttemptsRef = useRef(0);
 
-  const { data, error } = useSWR("/api/tours/tour_event", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 15000,
-    errorRetryCount: 1,
-    keepPreviousData: true,
-  });
-  const isChecking = false;
-  const participantExists = false;
+  const { data, error } = useTours();
+  const { isChecking, participantExists, participantData } = useEmailCheck(formData.email, data?.data?.tours[0]?.nextEvent?.id);
 
   // Initialiser les champs de placement
   useEffect(() => {
@@ -130,15 +87,8 @@ export default function RegistrationPage() {
 
   // Vérifier si on a des informations de placement valides (OCR ou manuel)
   const hasValidPlacementData = () => {
-    console.log("=== hasValidPlacementData DEBUG ===");
-    console.log("ocrFailed:", ocrFailed);
-    console.log("ocrData:", ocrData);
-    console.log("placementFields:", placementFields);
-    console.log("placementData:", placementData);
-
     // Si OCR a réussi, on a les données
     if (!ocrFailed && ocrData?.ticketUrl) {
-      console.log("OCR réussi, retourne true");
       return true;
     }
 
@@ -146,7 +96,6 @@ export default function RegistrationPage() {
     if (ocrFailed) {
       // Si pas de champs configurés, c'est OK
       if (placementFields.length === 0) {
-        console.log("Pas de champs requis, retourne true");
         return true;
       }
 
@@ -154,14 +103,11 @@ export default function RegistrationPage() {
       const result = placementFields.some(field => {
         const value = placementData[field];
         const isValid = value && value.trim() !== "";
-        // console.log(`Champ ${field}: "${value}" -> ${isValid}`);
         return isValid;
       });
-      console.log("Résultat final des champs manuels (au moins un):", result);
       return result;
     }
 
-    console.log("Cas par défaut, retourne false");
     return false;
   };
 
@@ -171,10 +117,8 @@ export default function RegistrationPage() {
     const now = Date.now();
     const startTs = Date.parse(eventISO);
     const endTs = Date.parse(endISO);
-    // console.log('[REG] dates', { nowISO: new Date(now).toISOString(), eventISO, endISO, startTs, endTs });
     if (Number.isNaN(startTs) || Number.isNaN(endTs)) return false;
     const cond = now <= endTs && startTs <= now;
-    // console.log('[REG] condition (now<=end) && (start<=now) =>', cond);
     return cond;
   };
 
@@ -193,7 +137,6 @@ export default function RegistrationPage() {
   if (data?.data?.tours.length === 0) return <LoadingObject text={"le formulaire est clôturé"} />;
   const evt = data?.data?.tours[0]?.nextEvent;
   const showForm = shouldShowForm(evt?.eventDate, evt?.endDate);
-  console.log('[REG] show form?', showForm, evt);
   if (!showForm) return <LoadingObject text={"le formulaire est clôturé"} />;
 
   const formattedDate = customdateFormat(data.data?.tours[0]?.nextEvent);
@@ -294,8 +237,6 @@ export default function RegistrationPage() {
 
   // VALIDATION COMPLÈTEMENT REECRITE - PLUS DE VÉRIFICATION BILLET
   const validateForm = () => {
-    console.log("=== DÉBUT VALIDATION ===");
-
     if (!formData.nom || !formData.prenom || !formData.dateNaissance || !formData.email || !formData.phone) {
       setErrorModal({ isOpen: true, title: "Formulaire incomplet", message: "Merci de remplir toutes les cases.", type: "error" });
       return false;
@@ -320,15 +261,12 @@ export default function RegistrationPage() {
 
     // SEULE vérification importante : les données de placement
     const placementValid = hasValidPlacementData();
-    console.log("hasValidPlacementData résultat:", placementValid);
 
     if (!placementValid) {
-      console.log("ÉCHEC: Données de placement invalides");
       setErrorModal({ isOpen: true, title: "Informations manquantes", message: "Veuillez renseigner au moins un champ de placement obligatoire.", type: "error" });
       return false;
     }
 
-    console.log("=== VALIDATION RÉUSSIE ===");
     return true;
   };
 

@@ -37,34 +37,3 @@ export const UnreadableTicketModal = ({ isOpen, onClose }) => {
     />
   );
 };
-
-// Utilisation des modals dans les composants
-/*
-import { DateErrorModal, ScannedTicketModal, UnreadableTicketModal } from '@/components/common/ErrorModals';
-
-// Dans votre composant
-const [dateErrorOpen, setDateErrorOpen] = useState(false);
-const [scannedErrorOpen, setScannedErrorOpen] = useState(false);
-const [unreadableErrorOpen, setUnreadableErrorOpen] = useState(false);
-
-// Pour ouvrir un modal
-const handleTicketError = (errorType) => {
-  if (errorType === 'date') setDateErrorOpen(true);
-  else if (errorType === 'scanned') setScannedErrorOpen(true);
-  else if (errorType === 'unreadable') setUnreadableErrorOpen(true);
-};
-
-// Dans le JSX
-<DateErrorModal 
-  isOpen={dateErrorOpen} 
-  onClose={() => setDateErrorOpen(false)} 
-/>
-<ScannedTicketModal 
-  isOpen={scannedErrorOpen} 
-  onClose={() => setScannedErrorOpen(false)} 
-/>
-<UnreadableTicketModal 
-  isOpen={unreadableErrorOpen} 
-  onClose={() => setUnreadableErrorOpen(false)} 
-/>
-*/

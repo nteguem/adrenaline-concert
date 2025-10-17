@@ -161,19 +161,37 @@ export class ParticipantService {
 
   static async handleGetAllParticipants(request: NextRequest) {
     try {
-      const { searchParams } = new URL(request.url);
-      const limit = parseInt(searchParams.get("limit") || "100");
-      const page = parseInt(searchParams.get("page") || "1");
-      const search = searchParams.get("search") || "";
-
-      const result = await this.getParticipants({ page, limit, search });
-
-      return successResponse(
+      await ensurePrismaConnected();
+      
+      // ✅ RÉCUPÉRER SEULEMENT LE TOTAL, PAS LES DONNÉES PAGINÉES
+      const total = await prisma.participant.count();
+      
+      console.log('🔍 [API] Total participants in database:', total);
+      
+      const response = successResponse(
         {
-          participants: result.participants,
+          totalParticipants: total, // ← Retourner le total global
+          message: `${total} participants trouvés au total`
         },
-        result.pagination
+        {
+          total,
+          page: 1,
+          limit: 1,
+          pages: 1
+        },
+        200,
+        {
+          'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+        }
       );
+      
+      console.log('📊 [API] Response structure:', {
+        success: true,
+        data: { totalParticipants: total },
+        pagination: { total }
+      });
+      
+      return response;
     } catch (error) {
       console.error("Erreur dans handleGetAllParticipants:", error);
       return apiErrorHandler(error);
@@ -233,6 +251,8 @@ export class ParticipantService {
           pages: Math.ceil(total / limit),
           hasMore: page * limit < total,
         },
+      }, undefined, 200, {
+        'Cache-Control': 'public, max-age=120, stale-while-revalidate=30'
       });
     } catch (error) {
       console.error("Erreur lors de la récupération des participants:", error);
