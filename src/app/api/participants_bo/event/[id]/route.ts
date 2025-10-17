@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ParticipantService } from '@/services/participantService';
 import { errorResponse } from '@/lib/apiUtils';
 
@@ -18,8 +18,25 @@ export async function GET(
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '100');
 
-  return ParticipantService.getParticipantsByEventId(eventId, {
+  const result = await ParticipantService.getParticipantsByEventId(eventId, {
     page,
     limit
+  });
+
+  // ✅ CORRECTION CORS : Ajouter headers CORS si result est NextResponse
+  if (result instanceof NextResponse) {
+    result.headers.set('Access-Control-Allow-Origin', '*');
+    result.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    result.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return result;
+  }
+
+  // ✅ CORRECTION CORS : Ajouter headers CORS si result est un objet
+  return NextResponse.json(result, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
   });
 }
