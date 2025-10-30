@@ -10,7 +10,7 @@ cloudinary.config({
 });
 
 export class OcrService {
-    static async analyzeTicket(file: File, eventDate?: string): Promise<{
+    static async analyzeTicket(file: File, eventDate?: string, expectedEventName?: string): Promise<{
         success: boolean;
         message?: string;
         data?: Record<string, string>;
@@ -146,10 +146,13 @@ AUTORISÉ À EXTRAIRE:
 - Porte d'accès: PORTE, DOOR + numéro/lettre
 - Niveau: NIVEAU, ÉTAGE + numéro
 
+CHAMPS AUXILIAIRES À FOURNIR DANS LE JSON:
+- detectedDate: la date détectée au format JJ/MM/AAAA si visible
+- detectedArtist: le nom de l'artiste ou de la tournée détecté, si visible
+
 STRICTEMENT INTERDIT D'EXTRAIRE:
 - Prix, montants, EUR, €, coûts, tarifs
 - Heures (20H00, 19:30, etc.)
-- Noms d'artistes ou tournées
 - Lieux/salles/venues
 - Catégories de prix (Or, VIP, Premium - sauf si c'est une zone de placement)
 - Mots comme "Normal", "Standard"
@@ -159,7 +162,7 @@ RÈGLE ABSOLUE:
 Si tu vois un prix, une heure, un nom d'artiste ou lieu → NE L'EXTRAIS PAS
 Ne garde que ce qui répond à la question "Où dois-je m'asseoir ?"
 
-N'INCLUS PAS la date dans le JSON final - elle n'est pas une information de placement.
+N'INCLUS PAS la date dans le JSON final - elle n'est pas une information de placement (sauf detectedDate dans les champs auxiliaires).
 
 Si aucune information de placement trouvée: réponds "INVALID_TICKET"
 Pas de texte explicatif, SEULEMENT le JSON ou le code d'erreur`;
@@ -295,16 +298,43 @@ Pas de texte explicatif, SEULEMENT le JSON ou le code d'erreur`;
                 }
             });
 
-            // Vérification finale (exclure ticketUrl et date de la validation des infos de placement)
-            const placementFields = Object.keys(cleanedData).filter(key => 
-                key !== 'ticketUrl' && key !== 'date'
-            );
-            
-            if (placementFields.length === 0) {
-                // MÊME SI AUCUNE INFO DE PLACEMENT, ON RETOURNE L'URL
+            // Normalisation util
+            const normalize = (s?: string) => (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
+
+            // 1) Vérif date côté serveur si attendu et détecté
+            const detectedDate = cleanedData.detectedDate;
+            if (expectedDateString && detectedDate && detectedDate !== expectedDateString) {
                 return {
                     success: false,
-                    message: "Aucune information de placement trouvée sur le billet - Billet enregistré",
+                    message: `Date incorrecte. Attendue: ${expectedDateString}, détectée: ${detectedDate}`,
+                    errorType: 'WRONG_EVENT_DATE',
+                    data: { ticketUrl }
+                };
+            }
+
+            // 2) Vérif artiste côté serveur si attendu
+            const expectedArtist = normalize(expectedEventName);
+            const detectedArtist = normalize(cleanedData.detectedArtist);
+            if (expectedArtist) {
+                if (!detectedArtist || !detectedArtist.includes(expectedArtist)) {
+                    return {
+                        success: false,
+                        message: `Artiste/tournée incorrect(e). Attendu: ${expectedEventName || ''}, détecté: ${cleanedData.detectedArtist || 'inconnu'}`,
+                        errorType: 'WRONG_EVENT_ARTIST',
+                        data: { ticketUrl }
+                    };
+                }
+            }
+
+            // 3) Exigence minimale sur le placement: au moins 2 informations
+            const placementKeys = ['section','zone','rang','rangée','rangee','row','place','seat','bloc','block','porte','niveau','étage','etage'];
+            const placementFields = Object.keys(cleanedData).filter(key => 
+                key !== 'ticketUrl' && key !== 'date' && placementKeys.includes(key.toLowerCase())
+            );
+            if (placementFields.length < 2) {
+                return {
+                    success: false,
+                    message: "Informations de placement insuffisantes (au moins deux champs de placement sont requis)",
                     errorType: 'NO_PLACEMENT_INFO',
                     data: { ticketUrl }
                 };

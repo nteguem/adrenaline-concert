@@ -165,6 +165,15 @@ export default function RegistrationPage() {
       if (data?.data?.tours[0]?.nextEvent?.endDate) {
         formData.append("endDate", data.data.tours[0].nextEvent.endDate);
       }
+      // Envoyer le nom d'artiste/tournée si disponible
+      const expectedArtist = data?.data?.tours?.[0]?.artistName
+        ?? data?.data?.tours?.[0]?.artist
+        ?? data?.data?.tours?.[0]?.eventName
+        ?? data?.data?.tours?.[0]?.nextEvent?.artistName
+        ?? data?.data?.tours?.[0]?.nextEvent?.artist;
+      if (expectedArtist) {
+        formData.append("eventName", expectedArtist);
+      }
 
       const apiResponse = await fetch("/api/ocr", { method: "POST", body: formData });
       const result = await apiResponse.json();
