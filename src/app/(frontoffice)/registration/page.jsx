@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation";
 import Input from "@/components/common/Input";
 import Checkbox from "@/components/common/Checkbox";
-import FileUpload from "@/components/common/FileUpload";
+// import FileUpload from "@/components/common/FileUpload";
 import Button from "@/components/common/Button";
 import PopupModal from "@/components/common/PopupModal";
 import { din, evangelion } from "@/styles/fonts";
@@ -62,21 +62,59 @@ export default function RegistrationPage() {
   const [ocrStatus, setOcrStatus] = useState(null);
   const [ocrStatusMessage, setOcrStatusMessage] = useState("");
   const [isPlacementEditable, setIsPlacementEditable] = useState(false);
+  const [certifiePresent, setCertifiePresent] = useState(false);
+  const [typePlacement, setTypePlacement] = useState("GRADIN"); // "GRADIN" ou "PARTERRE" - GRADIN par défaut
+  const [gradinNumber, setGradinNumber] = useState("");
+  const [isStep3Editable, setIsStep3Editable] = useState(false); // État pour activer/désactiver l'édition au step 3
   const uploadAttemptsRef = useRef(0);
 
   const { data, error } = useTours();
   const { isChecking, participantExists, participantData } = useEmailCheck(formData.email, data?.data?.tours[0]?.nextEvent?.id);
 
-  // Initialiser les champs de placement
+  // Fonction pour normaliser les noms de champs de l'API vers les clés utilisées dans le code
+  const normalizePlacementFieldName = useCallback((fieldName) => {
+    // Convertir en minuscules et remplacer les espaces par des underscores
+    const normalized = fieldName.toLowerCase().replace(/\s+/g, '_');
+    // Mapping spécial pour certains champs
+    const mappings = {
+      'gradin_ou_parterre': 'typePlacement', // Géré séparément
+      'categorie': 'categorie',
+      'rang': 'rang',
+      'place': 'place',
+    };
+    return mappings[normalized] || normalized;
+  }, []);
+
+  // Initialiser les champs de placement depuis l'API
   useEffect(() => {
     if (data?.data?.tours[0]?.nextEvent?.placement) {
       const initialPlacementData = {};
       data.data.tours[0].nextEvent.placement.forEach((field) => {
-        initialPlacementData[field] = "";
+        // Ignorer "GRADIN OU PARTERRE" car c'est géré par typePlacement et gradinNumber
+        if (field.toUpperCase() !== "GRADIN OU PARTERRE") {
+          const normalizedName = normalizePlacementFieldName(field);
+          initialPlacementData[normalizedName] = "";
+        }
       });
       setPlacementData(initialPlacementData);
     }
   }, [data]);
+
+  // Réinitialiser FORCÉMENT le modal d'erreur de placement au step 1
+  useEffect(() => {
+    if (formStep === 1) {
+      // Si on est au step 1, fermer IMMÉDIATEMENT toute erreur liée au placement
+      const isPlacementError = errorModal.message && (
+        errorModal.message.toLowerCase().includes("placement") ||
+        errorModal.message.toLowerCase().includes("renseigner au moins un champ")
+      );
+
+      if (isPlacementError && errorModal.isOpen) {
+        console.log("[useEffect] FORCAGE : Fermeture du modal d'erreur de placement au step 1");
+        setErrorModal({ isOpen: false, title: "", message: "", type: "error" });
+      }
+    }
+  }, [formStep]);
 
   const placementFields = useMemo(() => data?.data?.tours[0]?.nextEvent?.placement || [], [data]);
 
@@ -86,29 +124,37 @@ export default function RegistrationPage() {
   }, []);
 
   // Vérifier si on a des informations de placement valides (OCR ou manuel)
+  // IMPORTANT : Cette fonction ne doit JAMAIS être appelée au step 1
   const hasValidPlacementData = () => {
-    // Si OCR a réussi, on a les données
-    if (!ocrFailed && ocrData?.ticketUrl) {
+    // SÉCURITÉ ABSOLUE : Si on est au step 1, retourner true immédiatement (ne JAMAIS valider)
+    if (formStep !== 2) {
+      console.warn("[hasValidPlacementData] Appelée au step", formStep, "- Retourne true par sécurité");
+      return true; // Ne JAMAIS bloquer au step 1
+    }
+
+    // Vérifier si le champ textfield partagé (gradinNumber) est rempli
+    // Seulement si "GRADIN OU PARTERRE" est présent dans l'API
+    const hasGradinParterre = placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE");
+    if (hasGradinParterre && gradinNumber && gradinNumber.trim() !== "") {
       return true;
     }
 
-    // Si OCR a échoué, vérifier les champs manuels
-    if (ocrFailed) {
-      // Si pas de champs configurés, c'est OK
-      if (placementFields.length === 0) {
-        return true;
-      }
-
-      // Vérifier qu'AU MOINS UN champ requis est rempli (au lieu de TOUS)
-      const result = placementFields.some(field => {
-        const value = placementData[field];
-        const isValid = value && value.trim() !== "";
-        return isValid;
+    // Vérifier UNIQUEMENT les champs dynamiques depuis l'API
+    // Ignorer "GRADIN OU PARTERRE" car il est géré séparément ci-dessus
+    const otherFields = placementFields.filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE");
+    
+    if (otherFields.length > 0) {
+      // Vérifier qu'AU MOINS UN champ dynamique est rempli
+      const hasDynamicFields = otherFields.some(field => {
+        const normalizedName = normalizePlacementFieldName(field);
+        const value = placementData[normalizedName];
+        return value && value.trim() !== "";
       });
-      return result;
+      return hasDynamicFields;
     }
 
-    return false;
+    // Si aucun champ n'est configuré dans l'API, c'est OK
+    return true;
   };
 
   // Afficher si (Date.now <= endDate) ET (eventDate <= Date.now)
@@ -268,35 +314,69 @@ export default function RegistrationPage() {
       return false;
     }
 
-    // SEULE vérification importante : les données de placement
-    const placementValid = hasValidPlacementData();
-
-    if (!placementValid) {
-      setErrorModal({ isOpen: true, title: "Informations manquantes", message: "Veuillez renseigner au moins un champ de placement obligatoire.", type: "error" });
-      return false;
-    }
+    // PAS de vérification des champs de placement au step 1
+    // Ils seront validés au step 2 lors du submit final
 
     return true;
   };
 
   const isButtonDisabled = () => {
-    return ocrLoad;
+    return false; // return ocrLoad; // OCR désactivé temporairement
   };
 
   const handleNextStep = () => {
-    if (formStep === 1 && validateForm()) setFormStep(2);
+    if (formStep === 1 && validateForm()) {
+      // Réinitialiser le modal d'erreur avant de passer au step 2
+      setErrorModal({ isOpen: false, title: "", message: "", type: "error" });
+      setFormStep(2);
+    }
   };
 
   const formatDate = (date) => date.toISOString().split("T")[0];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // SÉCURITÉ ABSOLUE : Ne jamais exécuter au step 1
+    if (formStep !== 2) {
+      console.error("[handleSubmit] BLOCAGE : Appelé au step", formStep, "- Ignoré immédiatement");
+      // Réinitialiser toute erreur de placement qui pourrait persister
+      if (errorModal.message.includes("placement")) {
+        setErrorModal({ isOpen: false, title: "", message: "", type: "error" });
+      }
+      return;
+    }
+
+    // Validation des champs de placement au step 2 uniquement
+    const placementValid = hasValidPlacementData();
+    if (!placementValid) {
+      setErrorModal({ isOpen: true, title: "Informations manquantes", message: "Veuillez renseigner au moins un champ de placement obligatoire.", type: "error" });
+      return;
+    }
+
+    // Passer au step 3 (récapitulatif) au lieu de soumettre directement
+    setFormStep(3);
+  };
+
+  const handleFinalSubmit = async (e) => {
+    e.preventDefault();
+
+    // SÉCURITÉ ABSOLUE : Ne jamais exécuter en dehors du step 3
+    if (formStep !== 3) {
+      console.error("[handleFinalSubmit] BLOCAGE : Appelé au step", formStep, "- Ignoré immédiatement");
+      return;
+    }
+
     const postBody = {
       nom: formData.nom, prenom: formData.prenom, dateNaissance: formatDate(formData.dateNaissance),
       email: formData.email, phone: formData.phone, eventId: data?.data?.tours[0]?.nextEvent.id,
-      placementValues: { ...placementData },
-      ticketUrl: ocrData?.ticketUrl || ticketImage, // Utiliser l'image si pas d'OCR
-      textInfo: ocrFailed ? "Billet rempli manuellement après échec OCR" : "",
+      placementValues: {
+        ...placementData,
+        typePlacement: typePlacement,
+        gradinNumber: gradinNumber,
+      },
+      ticketUrl: ocrData?.ticketUrl || ticketImage || "", // Utiliser l'image si pas d'OCR, sinon chaîne vide
+      textInfo: ocrFailed ? "Billet rempli manuellement après échec OCR" : "Billet rempli manuellement",
     };
 
     try {
@@ -325,7 +405,7 @@ export default function RegistrationPage() {
         return;
       }
 
-      if (formStep === 2) router.push("/confirmation");
+      if (formStep === 3) router.push("/confirmation");
     } catch (err) {
       setErrorModal({
         isOpen: true,
@@ -440,8 +520,8 @@ export default function RegistrationPage() {
               checked={formData.confirmePresence} onChange={handleInputChange} name="confirmePresence"
             />
 
-            <div className="mt-6 mb-4">
-              {!ticketImage ? (
+            {/* <div className="mt-6 mb-4"> */}
+            {/* {!ticketImage ? (
                 <FileUpload onFileSelect={(dataUrl, fileName) => handleFileSelect(dataUrl, fileName)}
                   initialPreview={ticketImage} initialFileName={ticketFileName} />
               ) : (
@@ -460,44 +540,22 @@ export default function RegistrationPage() {
                     Réessayer
                   </button>
                 </div>
-              )}
-            </div>
+              )} */}
+            {/* </div> */}
 
-            {/* Champs de placement - SEULEMENT si OCR a échoué après 2 tentatives */}
-            {ticketImage && ocrFailed && placementFields.length > 0 && (
-              <div className="mt-6 mb-4">
-                <p className="text-white text-sm mb-4 text-center">
-                  MERCI DE RENSEIGNER LES DETAILS DE PLACEMENT FIGURANT SUR VOTRE BILLET
-                </p>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2 justify-start">
-                    {placementFields.map((field) => (
-                      <div key={`placement-field-${field}`} className="flex flex-col">
-                        <label htmlFor={`input-${field}`} className="text-white text-xs mb-1 font-medium">
-                          {field.toUpperCase()}
-                        </label>
-                        <Input
-                          id={`input-${field}`} placeholder="" name={field} value={placementData[field] || ""}
-                          onChange={handlePlacementChange} className="h-10 w-20 text-sm px-2" autoComplete="off"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Champs de placement - Retirés du step 1, affichés uniquement dans le step 2 */}
 
             <div className="mt-4 flex justify-center">
-              {ocrLoad ? (
+              {/* {ocrLoad ? (
                 <div className="text-center text-white">
                   <div>Chargement des infos du billet...</div>
                 </div>
-              ) : (
-                <Button type="submit" disabled={ocrLoad}
-                  className="transition-colors">
-                  CONTINUEZ
-                </Button>
-              )}
+              ) : ( */}
+              <Button type="submit" disabled={isButtonDisabled()}
+                className="transition-colors">
+                CONTINUEZ
+              </Button>
+              {/* )} */}
             </div>
           </form>
         );
@@ -506,93 +564,141 @@ export default function RegistrationPage() {
         return (
           <form onSubmit={handleSubmit}>
             <div className="mb-8">
-              {ticketImage && <TicketPreview />}
+              {/* {ticketImage && <TicketPreview />} */}
 
-              <div className="bg-gray-900/50 rounded-lg p-2 border border-gray-700 mb-3">
-                {/* Bloc Informations saisies manuellement (aligné à gauche) */}
-                <div className="mb-2">
-                  {ocrFailed ? (
-                    <div className="flex items-center mb-1">
-                      <svg
-                        className="w-4 h-4 text-orange-500 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
+              {/* Checkbox "JE CERTIFIE ÊTRE BIEN PRÉSENT..." */}
+              <div className="flex items-start mb-4">
+                <input
+                  type="checkbox"
+                  id="certifiePresent"
+                  checked={certifiePresent}
+                  onChange={(e) => {
+                    setCertifiePresent(e.target.checked);
+                    setIsPlacementEditable(e.target.checked);
+                  }}
+                  className="mt-1 mr-3  flex-shrink-0 cursor-pointer"
+                />
+                <label
+                  htmlFor="certifiePresent"
+                  className="text-red-500 font-bold text-base uppercase leading-tight cursor-pointer"
+                  style={{ textShadow: '0 0 2px rgba(239, 68, 68, 0.5)' }}
+                >
+                  JE CERTIFIE ÊTRE BIEN PRÉSENT DANS LA SALLE AU CONCERT DE CE JOUR
+                </label>
+              </div>
+
+              {/* Zone avec nom de l'événement et date */}
+              {data?.data?.tours[0]?.nextEvent && (() => {
+                const event = data.data.tours[0].nextEvent;
+                const endDate = event.endDate ? new Date(event.endDate) : null;
+                const formattedEventDate = endDate
+                  ? `${String(endDate.getUTCDate()).padStart(2, "0")}.${String(endDate.getUTCMonth() + 1).padStart(2, "0")}.${endDate.getUTCFullYear()}`
+                  : "";
+                const cityName = event.city ? event.city.toUpperCase() : "";
+                const displayText = cityName && formattedEventDate
+                  ? `${cityName} - ${formattedEventDate}`
+                  : cityName || event.venue || "Événement";
+
+                return (
+                  <div className="bg-white rounded px-4 py-3 mb-6">
+                    <p className="text-black font-bold text-base text-center">
+                      {displayText}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              <div className="mb-3">
+                {/* Titre principal */}
+                <h2 className="text-white text-xl font-bold uppercase mb-6 text-center">
+                  JE REMPLIE LES INFORMATIONS DE PLACEMENT MENTIONNÉES SUR MON BILLET
+                </h2>
+
+                {/* Sélection type de placement : GRADIN / PARTERRE - Affichée seulement si présent dans l'API */}
+                {placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE") && (
+                  <div className="flex items-center gap-4 mb-6">
+                    {/* Colonne gauche : Radio buttons et labels */}
+                    <div className="flex flex-col space-y-4">
+                      {/* GRADIN */}
+                      <div className="flex items-center gap-3 mr-2">
+                        <input
+                          type="radio"
+                          id="gradin"
+                          name="typePlacement"
+                          value="GRADIN"
+                          checked={typePlacement === "GRADIN"}
+                          onChange={(e) => setTypePlacement(e.target.value)}
+                          disabled={!certifiePresent}
+                          className="w-5 h-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         />
-                      </svg>
-                    </div>
-                  ) : null}
-                </div>
-
-                {/* Bouton centré */}
-                <div className="flex justify-center mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlacementEditable(!isPlacementEditable)}
-                    className="text-gray-300 text-xs flex items-center hover:text-white transition-colors cursor-pointer"
-                  >
-                    {isPlacementEditable ? (
-                      <svg
-                        className="w-3 h-3 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-3 h-3 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 616 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                    Je modifie mes informations si besoin
-                  </button>
-                </div>
-
-                {/* Grille des champs */}
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.keys(placementData).length > 0 ? (
-                    Object.keys(placementData).map((field) => (
-                      <div
-                        key={`step2-${field}`}
-                        className="bg-gray-800/50 rounded-md p-2 hover:bg-gray-800/70 transition-colors"
-                      >
-                        <label className="text-white font-medium text-xs uppercase block mb-1">
-                          {field}
+                        <label htmlFor="gradin" className="text-white font-bold text-base uppercase cursor-pointer whitespace-nowrap">
+                          GRADIN
                         </label>
-                        <Input
-                          name={field}
-                          value={placementData[field] || ""}
-                          onChange={handlePlacementChange}
-                          disabled={!isPlacementEditable}
-                          className={`h-8 focus:border-blue-500 focus:ring-blue-500 transition-colors text-sm w-full ${isPlacementEditable
-                              ? "bg-white text-black border-gray-300 hover:bg-gray-50"
-                              : "bg-gray-800 text-white border-gray-700 cursor-not-allowed opacity-60"
-                            }`}
-                          autoComplete="off"
-                        />
-
                       </div>
-                    ))
-                  ) : (
-                    <div className="col-span-3 text-center py-2">
-                      <p className="text-gray-400 italic text-xs">
-                        Aucune information de placement disponible
-                      </p>
+
+                      {/* PARTERRE */}
+                      <div className="flex items-center gap-3 mr-2">
+                        <input
+                          type="radio"
+                          id="parterre"
+                          name="typePlacement"
+                          value="PARTERRE"
+                          checked={typePlacement === "PARTERRE"}
+                          onChange={(e) => setTypePlacement(e.target.value)}
+                          disabled={!certifiePresent}
+                          className="w-5 h-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <label htmlFor="parterre" className="text-white font-bold text-base uppercase cursor-pointer whitespace-nowrap">
+                          PARTERRE
+                        </label>
+                      </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* Champ input partagé au milieu */}
+                    <div className="flex-2 flex items-center">
+                      <Input
+                        type="text"
+                        value={gradinNumber}
+                        onChange={(e) => setGradinNumber(e.target.value)}
+                        disabled={!certifiePresent}
+                        placeholder=""
+                        className={`w-full max-w-xs h-10 rounded ${certifiePresent
+                          ? "bg-white text-black border-gray-300"
+                          : "bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed"
+                          }`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Champs dynamiques depuis l'API (sauf GRADIN OU PARTERRE qui est géré au-dessus) */}
+                {placementFields.filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE").length > 0 && (
+                  <div className={`grid gap-4 ${placementFields.filter(f => f.toUpperCase() !== "GRADIN OU PARTERRE").length === 1 ? 'grid-cols-1' : placementFields.filter(f => f.toUpperCase() !== "GRADIN OU PARTERRE").length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                    {placementFields
+                      .filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE")
+                      .map((field) => {
+                        const normalizedName = normalizePlacementFieldName(field);
+                        return (
+                          <div key={field} className="flex flex-col">
+                            <label className="text-white font-bold text-sm uppercase mb-2">
+                              {field.toUpperCase()}
+                            </label>
+                            <Input
+                              name={normalizedName}
+                              value={placementData[normalizedName] || ""}
+                              onChange={handlePlacementChange}
+                              disabled={!certifiePresent}
+                              className={`h-10 rounded ${certifiePresent
+                                ? "bg-white text-black border-gray-300 hover:bg-gray-50"
+                                : "bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed"
+                                }`}
+                              autoComplete="off"
+                            />
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
 
             </div>
@@ -608,6 +714,152 @@ export default function RegistrationPage() {
             </div>
           </form>
         );
+
+      case 3: {
+        // Collecter tous les champs de placement à afficher
+        const allPlacementFields = [];
+        
+        // Ajouter GRADIN OU PARTERRE si présent
+        if (placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE")) {
+          allPlacementFields.push({
+            label: "GRADIN OU PARTERRE",
+            value: gradinNumber || "",
+            key: "gradinNumber",
+            isSpecial: true
+          });
+        }
+        
+        // Ajouter les autres champs dynamiques
+        placementFields
+          .filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE")
+          .forEach((field) => {
+            const normalizedName = normalizePlacementFieldName(field);
+            allPlacementFields.push({
+              label: field.toUpperCase(),
+              value: placementData[normalizedName] || "",
+              key: normalizedName,
+              isSpecial: false
+            });
+          });
+
+        return (
+          <form onSubmit={handleFinalSubmit}>
+            <div className="mb-8">
+              {/* Header avec icônes et titre cliquable */}
+              <div className="flex items-center mb-6">
+                {/* Icône triangle d'avertissement orange */}
+                <svg 
+                  className="w-5 h-5 text-orange-500 mr-2 flex-shrink-0" 
+                  fill="currentColor" 
+                  viewBox="0 0 20 20"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
+                
+                {/* Icône cadenas blanc */}
+                {isStep3Editable ? (
+                  <svg 
+                    className="w-4 h-4 text-white mr-2 flex-shrink-0"
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                ) : (
+                  <svg 
+                    className="w-4 h-4 text-white mr-2 flex-shrink-0"
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                )}
+                
+                {/* Titre cliquable */}
+                <button
+                  type="button"
+                  onClick={() => setIsStep3Editable(!isStep3Editable)}
+                  className="text-white text-sm font-bold uppercase hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  JE MODIFIE MES INFORMATIONS SI BESOIN
+                </button>
+              </div>
+
+              {/* Grille des champs de placement (2x2) */}
+              <div className="grid grid-cols-2 gap-4">
+                {allPlacementFields.map((field, index) => (
+                  <div key={field.key || index} className="flex flex-col">
+                    <label className="text-white font-bold text-xs uppercase mb-2">
+                      {field.label}
+                    </label>
+                    {field.isSpecial ? (
+                      <Input
+                        type="text"
+                        value={field.value}
+                        onChange={(e) => setGradinNumber(e.target.value)}
+                        disabled={!isStep3Editable}
+                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${
+                          isStep3Editable 
+                            ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text' 
+                            : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
+                        }`}
+                        style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <Input
+                        name={field.key}
+                        value={field.value}
+                        onChange={handlePlacementChange}
+                        disabled={!isStep3Editable}
+                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${
+                          isStep3Editable 
+                            ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text' 
+                            : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
+                        }`}
+                        style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
+                        autoComplete="off"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-between items-center space-x-4">
+              <Button 
+                onClick={() => setFormStep(2)} 
+                variant="secondary"
+                className="flex-1 !bg-white !text-black h-12 min-h-[48px] flex items-center justify-center"
+              >
+                RETOUR
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1 h-12 min-h-[48px] flex items-center justify-center"
+              >
+                VALIDER
+              </Button>
+            </div>
+          </form>
+        );
+      }
 
       default:
         return null;

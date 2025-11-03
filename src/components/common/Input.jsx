@@ -7,6 +7,7 @@ const Input = ({
   onChange,
   name,
   className = "",
+  disabled = false,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -20,6 +21,7 @@ const Input = ({
           value={value}
           onChange={onChange}
           name={name}
+          disabled={disabled}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className={` text-gray-700 rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
@@ -36,6 +38,7 @@ const Input = ({
       value={value}
       onChange={onChange}
       name={name}
+      disabled={disabled}
       className={` text-gray-700 rounded p-3 mb-3 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${className}`}
     />
   );

@@ -28,8 +28,9 @@ export async function decrypt(input: string): Promise<any> {
 export async function apiLogin(formData: FormData) {
     try {
         const postdata = {email: formData.get("email"), password: formData.get("password")}
+        const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || "http://localhost:3001";
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_DOMAIN}/api/auth/login`,
+          `${baseUrl}/api/auth/login`,
           {
             method: "POST",
             headers: {

@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useState } from "react";
-import { Download, Check, X, FileText, Image as ImageIcon, Camera, Upload } from "lucide-react";
+import { Download, Check, X, FileText, /* Image as ImageIcon, */ Camera, Upload } from "lucide-react";
 
 const FileUpload = ({
   onFileSelect,
@@ -211,7 +211,7 @@ const FileUpload = ({
 
   const getFileIcon = () => {
     if (fileType.startsWith("image/")) {
-      return <ImageIcon className="h-4 w-4 mr-1" />;
+      return <FileText className="h-4 w-4 mr-1" />; // return <ImageIcon className="h-4 w-4 mr-1" />;
     } else if (fileType === "application/pdf") {
       return <FileText className="h-4 w-4 mr-1" />;
     } else {

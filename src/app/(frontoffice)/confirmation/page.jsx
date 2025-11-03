@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import Image from "next/image";
+// import Image from "next/image";
 import { evangelion, din } from "@/styles/fonts";
 import LogoHeader from "@/components/common/LogoHeader";
 import LoadingObject from "@/components/common/CentralLoadingObject";
