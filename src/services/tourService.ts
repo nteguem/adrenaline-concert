@@ -267,7 +267,7 @@ export class TourService {
         message: `${toursWithUpcomingEvents.length} tours trouvés`,
         tours: toursWithUpcomingEvents
       }, undefined, 200, {
-        'Cache-Control': 'public, max-age=1800, stale-while-revalidate=300'
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate'
       });
 
     } catch (error) {

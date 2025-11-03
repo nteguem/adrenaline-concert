@@ -7,9 +7,10 @@ export async function POST(request: Request) {
   try {
     await ensurePrismaConnected();
     const body = await request.json();
-    const { email, password } = body;
+    const { email: emailInput, password } = body;
 
-    if (!email || !password) {
+    if (!emailInput || !password) {
+      console.log("[POST /api/auth/login] Email ou mot de passe manquant");
       return NextResponse.json({
         success: false,
         code: 400,
@@ -17,12 +18,19 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // Normaliser l'email en minuscules pour la recherche
+    const email = String(emailInput).toLowerCase().trim();
+    console.log("[POST /api/auth/login] Recherche utilisateur avec email:", email);
+
     // Find user in database
     const user = await prisma.user.findUnique({
       where: { email }
     });
+    
+    console.log("[POST /api/auth/login] Utilisateur trouvé:", user ? "Oui" : "Non");
 
     if (!user) {
+      console.log("[POST /api/auth/login] Utilisateur non trouvé pour:", email);
       return NextResponse.json({
         success: false,
         code: 401,
@@ -31,15 +39,19 @@ export async function POST(request: Request) {
     }
 
     // Verify password
+    console.log("[POST /api/auth/login] Vérification du mot de passe...");
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
+      console.log("[POST /api/auth/login] Mot de passe incorrect pour:", email);
       return NextResponse.json({
         success: false,
         code: 401,
         message: "Mot de passe incorrect"
       }, { status: 401 });
     }
+    
+    console.log("[POST /api/auth/login] Authentification réussie pour:", email);
 
 
 

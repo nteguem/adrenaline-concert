@@ -15,10 +15,26 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true
   },
   
-  // Configuration optimisée des headers de cache pour FRONT OFFICE
+  // DÉSACTIVER TOUT LE CACHE Next.js
+  // Note: Les options de cache sont désactivées via les headers et les configurations ci-dessous
+  
+  // Désactiver le cache de build
+  generateBuildId: async () => {
+    // Générer un ID unique à chaque build pour éviter le cache
+    return `build-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  },
+  
+  // Désactiver le cache de fichiers système en développement
+  onDemandEntries: {
+    // Désactiver le cache des pages en développement
+    maxInactiveAge: 0,
+    pagesBufferLength: 0,
+  },
+  
+  // Configuration SANS CACHE pour les API (sauf assets statiques)
   async headers() {
     return [
-      // Assets statiques - Cache 1 an
+      // Assets statiques - Cache 1 an (gardé pour performance)
       {
         source: '/:all*(css|js|gif|svg|jpg|jpeg|png|woff|woff2|avif|webp)',
         headers: [
@@ -29,7 +45,7 @@ const nextConfig: NextConfig = {
         ],
       },
       
-      // API Events - Cache 5 minutes
+      // API Events - SANS CACHE
       {
         source: '/api/events/:path*',
         headers: [
@@ -45,12 +61,12 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=300, stale-while-revalidate=60'
+            value: 'private, no-cache, no-store, must-revalidate'
           }
         ]
       },
       
-      // API Tours - Cache 30 minutes
+      // API Tours - SANS CACHE
       {
         source: '/api/tours/:path*',
         headers: [
@@ -66,12 +82,12 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=1800, stale-while-revalidate=300'
+            value: 'private, no-cache, no-store, must-revalidate'
           }
         ]
       },
       
-      // API Participants Front Office - Cache 2 minutes
+      // API Participants Front Office - SANS CACHE
       {
         source: '/api/participants_fo/:path*',
         headers: [
@@ -87,12 +103,12 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=120, stale-while-revalidate=30'
+            value: 'private, no-cache, no-store, must-revalidate'
           }
         ]
       },
       
-      // API Tirage - Cache 1 minute (données critiques)
+      // API Tirage - SANS CACHE
       {
         source: '/api/tirage/:path*',
         headers: [
@@ -108,12 +124,12 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=60, stale-while-revalidate=15'
+            value: 'private, no-cache, no-store, must-revalidate'
           }
         ]
       },
       
-      // API Vainqueurs - Cache 1 minute (données critiques)
+      // API Vainqueurs - SANS CACHE
       {
         source: '/api/vainqueurs/:path*',
         headers: [
@@ -129,12 +145,12 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=60, stale-while-revalidate=15'
+            value: 'private, no-cache, no-store, must-revalidate'
           }
         ]
       },
       
-      // API Auth - Pas de cache (sécurité)
+      // API Auth - SANS CACHE (déjà correct)
       {
         source: '/api/auth/:path*',
         headers: [
@@ -155,7 +171,7 @@ const nextConfig: NextConfig = {
         ]
       },
       
-      // API Check Participant - Cache 30 secondes
+      // API Check Participant - SANS CACHE
       {
         source: '/api/check-participant',
         headers: [
@@ -171,7 +187,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'public, max-age=30, stale-while-revalidate=10'
+            value: 'private, no-cache, no-store, must-revalidate'
           }
         ]
       }

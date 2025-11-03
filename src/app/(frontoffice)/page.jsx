@@ -184,7 +184,7 @@ export default function HomePage() {
                         <div className="text-gray-300 text-xs mt-1 leading-tight">
                           ( problèmes cardiaques, épilepsie, mobilité réduite, grossesse, vertiges …)
                         </div>
-                        <div className="mt-1">
+                        {/* <div className="mt-1">
                           <a
                             href="/conditions"
                             target="_blank"
@@ -193,7 +193,7 @@ export default function HomePage() {
                           >
                             voir les conditions
                           </a>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
 
@@ -212,9 +212,10 @@ export default function HomePage() {
                         </label>
                         <div className="mt-1">
                           <a
-                            href="/reglement"
+                            href="/reglement.pdf"
                             target="_blank"
                             rel="noopener noreferrer"
+                            type="application/pdf"
                             className="text-blue-400 text-xs underline hover:text-blue-300 transition-colors"
                           >
                             voir conditions et règlement

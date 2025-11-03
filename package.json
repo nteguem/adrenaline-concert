@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "rm -rf .next && next dev --turbopack",
+    "dev:no-cache": "rm -rf .next && NODE_OPTIONS='--no-experimental-fetch' next dev --turbopack",
+    "build": "rm -rf .next && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {
     

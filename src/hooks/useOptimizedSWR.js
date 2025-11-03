@@ -1,82 +1,82 @@
-// hooks/useOptimizedSWR.js - Hooks SWR optimisés pour le FRONT OFFICE
+// hooks/useOptimizedSWR.js - Hooks SWR SANS CACHE
 import useSWR from 'swr';
 import { useMemo } from 'react';
 
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
-// Configuration SWR pour les tours (cache 30 minutes)
+// Configuration SWR SANS CACHE pour les tours
 export function useTours() {
   return useSWR('/api/tours/tour_event', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 1800000, // 30 minutes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 2,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   });
 }
 
-// Configuration SWR pour les événements (cache 5 minutes)
+// Configuration SWR SANS CACHE pour les événements
 export function useEvents() {
   return useSWR('/api/events', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 300000, // 5 minutes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 2,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   });
 }
 
-// Configuration SWR pour les participants (cache 2 minutes)
+// Configuration SWR SANS CACHE pour les participants
 export function useParticipants(eventId) {
   return useSWR(
     eventId ? `/api/participants_fo/event/${eventId}` : null,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 120000, // 2 minutes
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // Pas de cache
       errorRetryCount: 2,
       refreshInterval: 0,
-      keepPreviousData: true,
+      keepPreviousData: false,
     }
   );
 }
 
-// Configuration SWR pour les tirages (cache 1 minute)
+// Configuration SWR SANS CACHE pour les tirages
 export function useTirages(eventId) {
   return useSWR(
     eventId ? `/api/tirage/event/${eventId}` : null,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 60000, // 1 minute
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // Pas de cache
       errorRetryCount: 2,
       refreshInterval: 0,
-      keepPreviousData: true,
+      keepPreviousData: false,
     }
   );
 }
 
-// Configuration SWR pour les vainqueurs (cache 1 minute)
+// Configuration SWR SANS CACHE pour les vainqueurs
 export function useVainqueurs(eventId) {
   return useSWR(
     eventId ? `/api/vainqueurs/event/${eventId}` : null,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 60000, // 1 minute
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // Pas de cache
       errorRetryCount: 2,
       refreshInterval: 0,
-      keepPreviousData: true,
+      keepPreviousData: false,
     }
   );
 }
 
-// Configuration SWR pour la vérification d'email (cache 30 secondes)
+// Configuration SWR SANS CACHE pour la vérification d'email
 export function useEmailCheck(email, eventId) {
   const shouldCheck = useMemo(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -88,8 +88,13 @@ export function useEmailCheck(email, eventId) {
     async ([url, email, eventId]) => {
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), eventId })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+        body: JSON.stringify({ email: email.toLowerCase().trim(), eventId }),
+        cache: 'no-store'
       });
       
       if (!response.ok) return null;
@@ -97,15 +102,15 @@ export function useEmailCheck(email, eventId) {
       return data.success ? data.data : null;
     },
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 30000, // 30 secondes
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // Pas de cache
       errorRetryCount: 1,
     }
   );
 }
 
-// Configuration SWR pour les données critiques (pas de cache)
+// Configuration SWR SANS CACHE pour les données critiques
 export function useCriticalData(url) {
   return useSWR(url, fetcher, {
     revalidateOnFocus: true,
@@ -117,58 +122,58 @@ export function useCriticalData(url) {
   });
 }
 
-// Configuration SWR pour les statistiques (cache modéré)
+// Configuration SWR SANS CACHE pour les statistiques
 export function useStatistics() {
   return useSWR('/api/events/event_participants', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 300000, // 5 minutes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 2,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   });
 }
 
-// Utilitaires pour la gestion du cache SWR - FRONT OFFICE
+// Utilitaires pour la gestion du cache SWR - SANS CACHE
 export const SWRConfigFO = {
-  // Configuration pour les données de référence (tours, événements)
+  // Configuration pour les données de référence (SANS CACHE)
   reference: {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 1800000, // 30 minutes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 2,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   },
   
-  // Configuration pour les données dynamiques (participants)
+  // Configuration pour les données dynamiques (SANS CACHE)
   dynamic: {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 120000, // 2 minutes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 2,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   },
   
-  // Configuration pour les données critiques (tirages, vainqueurs)
+  // Configuration pour les données critiques (SANS CACHE)
   critical: {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 60000, // 1 minute
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 2,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   },
   
-  // Configuration pour les vérifications rapides
+  // Configuration pour les vérifications rapides (SANS CACHE)
   quick: {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 30000, // 30 secondes
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 0, // Pas de cache
     errorRetryCount: 1,
     refreshInterval: 0,
-    keepPreviousData: true,
+    keepPreviousData: false,
   }
 };
 

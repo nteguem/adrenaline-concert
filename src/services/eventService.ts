@@ -212,7 +212,7 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
         events: result.events,
         tour: result.tour
       }, result.pagination, 200, {
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate'
       });
     } catch (error) {
       console.error('Erreur dans handleGetAllEvent:', error);

@@ -181,7 +181,7 @@ export class ParticipantService {
         },
         200,
         {
-          'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate'
         }
       );
       
@@ -252,7 +252,7 @@ export class ParticipantService {
           hasMore: page * limit < total,
         },
       }, undefined, 200, {
-        'Cache-Control': 'public, max-age=120, stale-while-revalidate=30'
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate'
       });
     } catch (error) {
       console.error("Erreur lors de la récupération des participants:", error);

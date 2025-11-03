@@ -142,7 +142,7 @@ export default function RegistrationPage() {
     // Vérifier UNIQUEMENT les champs dynamiques depuis l'API
     // Ignorer "GRADIN OU PARTERRE" car il est géré séparément ci-dessus
     const otherFields = placementFields.filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE");
-    
+
     if (otherFields.length > 0) {
       // Vérifier qu'AU MOINS UN champ dynamique est rempli
       const hasDynamicFields = otherFields.some(field => {
@@ -221,7 +221,11 @@ export default function RegistrationPage() {
         formData.append("eventName", expectedArtist);
       }
 
-      const apiResponse = await fetch("/api/ocr", { method: "POST", body: formData });
+      const apiResponse = await fetch("/api/ocr", {
+        method: "POST",
+        body: formData,
+        cache: "no-store"
+      });
       const result = await apiResponse.json();
 
       if (!apiResponse.ok || !result?.success) {
@@ -382,8 +386,13 @@ export default function RegistrationPage() {
     try {
       const response = await fetch("/api/participants_fo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache"
+        },
         body: JSON.stringify(postBody),
+        cache: "no-store"
       });
 
       let payload = null;
@@ -567,7 +576,7 @@ export default function RegistrationPage() {
               {/* {ticketImage && <TicketPreview />} */}
 
               {/* Checkbox "JE CERTIFIE ÊTRE BIEN PRÉSENT..." */}
-              <div className="flex items-start mb-4">
+              <div className="flex items-center justify-center mb-4 ">
                 <input
                   type="checkbox"
                   id="certifiePresent"
@@ -576,15 +585,14 @@ export default function RegistrationPage() {
                     setCertifiePresent(e.target.checked);
                     setIsPlacementEditable(e.target.checked);
                   }}
-                  className="mt-1 mr-3  flex-shrink-0 cursor-pointer"
+                  className="mr-3 flex-shrink-0 cursor-pointer"
                 />
-                <label
+                <h5 
                   htmlFor="certifiePresent"
-                  className="text-red-500 font-bold text-base uppercase leading-tight cursor-pointer"
-                  style={{ textShadow: '0 0 2px rgba(239, 68, 68, 0.5)' }}
+                  className="text-red-500 font-bold text-sm uppercase leading-tight cursor-pointer text-center"
                 >
                   JE CERTIFIE ÊTRE BIEN PRÉSENT DANS LA SALLE AU CONCERT DE CE JOUR
-                </label>
+                </h5>
               </div>
 
               {/* Zone avec nom de l'événement et date */}
@@ -610,9 +618,9 @@ export default function RegistrationPage() {
 
               <div className="mb-3">
                 {/* Titre principal */}
-                <h2 className="text-white text-xl font-bold uppercase mb-6 text-center">
+                <h6 className="text-white font-bold text-sm uppercase mb-6 text-center">
                   JE REMPLIE LES INFORMATIONS DE PLACEMENT MENTIONNÉES SUR MON BILLET
-                </h2>
+                </h6>
 
                 {/* Sélection type de placement : GRADIN / PARTERRE - Affichée seulement si présent dans l'API */}
                 {placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE") && (
@@ -655,14 +663,14 @@ export default function RegistrationPage() {
                     </div>
 
                     {/* Champ input partagé au milieu */}
-                    <div className="flex-2 flex items-center">
+                    <div className="flex-1 flex items-center">
                       <Input
                         type="text"
                         value={gradinNumber}
                         onChange={(e) => setGradinNumber(e.target.value)}
                         disabled={!certifiePresent}
                         placeholder=""
-                        className={`w-full max-w-xs h-10 rounded ${certifiePresent
+                        className={`w-full h-10 rounded ${certifiePresent
                           ? "bg-white text-black border-gray-300"
                           : "bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed"
                           }`}
@@ -701,6 +709,10 @@ export default function RegistrationPage() {
                 )}
               </div>
 
+
+              <h6 className="text-white font-bold text-sm uppercase mb-6 text-left"  >
+                Veillez a bien renseigner tous les champs ci-dessus. <br /> si vous gagnez, votre billet vous sera demandé pour verification. 
+              </h6>
             </div>
 
             <div className="mt-8 flex justify-between items-center space-x-4">
@@ -718,7 +730,7 @@ export default function RegistrationPage() {
       case 3: {
         // Collecter tous les champs de placement à afficher
         const allPlacementFields = [];
-        
+
         // Ajouter GRADIN OU PARTERRE si présent
         if (placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE")) {
           allPlacementFields.push({
@@ -728,7 +740,7 @@ export default function RegistrationPage() {
             isSpecial: true
           });
         }
-        
+
         // Ajouter les autres champs dynamiques
         placementFields
           .filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE")
@@ -748,49 +760,49 @@ export default function RegistrationPage() {
               {/* Header avec icônes et titre cliquable */}
               <div className="flex items-center mb-6">
                 {/* Icône triangle d'avertissement orange */}
-                <svg 
-                  className="w-5 h-5 text-orange-500 mr-2 flex-shrink-0" 
-                  fill="currentColor" 
+                <svg
+                  className="w-5 h-5 text-orange-500 mr-2 flex-shrink-0"
+                  fill="currentColor"
                   viewBox="0 0 20 20"
                 >
-                  <path 
-                    fillRule="evenodd" 
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" 
-                    clipRule="evenodd" 
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
                   />
                 </svg>
-                
+
                 {/* Icône cadenas blanc */}
                 {isStep3Editable ? (
-                  <svg 
+                  <svg
                     className="w-4 h-4 text-white mr-2 flex-shrink-0"
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
                       d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                     />
                   </svg>
                 ) : (
-                  <svg 
+                  <svg
                     className="w-4 h-4 text-white mr-2 flex-shrink-0"
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                     />
                   </svg>
                 )}
-                
+
                 {/* Titre cliquable */}
                 <button
                   type="button"
@@ -814,11 +826,10 @@ export default function RegistrationPage() {
                         value={field.value}
                         onChange={(e) => setGradinNumber(e.target.value)}
                         disabled={!isStep3Editable}
-                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${
-                          isStep3Editable 
-                            ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text' 
-                            : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
-                        }`}
+                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${isStep3Editable
+                          ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text'
+                          : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
+                          }`}
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
                         autoComplete="off"
                       />
@@ -828,11 +839,10 @@ export default function RegistrationPage() {
                         value={field.value}
                         onChange={handlePlacementChange}
                         disabled={!isStep3Editable}
-                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${
-                          isStep3Editable 
-                            ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text' 
-                            : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
-                        }`}
+                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${isStep3Editable
+                          ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text'
+                          : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
+                          }`}
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
                         autoComplete="off"
                       />
@@ -843,15 +853,22 @@ export default function RegistrationPage() {
             </div>
 
             <div className="mt-8 flex justify-between items-center space-x-4">
-              <Button 
-                onClick={() => setFormStep(2)} 
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("[Step 3] Bouton RETOUR cliqué, retour au step 2");
+                  setIsStep3Editable(false); // Réinitialiser l'état d'édition
+                  setFormStep(2);
+                }}
                 variant="secondary"
-                className="flex-1 !bg-white !text-black h-12 min-h-[48px] flex items-center justify-center"
+                className="flex-1 !bg-white !text-black h-12 min-h-[48px] flex items-center justify-center !cursor-pointer"
               >
                 RETOUR
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="flex-1 h-12 min-h-[48px] flex items-center justify-center"
               >
                 VALIDER

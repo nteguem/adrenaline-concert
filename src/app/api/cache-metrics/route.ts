@@ -75,7 +75,7 @@ export async function GET() {
     }
   }, {
     headers: {
-      'Cache-Control': 'private, max-age=30',
+      'Cache-Control': 'private, no-cache, no-store, must-revalidate',
       'Content-Type': 'application/json'
     }
   });
