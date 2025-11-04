@@ -140,7 +140,7 @@ export class TirageService {
             nom_participant: true,
             email: true,
             rang: true,
-            ticketUrl: true,
+            // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
             ticketInfo: true,
             porte: true,
             place: true,
@@ -153,7 +153,7 @@ export class TirageService {
                 phone: true,           // ← RÉCUPÉRÉ VIA JOINTURE
                 dateNaissance: true,   // ← RÉCUPÉRÉ VIA JOINTURE
                 placement: true,       // ← RÉCUPÉRÉ VIA JOINTURE
-                ticketUrl: true,
+                // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
                 textInfo: true,
               }
             }
@@ -256,7 +256,7 @@ export class TirageService {
                 nom_participant: true,
                 email: true,
                 rang: true,
-                ticketUrl: true,
+                // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
                 ticketInfo: true,
                 porte: true,
                 place: true,
@@ -265,7 +265,7 @@ export class TirageService {
                     phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
                     dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
                     placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-                    ticketUrl: true,
+                    // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
                     textInfo: true,
                   }
                 }
@@ -341,7 +341,7 @@ export class TirageService {
           nom_participant: true,
           email: true,
           rang: true,
-          ticketUrl: true,
+          // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
           ticketInfo: true,
           porte: true,
           place: true,
@@ -350,7 +350,7 @@ export class TirageService {
               phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
               dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES  
               placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-              ticketUrl: true,
+              // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
               textInfo: true,
             }
           }
@@ -389,7 +389,7 @@ export class TirageService {
           nom_participant: true,
           email: true,
           rang: true,
-          ticketUrl: true,
+          // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
           ticketInfo: true,
           porte: true,
           place: true,
@@ -398,7 +398,7 @@ export class TirageService {
               phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
               dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
               placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-              ticketUrl: true,
+              // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
               textInfo: true,
             }
           }

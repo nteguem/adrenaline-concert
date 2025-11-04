@@ -16,7 +16,7 @@ export async function GET(
   // Extraire les paramètres de pagination
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '100');
+  const limit = parseInt(searchParams.get('limit') || '50000');
 
   const result = await ParticipantService.getParticipantsByEventId(eventId, {
     page,

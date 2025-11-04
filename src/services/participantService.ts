@@ -137,7 +137,7 @@ export class ParticipantService {
             dateNaissance: true,
             createdAt: true,
             placement: true,
-            ticketUrl: true,
+            // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
             textInfo: true,
           },
         }),
@@ -207,7 +207,7 @@ export class ParticipantService {
       if (!isValidObjectId(eventId)) {
         return errorResponse("ID de l'événement invalide", 400);
       }
-      const limit = Math.min(options.limit || 100, 500); // Max 500 pour éviter surcharge
+      const limit = Math.min(options.limit || 50000, 100000); // Limite élevée pour récupérer tous les participants
       const page = options.page || 1;
       const skip = (page - 1) * limit;
 
@@ -225,7 +225,7 @@ export class ParticipantService {
             dateNaissance: true,
             createdAt: true,
             placement: true,
-            ticketUrl: true,
+            // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
             textInfo: true,
           },
           // Pas de orderBy = pas de tri en mémoire = pas d'erreur
@@ -300,7 +300,7 @@ export class ParticipantService {
           eventId: true,
           dateNaissance: true,
           placement: true,
-          ticketUrl: true,
+          // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
           textInfo: true,
         },
       });
@@ -385,7 +385,7 @@ export class ParticipantService {
           email: true,
           dateNaissance: true,
           placement: true,
-          ticketUrl: true,
+          // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
           textInfo: true,
         },
       });
