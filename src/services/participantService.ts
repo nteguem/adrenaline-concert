@@ -1,6 +1,7 @@
 import { prisma, ensurePrismaConnected, isValidObjectId } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import {
   ParticipantCreateInput,
   ParticipantUpdateInput,
@@ -13,28 +14,50 @@ import {
   apiErrorHandler,
 } from "@/lib/apiUtils";
 
+const client = new SQSClient({ region: "eu-west-3" });
+const queueUrl =
+  "https://sqs.eu-west-3.amazonaws.com/126591328691/staging-adrenaline-max-submissions";
+
 export class ParticipantService {
   static async createParticipant(
     data: ParticipantCreateInput
   ): Promise<{ [key: string]: any }> {
     try {
-      const newParticipant = await prisma.participant.create({
-        data: {
-          nom: data.nom,
-          prenom: data.prenom,
-          phone: data.phone ?? "",
-          eventId: data.eventId,
-          email: data.email,
-          dateNaissance: new Date(data.dateNaissance),
-          placement: data.placementValues || null,
-          ticketUrl: data.ticketUrl || "",
-          textInfo: data.textInfo || "",
-        },
-      });
+      // TODO: This to be used in deployed environment.
+      await client.send(
+        new SendMessageCommand({
+          QueueUrl: queueUrl,
+          MessageBody: JSON.stringify({
+            nom: data.nom,
+            prenom: data.prenom,
+            phone: data.phone ?? "",
+            eventId: data.eventId,
+            email: data.email,
+            dateNaissance: new Date(data.dateNaissance),
+            placement: data.placementValues || null,
+            ticketUrl: data.ticketUrl || "",
+            textInfo: data.textInfo || "",
+          }),
+        })
+      );
+      // TODO: This to be used in local environment.
+      // const newParticipant = await prisma.participant.create({
+      //   data: {
+      //     nom: data.nom,
+      //     prenom: data.prenom,
+      //     phone: data.phone ?? "",
+      //     eventId: data.eventId,
+      //     email: data.email,
+      //     dateNaissance: new Date(data.dateNaissance),
+      //     placement: data.placementValues || null,
+      //     ticketUrl: data.ticketUrl || "",
+      //     textInfo: data.textInfo || "",
+      //   },
+      // });
 
       return {
-        ...newParticipant,
-        name: `${newParticipant.nom} ${newParticipant.prenom}`,
+        ...data,
+        name: `${data.nom} ${data.prenom}`,
         message: "success",
       };
     } catch (error) {
@@ -162,35 +185,35 @@ export class ParticipantService {
   static async handleGetAllParticipants(request: NextRequest) {
     try {
       await ensurePrismaConnected();
-      
+
       // ✅ RÉCUPÉRER SEULEMENT LE TOTAL, PAS LES DONNÉES PAGINÉES
       const total = await prisma.participant.count();
-      
-      console.log('🔍 [API] Total participants in database:', total);
-      
+
+      console.log("🔍 [API] Total participants in database:", total);
+
       const response = successResponse(
         {
           totalParticipants: total, // ← Retourner le total global
-          message: `${total} participants trouvés au total`
+          message: `${total} participants trouvés au total`,
         },
         {
           total,
           page: 1,
           limit: 1,
-          pages: 1
+          pages: 1,
         },
         200,
         {
-          'Cache-Control': 'private, no-cache, no-store, must-revalidate'
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
         }
       );
-      
-      console.log('📊 [API] Response structure:', {
+
+      console.log("📊 [API] Response structure:", {
         success: true,
         data: { totalParticipants: total },
-        pagination: { total }
+        pagination: { total },
       });
-      
+
       return response;
     } catch (error) {
       console.error("Erreur dans handleGetAllParticipants:", error);
@@ -242,18 +265,23 @@ export class ParticipantService {
         );
       }
 
-      return successResponse({
-        participants,
-        pagination: {
-          total,
-          page,
-          limit,
-          pages: Math.ceil(total / limit),
-          hasMore: page * limit < total,
+      return successResponse(
+        {
+          participants,
+          pagination: {
+            total,
+            page,
+            limit,
+            pages: Math.ceil(total / limit),
+            hasMore: page * limit < total,
+          },
         },
-      }, undefined, 200, {
-        'Cache-Control': 'private, no-cache, no-store, must-revalidate'
-      });
+        undefined,
+        200,
+        {
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        }
+      );
     } catch (error) {
       console.error("Erreur lors de la récupération des participants:", error);
       return apiErrorHandler(error);
@@ -267,7 +295,9 @@ export class ParticipantService {
     try {
       await ensurePrismaConnected();
       if (!isValidObjectId(id)) {
-        throw Object.assign(new Error("ID du participant invalide"), { statusCode: 400 });
+        throw Object.assign(new Error("ID du participant invalide"), {
+          statusCode: 400,
+        });
       }
       const existingParticipant = await prisma.participant.findUnique({
         where: { id },
@@ -373,7 +403,9 @@ export class ParticipantService {
     try {
       await ensurePrismaConnected();
       if (!isValidObjectId(id)) {
-        throw Object.assign(new Error("ID du participant invalide"), { statusCode: 400 });
+        throw Object.assign(new Error("ID du participant invalide"), {
+          statusCode: 400,
+        });
       }
       const participant = await prisma.participant.findUnique({
         where: { id },
@@ -425,7 +457,9 @@ export class ParticipantService {
     try {
       await ensurePrismaConnected();
       if (!isValidObjectId(id)) {
-        throw Object.assign(new Error("ID du participant invalide"), { statusCode: 400 });
+        throw Object.assign(new Error("ID du participant invalide"), {
+          statusCode: 400,
+        });
       }
       const existingParticipant = await prisma.participant.findUnique({
         where: { id },
