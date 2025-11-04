@@ -56,6 +56,45 @@ export default function HomePage() {
     return returnDate;
   };
 
+  const formatEndTime = (endDate) => {
+    if (!endDate) return null;
+    try {
+      const date = new Date(endDate);
+      if (isNaN(date.getTime())) return null;
+      const hours = date.getUTCHours();
+      return `${hours}h`;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  // Fonction pour trouver l'événement avec la endDate la plus proche (mais pas encore passée)
+  const getClosestEvent = (tours) => {
+    if (!tours || tours.length === 0) return null;
+    
+    const now = new Date();
+    let closestEvent = null;
+    let closestEndDate = null;
+    
+    // Parcourir tous les tours et leurs événements
+    tours.forEach(tour => {
+      if (tour.nextEvent && tour.nextEvent.endDate) {
+        const endDate = new Date(tour.nextEvent.endDate);
+        
+        // Vérifier que l'événement n'est pas encore terminé
+        if (endDate >= now) {
+          // Si c'est le premier événement valide ou si sa endDate est plus proche
+          if (!closestEndDate || endDate < closestEndDate) {
+            closestEvent = tour.nextEvent;
+            closestEndDate = endDate;
+          }
+        }
+      }
+    });
+    
+    return closestEvent;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.age || !formData.santéOk || !formData.cgu) {
@@ -78,10 +117,16 @@ export default function HomePage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
+  
+  // Récupérer l'événement le plus proche parmi tous les tours
+  const closestEvent = data?.data?.tours ? getClosestEvent(data.data.tours) : null;
+  
   if (data) {
     if (data?.data?.tours.length > 0) {
-      const evt = data?.data?.tours[0]?.nextEvent;
-      const show = shouldShowForm(evt?.eventDate, evt?.endDate);
+      if (!closestEvent) {
+        return <LoadingObject text={"le formulaire est clôturé"} />;
+      }
+      const show = shouldShowForm(closestEvent?.eventDate, closestEvent?.endDate);
       if (!show) return <LoadingObject text={"le formulaire est clôturé"} />;
     } else {
       return <LoadingObject text={"le formulaire est clôturé"} />;
@@ -89,9 +134,17 @@ export default function HomePage() {
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
-  else {
-    formattedDate = customdateFormat(data?.data?.tours[0]?.nextEvent);
+  
+  if (!closestEvent) {
+    return <LoadingObject text={"le formulaire est clôturé"} />;
   }
+  
+  formattedDate = customdateFormat(closestEvent);
+  
+  // Récupérer l'heure de fin de l'événement
+  const endTime = closestEvent?.endDate 
+    ? formatEndTime(closestEvent.endDate)
+    : null;
 
   const handleClick = () => {
     // Valider uniquement au clic
@@ -116,7 +169,7 @@ export default function HomePage() {
       {/* Conteneur avec overlay pour le contenu qui défile */}
       <div className="content-overlay">
         <div className="min-h-screen flex flex-col">
-          
+
           {!isLoggedIn ? (
             <div className="flex-1 flex items-center justify-center p-4">
               <Login handle={setIsLoggedIn} />
@@ -127,21 +180,27 @@ export default function HomePage() {
               <div className="flex-shrink-0">
                 <LogoHeader
                   date={formattedDate}
-                  venue={data?.data?.tours[0]?.nextEvent.venue}
-                  city={data?.data?.tours[0]?.nextEvent.city}
+                  venue={closestEvent.venue}
+                  city={closestEvent.city}
                 />
                 {/* Espace pour compenser le header fixe */}
                 <div className="h-24 sm:h-28 md:h-32 lg:h-36"></div>
               </div>
 
               {/* Espace flexible pour pousser le contenu vers le bas */}
-              <div className="flex-1"></div>
-              
+              {endTime && (
+                <div className="flex justify-center mb-8 sm:mb-12 md:mb-16 px-4">
+                  <h5 className="text-white text-xs sm:text-sm leading-tight block">
+                    L'inscription au concours est ouverte jusqu'à <span className="text-blue-400 font-bold">{endTime}</span>
+                  </h5>
+                </div>
+              )}
+
               {/* Titre principal */}
               <div className="flex justify-center mb-8 sm:mb-12 md:mb-16 px-4">
                 <div className="inline-block bg-white px-3 py-2 sm:px-4 sm:py-2 rounded-sm text-center max-w-[95%] sm:max-w-none">
                   <p className={`${din.className} text-xs sm:text-sm md:text-base lg:text-lg font-bold text-black uppercase leading-tight`}>
-                    <span className="block whitespace-nowrap">TENTEZ DE VIVRE L'EXPÉRIENCE</span> 
+                    <span className="block whitespace-nowrap">TENTEZ DE VIVRE L'EXPÉRIENCE</span>
                     <span className="block whitespace-nowrap">ADRENALINE MAX</span>
                   </p>
                 </div>
@@ -151,7 +210,7 @@ export default function HomePage() {
               <div className="w-full max-w-md mx-auto px-4 pb-4">
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-3 sm:space-y-4 px-2 mb-4">
-                    
+
                     {/* Checkbox 1 */}
                     <div className="flex gap-3 w-full">
                       <input
@@ -233,10 +292,9 @@ export default function HomePage() {
                       w-full max-w-[280px] sm:max-w-[300px]
                       mx-auto 
                       transition-colors 
-                      ${
-                        isButtonDisabled
-                          ? "bg-gray-500 text-gray-300 cursor-not-allowed"
-                          : isClicked
+                      ${isButtonDisabled
+                        ? "bg-gray-500 text-gray-300 cursor-not-allowed"
+                        : isClicked
                           ? "bg-blue-400"
                           : ""
                       }

@@ -239,7 +239,7 @@ export class TourService {
               endDate: { gte: now },
             },
             orderBy: {
-              eventDate: 'asc',
+              endDate: 'asc', // Trier par endDate pour avoir la date de fin la plus proche
             },
             select: {
               id: true,
