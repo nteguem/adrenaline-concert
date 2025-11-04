@@ -62,7 +62,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cache-Control",
-            value: "private, no-cache, no-store, must-revalidate",
+            value: "public, max-age=7200, immutable",
           },
         ],
       },
@@ -81,6 +81,10 @@ const nextConfig: NextConfig = {
             key: "Access-Control-Allow-Headers",
             value:
               "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+          },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=7200, immutable",
           },
         ],
       },
