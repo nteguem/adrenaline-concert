@@ -71,16 +71,16 @@ export default function HomePage() {
   // Fonction pour trouver l'événement avec la endDate la plus proche (mais pas encore passée)
   const getClosestEvent = (tours) => {
     if (!tours || tours.length === 0) return null;
-    
+
     const now = new Date();
     let closestEvent = null;
     let closestEndDate = null;
-    
+
     // Parcourir tous les tours et leurs événements
     tours.forEach(tour => {
       if (tour.nextEvent && tour.nextEvent.endDate) {
         const endDate = new Date(tour.nextEvent.endDate);
-        
+
         // Vérifier que l'événement n'est pas encore terminé
         if (endDate >= now) {
           // Si c'est le premier événement valide ou si sa endDate est plus proche
@@ -91,7 +91,7 @@ export default function HomePage() {
         }
       }
     });
-    
+
     return closestEvent;
   };
 
@@ -117,10 +117,10 @@ export default function HomePage() {
   };
 
   if (error) return <LoadingObject text={"Failed to load"} />;
-  
+
   // Récupérer l'événement le plus proche parmi tous les tours
   const closestEvent = data?.data?.tours ? getClosestEvent(data.data.tours) : null;
-  
+
   if (data) {
     if (data?.data?.tours.length > 0) {
       if (!closestEvent) {
@@ -134,15 +134,15 @@ export default function HomePage() {
   }
 
   if (!data) return <LoadingObject text={"Loading ..."} />;
-  
+
   if (!closestEvent) {
     return <LoadingObject text={"le formulaire est clôturé"} />;
   }
-  
+
   formattedDate = customdateFormat(closestEvent);
-  
+
   // Récupérer l'heure de fin de l'événement
-  const endTime = closestEvent?.endDate 
+  const endTime = closestEvent?.endDate
     ? formatEndTime(closestEvent.endDate)
     : null;
 
@@ -290,8 +290,8 @@ export default function HomePage() {
                     disabled={isButtonDisabled}
                     className={`
                       w-full max-w-[280px] sm:max-w-[300px]
-                      mx-auto 
-                      transition-colors 
+                      mx-auto
+                      transition-colors
                       ${isButtonDisabled
                         ? "bg-gray-500 text-gray-300 cursor-not-allowed"
                         : isClicked

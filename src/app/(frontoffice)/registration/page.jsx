@@ -29,11 +29,11 @@ const IntegratedHeader = ({ venue, date, city }) => {
 
   return (
     <div className="w-full flex flex-col items-center mb-8">
-      <h1 className={`${evangelion.className} text-6xl text-white text-center`} style={{ whiteSpace: "nowrap" }}>
+      <h1 className={`${evangelion.className} text-6xl text-white text-center`}>
         ADRENALINE TOUR
       </h1>
       {(venue || date || city) && (
-        <div className={`text-center ${getFontSize(subtitleText)} text-white whitespace-nowrap ma-w-full`}>
+        <div className={`text-center ${getFontSize(subtitleText)} text-white whitespace ma-w-full`}>
           <span className="inline-block" style={{
             transform: subtitleText && subtitleText.length > 50 ? "scaleX(0.9)" : "scaleX(1)",
             transformOrigin: "center",
@@ -587,7 +587,7 @@ export default function RegistrationPage() {
                   }}
                   className="mr-3 flex-shrink-0 cursor-pointer"
                 />
-                <h5 
+                <h5
                   htmlFor="certifiePresent"
                   className="text-red-500 font-bold text-sm uppercase leading-tight cursor-pointer text-center"
                 >
@@ -711,7 +711,7 @@ export default function RegistrationPage() {
 
 
               <h6 className="text-white font-bold text-sm uppercase mb-6 text-left"  >
-                Veillez a bien renseigner tous les champs ci-dessus. <br /> si vous gagnez, votre billet vous sera demandé pour verification. 
+                Veillez a bien renseigner tous les champs ci-dessus. <br /> si vous gagnez, votre billet vous sera demandé pour verification.
               </h6>
             </div>
 

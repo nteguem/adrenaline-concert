@@ -15,9 +15,9 @@ const LogoHeader = ({ venue, date, city }) => {
   };
 
   return (
-    <div className="fixed top-0 left-0 w-full z-50">
+    <div className="w-full z-50">
       <div className="flex flex-col items-center py-4">
-        
+
         {/* EXACTEMENT le même titre que registration */}
         <h1
           className={`${evangelion.className} text-6xl text-white mb-1 text-center`}
