@@ -190,9 +190,9 @@ export default function HomePage() {
               {/* Espace flexible pour pousser le contenu vers le bas */}
               {endTime && (
                 <div className="flex justify-center mb-8 sm:mb-12 md:mb-16 px-4">
-                  <h5 className="text-white text-xs sm:text-sm leading-tight block">
+                  <h1 className="text-white text-large sm:text-sm leading-tight block">
                     L'inscription au concours est ouverte jusqu'à <span className="text-blue-400 font-bold">{endTime}</span>
-                  </h5>
+                  </h1>
                 </div>
               )}
 
