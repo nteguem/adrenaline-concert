@@ -13,16 +13,15 @@ export async function GET(
       return errorResponse('Invalid event ID', 400);
     }
 
+    // getWinnersByEventId retourne déjà un NextResponse avec successResponse()
     const result = await TirageService.getWinnersByEventId(params.id);
     
-    // Ajouter headers CORS à la réponse
-    return NextResponse.json(result, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      }
-    });
+    // Ajouter headers CORS à la réponse existante
+    result.headers.set('Access-Control-Allow-Origin', '*');
+    result.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    result.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    return result;
   } catch (error) {
     console.error('Error in GET winners:', error);
     return errorResponse('Internal server error', 500);
