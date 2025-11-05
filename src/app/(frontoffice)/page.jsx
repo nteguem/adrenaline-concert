@@ -61,8 +61,17 @@ export default function HomePage() {
     try {
       const date = new Date(endDate);
       if (isNaN(date.getTime())) return null;
-      const hours = date.getUTCHours();
-      return `${hours}h`;
+
+      const options = {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Europe/Paris'
+      };
+      const timeString = date.toLocaleTimeString('fr-FR', options);
+
+      const [hours, minutes] = timeString.split(':');
+      return `${hours}h${minutes !== '00' ? minutes : ''}`;
     } catch (error) {
       return null;
     }
