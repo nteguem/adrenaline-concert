@@ -180,7 +180,7 @@ export default function HomePage() {
         <div className="min-h-screen flex flex-col">
 
           {!isLoggedIn ? (
-            <div className="flex-1 flex items-center justify-center p-4">
+            <div className="flex items-center justify-center h-screen p-4">
               <Login handle={setIsLoggedIn} />
             </div>
           ) : (
