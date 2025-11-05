@@ -1,5 +1,6 @@
 // src/services/tirageService.ts
-import { prisma, ensurePrismaConnected, isValidObjectId } from '@/lib/db';
+import { getDatabase, isValidObjectId } from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 import { successResponse, errorResponse, apiErrorHandler } from '@/lib/apiUtils';
 import {
     TirageRequest,
@@ -15,7 +16,6 @@ import { NextRequest } from 'next/server';
 export class TirageService {
   static async handleCreateTirage(request: NextRequest) {
     try {
-        await ensurePrismaConnected();
         const body = await request.json();
 
         // Validate required fields
@@ -30,7 +30,7 @@ export class TirageService {
         };
 
         const tirageResult = await this.faireTirage(tirageInput);
-        
+
         if ('error' in tirageResult) {
             return tirageResult;
         }
@@ -44,7 +44,8 @@ export class TirageService {
 
   static async faireTirage(data: TirageRequest): Promise<{ [key: string]: any }> {
     try {
-      await ensurePrismaConnected();
+      const now = new Date();
+      const db = await getDatabase();
       if (!data.eventId) {
         return errorResponse('ID de l\'événement requis', 400);
       }
@@ -58,8 +59,8 @@ export class TirageService {
       }
 
       // 1. Vérifier que l'événement existe
-      const event = await prisma.event.findUnique({
-        where: { id: data.eventId }
+      const event = await db.collection('Event').findOne({
+        _id: new ObjectId(data.eventId)
       });
 
       if (!event) {
@@ -67,14 +68,12 @@ export class TirageService {
       }
 
       // 2. Vérifier si un tirage existe déjà pour cet événement
-      const existingTirage = await prisma.tirage.findFirst({
-        where: { eventId: data.eventId }
+      const existingTirage = await db.collection('tirage').findOne({
+        eventId: data.eventId,
       });
 
       // 3. Récupérer tous les participants de l'événement
-      const participants = await prisma.participant.findMany({
-        where: { eventId: data.eventId },
-      });
+      const participants = await db.collection('participant').find({ eventId: new ObjectId(data.eventId) }).toArray();
 
       if (participants.length === 0) {
         return errorResponse('Aucun participant trouvé pour cet événement', 404);
@@ -84,91 +83,103 @@ export class TirageService {
       const vainqueurs = this.selectionnerVainqueurs(participants, data.nombreVainqueurs);
 
       // 5. Utilisation de transaction pour garantir l'intégrité des données
-      const result = await prisma.$transaction(async (tx) => {
-        let nouveauTirage;
+      let nouveauTirage;
 
-        if (existingTirage) {
-          // Si un tirage existe, supprimer d'abord les anciens vainqueurs
-          await tx.vainqueur.deleteMany({
-            where: { tirageid: existingTirage.id }
-          });
-          
-          // Mettre à jour le tirage existant
-          nouveauTirage = await tx.tirage.update({
-            where: { id: existingTirage.id },
-            data: {
+      if (existingTirage) {
+        // Si un tirage existe, supprimer d'abord les anciens vainqueurs
+        await db.collection('vainqueur').deleteMany({ tirageid: existingTirage._id.toString() });
+        // Mettre à jour le tirage existant
+        nouveauTirage = (await db.collection('tirage').findOneAndUpdate(
+          { _id: existingTirage._id },
+          {
+            $set: {
               nombreVainqueur: vainqueurs.length,
               dateTirage: data.dateTirage
             }
-          });
-        } else {
-          // Créer un nouveau tirage
-          nouveauTirage = await tx.tirage.create({
-            data: {
-              eventId: data.eventId,
-              nombreVainqueur: vainqueurs.length,
-              dateTirage: data.dateTirage,
-            }
-          });
-        }
-
-        // Créer les nouveaux vainqueurs (données minimales, le reste via jointure)
-        const vainqueursData = vainqueurs.map((participant, index) => ({
-          participantId: participant.id, // ← CLÉ PRINCIPALE pour la jointure
-          email: participant.email,
-          prenom_participant: participant.prenom,
-          nom_participant: participant.nom,
-          tirageid: nouveauTirage.id,
-          rang: index + 1,
-          porte: participant.porte ?? '',
-          place: participant.place ?? '', 
-          ticketUrl: participant.ticketUrl ?? '',    
-          ticketInfo: participant.textInfo ?? '',   
-        }));
-
-        // Créer les vainqueurs en base de données
-        await tx.vainqueur.createMany({
-          data: vainqueursData,
-        });
-
-        // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
-        const vainqueursComplets = await tx.vainqueur.findMany({
-          where: { tirageid: nouveauTirage.id },
-          select: {
-            id: true,
-            prenom_participant: true,
-            nom_participant: true,
-            email: true,
-            rang: true,
-            // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-            ticketInfo: true,
-            porte: true,
-            place: true,
-            participant: { // ← SÉLECTION IMBRIQUÉE AU LIEU D'INCLUDE
-              select: {
-                id: true,
-                nom: true,
-                prenom: true,
-                email: true,
-                phone: true,           // ← RÉCUPÉRÉ VIA JOINTURE
-                dateNaissance: true,   // ← RÉCUPÉRÉ VIA JOINTURE
-                placement: true,       // ← RÉCUPÉRÉ VIA JOINTURE
-                // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-                textInfo: true,
-              }
-            }
           },
-          orderBy: { rang: 'asc' }
+          { returnDocument: 'after' },
+        ))?.value;
+      } else {
+        // Créer un nouveau tirage
+        const result = await db.collection('tirage').insertOne({
+          eventId: data.eventId,
+          nombreVainqueur: vainqueurs.length,
+          dateTirage: data.dateTirage,
+          createdAt: now,
+          updatedAt: now,
         });
 
-        return {
-          tirage: nouveauTirage,
-          vainqueurs: vainqueursComplets
-        };
-      });
+        nouveauTirage = await db.collection('tirage').findOne({ _id: result.insertedId });
+      }
+
+      // Créer les nouveaux vainqueurs (données minimales, le reste via jointure)
+      const vainqueursData = vainqueurs.map((participant, index) => ({
+        participantId: participant._id.toString(),
+        email: participant.email,
+        prenom_participant: participant.prenom,
+        nom_participant: participant.nom,
+        tirageid: nouveauTirage._id.toString(),
+        rang: index + 1,
+        porte: participant.porte ?? '',
+        place: participant.place ?? '',
+        ticketUrl: participant.ticketUrl ?? '',
+        ticketInfo: participant.textInfo ?? '',
+        createdAt: now,
+        updatedAt: now,
+      }));
+
+      // Créer les vainqueurs en base de données
+      await db.collection('vainqueur').insertMany(vainqueursData);
+
+      // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
+      const vainqueursComplets = await db.collection("vainqueur").aggregate([
+        { $match: { tirageid: nouveauTirage._id.toString() } },
+        { $sort: { rang: 1 } },
+        {
+          $addFields: {
+            participantObjId: { $toObjectId: "$participantId" }
+          }
+        },
+        {
+          $lookup: {
+            from: "participant",
+            localField: "participantObjId",
+            foreignField: "_id",
+            as: "participant"
+          }
+        },
+        { $unwind: "$participant" },
+        {
+          $project: {
+            id: "$_id",
+            prenom_participant: 1,
+            nom_participant: 1,
+            email: 1,
+            rang: 1,
+            ticketInfo: 1,
+            porte: 1,
+            place: 1,
+            participant: {
+              id: "$participant._id",
+              nom: "$participant.nom",
+              prenom: "$participant.prenom",
+              email: "$participant.email",
+              phone: "$participant.phone",
+              dateNaissance: "$participant.dateNaissance",
+              placement: "$participant.placement",
+              textInfo: "$participant.textInfo"
+            }
+          }
+        }
+      ]).toArray();
+
+      const result = {
+        tirage: nouveauTirage,
+        vainqueurs: vainqueursComplets
+      };
 
       // 6. Renvoyer la réponse de succès
-      const message = existingTirage 
+      const message = existingTirage
         ? `Tirage mis à jour avec succès. ${result.vainqueurs.length} nouveaux vainqueurs sélectionnés.`
         : `${result.vainqueurs.length} vainqueurs ont été sélectionnés avec succès.`;
 
@@ -187,33 +198,36 @@ export class TirageService {
 
   static async getAllTiragesWithEvents() {
     try {
-      await ensurePrismaConnected();
-      const tirages = await prisma.tirage.findMany({
-        orderBy: {
-          dateTirage: 'desc'
-        },
-        select: {
-          id: true,
-          eventId: true,
-          dateTirage: true,
-          nombreVainqueur: true,
-          createdAt: true
-        }
-      });
+      const db = await getDatabase();
+      const tirages = await db.collection("tirage")
+        .find({}, {
+          projection: {
+            _id: 1,
+            id: "$_id",
+            eventId: 1,
+            dateTirage: 1,
+            nombreVainqueur: 1,
+            createdAt: 1
+          }
+        })
+        .sort({ dateTirage: -1 })
+        .toArray();
 
       const tiragesWithEvents = await Promise.all(
         tirages.map(async (tirage) => {
-          const event = await prisma.event.findUnique({
-            where: { id: tirage.eventId },
-            select: {
-              id: true,
-              city: true,
-              venue: true,
-              eventDate: true,
-              endDate: true,
-              status: true
+          const event = await await db.collection("Event").findOne(
+            { _id: new ObjectId(tirage.eventId) },
+            {
+              projection: {
+                _id: 1,
+                city: 1,
+                venue: 1,
+                eventDate: 1,
+                endDate: 1,
+                status: 1
+              }
             }
-          });
+          );
 
           return {
             ...tirage,
@@ -235,50 +249,54 @@ export class TirageService {
 
   static async getAllTiragesWithWinners() {
     try {
-      await ensurePrismaConnected();
-      const tirages = await prisma.tirage.findMany({
-        orderBy: {
-          dateTirage: 'desc'
-        }
-      });
+      const db = await getDatabase();
+      const tirages = await db.collection('tirage').find({})
+        .sort({ dateTirage: -1 })
+        .toArray();
 
       const tiragesWithDetails = await Promise.all(
         tirages.map(async (tirage) => {
           try {
             // ← JOINTURE : Récupérer les vainqueurs avec les données des participants
-            const vainqueurs = await prisma.vainqueur.findMany({
-              where: {
-                tirageid: tirage.id
-              },
-              select: {
-                id: true,
-                prenom_participant: true,
-                nom_participant: true,
-                email: true,
-                rang: true,
-                // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-                ticketInfo: true,
-                porte: true,
-                place: true,
-                participant: { // ← SÉLECTION IMBRIQUÉE
-                  select: {
-                    phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
-                    dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
-                    placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-                    // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-                    textInfo: true,
-                  }
+            const vainqueurs = await db.collection("vainqueur").aggregate([
+              { $match: { tirageid: tirage._id.toString() } },
+              { $sort: { rang: 1 } },
+              {
+                $addFields: {
+                  participantObjId: { $toObjectId: "$participantId" }
                 }
               },
-              orderBy: {
-                rang: 'asc'
+              {
+                $lookup: {
+                  from: "participant",
+                  localField: "participantObjId",
+                  foreignField: "_id",
+                  as: "participant"
+                }
+              },
+              { $unwind: "$participant" },
+              {
+                $project: {
+                  id: "$_id",
+                  prenom_participant: 1,
+                  nom_participant: 1,
+                  email: 1,
+                  rang: 1,
+                  ticketInfo: 1,
+                  porte: 1,
+                  place: 1,
+                  participant: {
+                    phone: "$participant.phone",
+                    dateNaissance: "$participant.dateNaissance",
+                    placement: "$participant.placement",
+                    textInfo: "$participant.textInfo"
+                  }
+                }
               }
-            });
+            ]).toArray();
 
-            const event = await prisma.event.findUnique({
-              where: {
-                id: tirage.eventId
-              }
+            const event = await db.collection('Event').findOne({
+              _id: new ObjectId(tirage.eventId)
             });
 
             return {
@@ -287,7 +305,7 @@ export class TirageService {
               vainqueurs
             };
           } catch (error) {
-            console.error(`Error fetching details for tirage ${tirage.id}:`, error);
+            console.error(`Error fetching details for tirage ${tirage._id.toString()}:`, error);
             return {
               ...tirage,
               event: null,
@@ -298,8 +316,8 @@ export class TirageService {
       );
 
       return successResponse({
-        message: tiragesWithDetails.length > 0 
-          ? `${tiragesWithDetails.length} tirages trouvés` 
+        message: tiragesWithDetails.length > 0
+          ? `${tiragesWithDetails.length} tirages trouvés`
           : 'Aucun tirage trouvé',
         tirages: tiragesWithDetails
       });
@@ -312,15 +330,11 @@ export class TirageService {
 
   static async getWinnersByEventId(eventId: string) {
     try {
-      await ensurePrismaConnected();
+      const db = await getDatabase();
       if (!isValidObjectId(eventId)) {
         return errorResponse('ID de l\'événement invalide', 400);
       }
-      const tirage = await prisma.tirage.findFirst({
-        where: {
-          eventId: eventId
-        }
-      });
+      const tirage = await db.collection('tirage').findOne({ eventId });
 
       if (!tirage) {
         // Retourner un tableau vide au lieu d'une erreur 404
@@ -331,34 +345,42 @@ export class TirageService {
       }
 
       // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
-      const vainqueurs = await prisma.vainqueur.findMany({
-        where: {
-          tirageid: tirage.id
-        },
-        select: {
-          id: true,
-          prenom_participant: true,
-          nom_participant: true,
-          email: true,
-          rang: true,
-          // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-          ticketInfo: true,
-          porte: true,
-          place: true,
-          participant: { // ← SÉLECTION IMBRIQUÉE
-            select: {
-              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
-              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES  
-              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-              // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-              textInfo: true,
-            }
+      const vainqueurs = await db.collection("vainqueur").aggregate([
+        { $match: { tirageid: tirage._id.toString() } },
+        { $sort: { rang: 1 } },
+        {
+          $addFields: {
+            participantObjId: { $toObjectId: "$participantId" }
           }
         },
-        orderBy: {
-          rang: 'asc'
+        {
+          $lookup: {
+            from: "participant",
+            localField: "participantObjId",
+            foreignField: "_id",
+            as: "participant"
+          }
+        },
+        { $unwind: "$participant" },
+        {
+          $project: {
+            id: "$_id",
+            prenom_participant: 1,
+            nom_participant: 1,
+            email: 1,
+            rang: 1,
+            ticketInfo: 1,
+            porte: 1,
+            place: 1,
+            participant: {
+              phone: "$participant.phone",
+              dateNaissance: "$participant.dateNaissance",
+              placement: "$participant.placement",
+              textInfo: "$participant.textInfo"
+            }
+          }
         }
-      });
+      ]).toArray();
 
       return successResponse({
         message: `${vainqueurs.length} vainqueurs trouvés`,
@@ -374,39 +396,47 @@ export class TirageService {
 
   static async getWinnersByTirageId(tirageId: string) {
     try {
-      await ensurePrismaConnected();
+      const db = await getDatabase();
       if (!isValidObjectId(tirageId)) {
         return errorResponse('ID du tirage invalide', 400);
       }
       // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
-      const vainqueurs = await prisma.vainqueur.findMany({
-        where: {
-          tirageid: tirageId
-        },
-        select: {
-          id: true,
-          prenom_participant: true,
-          nom_participant: true,
-          email: true,
-          rang: true,
-          // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-          ticketInfo: true,
-          porte: true,
-          place: true,
-          participant: { // ← SÉLECTION IMBRIQUÉE
-            select: {
-              phone: true,           // ← DONNÉES SUPPLÉMENTAIRES
-              dateNaissance: true,   // ← DONNÉES SUPPLÉMENTAIRES
-              placement: true,       // ← DONNÉES SUPPLÉMENTAIRES
-              // ticketUrl: true, // ✅ RETIRÉ - Plus de récupération d'images
-              textInfo: true,
-            }
+      const vainqueurs = await db.collection("vainqueur").aggregate([
+        { $match: { tirageid: tirageId } },
+        { $sort: { rang: 1 } },
+        {
+          $addFields: {
+            participantObjId: { $toObjectId: "$participantId" }
           }
         },
-        orderBy: {
-          rang: 'asc'
+        {
+          $lookup: {
+            from: "participant",
+            localField: "participantObjId",
+            foreignField: "_id",
+            as: "participant"
+          }
+        },
+        { $unwind: "$participant" },
+        {
+          $project: {
+            id: "$_id",
+            prenom_participant: 1,
+            nom_participant: 1,
+            email: 1,
+            rang: 1,
+            ticketInfo: 1,
+            porte: 1,
+            place: 1,
+            participant: {
+              phone: "$participant.phone",
+              dateNaissance: "$participant.dateNaissance",
+              placement: "$participant.placement",
+              textInfo: "$participant.textInfo"
+            }
+          }
         }
-      });
+      ]).toArray();
 
       if (!vainqueurs.length) {
         return errorResponse('Aucun vainqueur trouvé pour ce tirage', 404);
@@ -432,7 +462,7 @@ export class TirageService {
     // Algorithme de Fisher-Yates pour un mélange aléatoire efficace
     for (let i = participantsDisponibles.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [participantsDisponibles[i], participantsDisponibles[j]] = 
+      [participantsDisponibles[i], participantsDisponibles[j]] =
         [participantsDisponibles[j], participantsDisponibles[i]];
     }
 
@@ -441,26 +471,23 @@ export class TirageService {
 
   static async getTiragesByEventId(eventId: string) {
     try {
-      await ensurePrismaConnected();
+      const db = await getDatabase();
       if (!isValidObjectId(eventId)) {
         return errorResponse('ID de l\'événement invalide', 400);
       }
-      const tirages = await prisma.tirage.findMany({
-        where: {
-          eventId: eventId
-        },
-        orderBy: {
-          dateTirage: 'desc'
-        },
-        select: {
-          id: true,
-          eventId: true,
-          dateTirage: true,
-          nombreVainqueur: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      });
+      const tirages = await db.collection("tirage")
+        .find({ eventId })
+        .project({
+          _id: 1,
+          id: "$_id",
+          eventId: 1,
+          dateTirage: 1,
+          nombreVainqueur: 1,
+          createdAt: 1,
+          updatedAt: 1
+        })
+        .sort({ dateTirage: -1 })
+        .toArray();
 
       if (!tirages.length) {
         return errorResponse('Aucun tirage trouvé pour cet événement', 404);
