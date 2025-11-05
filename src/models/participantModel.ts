@@ -8,6 +8,7 @@ export interface ParticipantCreateInput {
     placementValues?: { [key: string]: string };
     ticketUrl?: string;
     textInfo?: string;
+    accepteInfos?: boolean;
 }
 
 export interface ParticipantUpdateInput {
@@ -19,6 +20,7 @@ export interface ParticipantUpdateInput {
     placementValues?: { [key: string]: string };
     ticketUrl?: string;
     textInfo?: string;
+    accepteInfos?: boolean;
 }
 
 export interface PaginationOptions {

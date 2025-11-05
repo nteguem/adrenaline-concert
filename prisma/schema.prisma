@@ -63,6 +63,7 @@ model participant {
   placement     Json?
   ticketUrl     String?
   textInfo      String?
+  accepteInfos  Boolean     @default(false)
   event         Event       @relation(fields: [eventId], references: [id]) 
   vainqueurs    vainqueur[]
 }

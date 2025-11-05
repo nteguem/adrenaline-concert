@@ -374,6 +374,7 @@ export default function RegistrationPage() {
     const postBody = {
       nom: formData.nom, prenom: formData.prenom, dateNaissance: formatDate(formData.dateNaissance),
       email: formData.email, phone: formData.phone, eventId: data?.data?.tours[0]?.nextEvent.id,
+      accepteInfos: formData.confirmePresence,
       placementValues: {
         ...placementData,
         typePlacement: typePlacement,
