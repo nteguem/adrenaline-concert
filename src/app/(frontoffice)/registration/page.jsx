@@ -29,7 +29,7 @@ const IntegratedHeader = ({ venue, date, city }) => {
 
   return (
     <div className="w-full flex flex-col items-center mb-8">
-      <h1 className={`${evangelion.className} text-6xl text-white text-center`}>
+      <h1 className={`${evangelion.className} text-6xl text-white text-center whitespace-nowrap`}>
         ADRENALINE TOUR
       </h1>
       {(venue || date || city) && (
@@ -826,8 +826,8 @@ export default function RegistrationPage() {
                         value={field.value}
                         onChange={(e) => setGradinNumber(e.target.value)}
                         disabled={!isStep3Editable}
-                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${isStep3Editable
-                          ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text'
+                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0  ${isStep3Editable
+                          ? '!bg-white !text-black focus:!bg-white focus:!text-black cursor-text'
                           : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
                           }`}
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
@@ -839,8 +839,8 @@ export default function RegistrationPage() {
                         value={field.value}
                         onChange={handlePlacementChange}
                         disabled={!isStep3Editable}
-                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !p-0 focus:!outline-none focus:!ring-0 !placeholder-gray-400 ${isStep3Editable
-                          ? '!bg-gray-700 !text-white focus:!bg-gray-600 cursor-text'
+                        className={`!h-16  !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0  ${isStep3Editable
+                          ? '!bg-white !text-black focus:!bg-white focus:!text-black cursor-text'
                           : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
                           }`}
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}

@@ -43,7 +43,7 @@ export async function apiLogin(formData: FormData) {
         
         console.log("[apiLogin] Tentative de connexion pour:", postdata.email);
         
-        const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || "http://localhost:3001";
+        const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || "http://localhost:3000";
         const response = await fetch(
           `${baseUrl}/api/auth/login`,
           {

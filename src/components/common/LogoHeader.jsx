@@ -20,7 +20,7 @@ const LogoHeader = ({ venue, date, city }) => {
 
         {/* EXACTEMENT le même titre que registration */}
         <h1
-          className={`${evangelion.className} text-6xl text-white mb-1 text-center`}
+          className={`${evangelion.className} text-6xl text-white mb-1 text-center whitespace-nowrap`}
         >
           ADRENALINE TOUR
         </h1>
