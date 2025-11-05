@@ -39,9 +39,9 @@ const nextConfig: NextConfig = {
         source: "/:all*(css|js|gif|svg|jpg|jpeg|png|woff|woff2|avif|webp)",
         headers: [
           {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, must-revalidate'
+          }
         ],
       },
 
@@ -61,9 +61,9 @@ const nextConfig: NextConfig = {
               "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
           },
           {
-            key: "Cache-Control",
-            value: "public, max-age=7200, immutable",
-          },
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, must-revalidate'
+          }
         ],
       },
 
@@ -83,9 +83,9 @@ const nextConfig: NextConfig = {
               "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
           },
           {
-            key: "Cache-Control",
-            value: "public, max-age=7200, immutable",
-          },
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, must-revalidate'
+          }
         ],
       },
 
@@ -105,9 +105,9 @@ const nextConfig: NextConfig = {
               "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
           },
           {
-            key: "Cache-Control",
-            value: "private, no-cache, no-store, must-revalidate",
-          },
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, must-revalidate'
+          }
         ],
       },
 
