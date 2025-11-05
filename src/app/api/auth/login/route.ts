@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { encode } from 'next-auth/jwt';
-import { prisma, ensurePrismaConnected } from '@/lib/db';
 import bcrypt from 'bcrypt';
+import { getDatabase } from '@/lib/mongodb';
 
 export async function POST(request: Request) {
   try {
-    await ensurePrismaConnected();
+    const db = await getDatabase();
     const body = await request.json();
     const { email: emailInput, password } = body;
 
@@ -23,10 +23,10 @@ export async function POST(request: Request) {
     console.log("[POST /api/auth/login] Recherche utilisateur avec email:", email);
 
     // Find user in database
-    const user = await prisma.user.findUnique({
-      where: { email }
+    const user = await db.collection('User').findOne({
+      email
     });
-    
+
     console.log("[POST /api/auth/login] Utilisateur trouvé:", user ? "Oui" : "Non");
 
     if (!user) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         message: "Mot de passe incorrect"
       }, { status: 401 });
     }
-    
+
     console.log("[POST /api/auth/login] Authentification réussie pour:", email);
 
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     currentDate.setMinutes(currentDate.getMinutes() + 720);
 
     // 3. Afficher la nouvelle date et la convertir en minutes
-    const expirationInMinutes = Math.floor(currentDate.getTime() / 60000); 
+    const expirationInMinutes = Math.floor(currentDate.getTime() / 60000);
 
     const token = await encode({
       token: {

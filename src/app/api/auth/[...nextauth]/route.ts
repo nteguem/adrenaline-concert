@@ -1,8 +1,7 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { connectToDB } from "@/lib/apiUtils";
 import bcrypt from 'bcrypt';
-import { prisma } from '@/lib/db';
+import { getDatabase } from "@/lib/mongodb";
 
 // Type pour l'utilisateur personnalisé
 interface CustomUser {
@@ -17,7 +16,7 @@ interface CustomUser {
 // Déclaration pour étendre les types de session et token
 declare module "next-auth" {
   interface User extends CustomUser {}
-  
+
   interface Session {
     user: CustomUser;
   }
@@ -47,23 +46,23 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          await connectToDB();
-          
+          const db = await getDatabase();
+
           // Recherche de l'utilisateur par email
-          const dbUser = await prisma.user.findUnique({
-            where: { email: credentials.email }
+          const dbUser = await db.collection('User').findOne({
+            email: credentials.email
           });
-          
+
           if (!dbUser) {
             throw new Error('Utilisateur non trouvé');
           }
-          
+
           const isPasswordValid = await bcrypt.compare(credentials.password, dbUser.password);
-          
+
           if (!isPasswordValid) {
             throw new Error('Mot de passe incorrect');
           }
-          
+
           // Transformation explicite en CustomUser pour le typage correct
           const user: CustomUser = {
             id: dbUser.id,
@@ -72,7 +71,7 @@ export const authOptions: NextAuthOptions = {
             isAdmin: dbUser.isAdmin,
             username: dbUser.username
           };
-          
+
           return user;
         } catch (error) {
           console.error("Erreur d'authentification:", error);
