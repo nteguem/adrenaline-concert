@@ -24,36 +24,36 @@ export class ParticipantService {
   ): Promise<{ [key: string]: any }> {
     try {
       // TODO: This to be used in deployed environment.
-      // await client.send(
-      //   new SendMessageCommand({
-      //     QueueUrl: queueUrl,
-      //     MessageBody: JSON.stringify({
-      //       nom: data.nom,
-      //       prenom: data.prenom,
-      //       phone: data.phone ?? "",
-      //       eventId: data.eventId,
-      //       email: data.email,
-      //       dateNaissance: new Date(data.dateNaissance),
-      //       placement: data.placementValues || null,
-      //       ticketUrl: data.ticketUrl || "",
-      //       textInfo: data.textInfo || "",
-      //     }),
-      //   })
-      // );
+      await client.send(
+        new SendMessageCommand({
+          QueueUrl: queueUrl,
+          MessageBody: JSON.stringify({
+            nom: data.nom,
+            prenom: data.prenom,
+            phone: data.phone ?? "",
+            eventId: data.eventId,
+            email: data.email,
+            dateNaissance: new Date(data.dateNaissance),
+            placement: data.placementValues || null,
+            ticketUrl: data.ticketUrl || "",
+            textInfo: data.textInfo || "",
+          }),
+        })
+      );
       // TODO: This to be used in local environment.
-      const newParticipant = await prisma.participant.create({
-        data: {
-          nom: data.nom,
-          prenom: data.prenom,
-          phone: data.phone ?? "",
-          eventId: data.eventId,
-          email: data.email,
-          dateNaissance: new Date(data.dateNaissance),
-          placement: data.placementValues || null,
-          ticketUrl: data.ticketUrl || "",
-          textInfo: data.textInfo || "",
-        },
-      });
+      // const newParticipant = await prisma.participant.create({
+      //   data: {
+      //     nom: data.nom,
+      //     prenom: data.prenom,
+      //     phone: data.phone ?? "",
+      //     eventId: data.eventId,
+      //     email: data.email,
+      //     dateNaissance: new Date(data.dateNaissance),
+      //     placement: data.placementValues || null,
+      //     ticketUrl: data.ticketUrl || "",
+      //     textInfo: data.textInfo || "",
+      //   },
+      // });
 
       return {
         ...data,
