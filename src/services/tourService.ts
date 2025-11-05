@@ -1,33 +1,36 @@
-import { prisma, ensurePrismaConnected, isValidObjectId } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { getDatabase, isValidObjectId } from '@/lib/mongodb';
 import { NextRequest } from 'next/server';
-import { 
+import {
   TourCreateInput,
   TourUpdateInput,
   PaginationOptions
 } from '@/models/tourModel';
 
-import { 
-  successResponse, 
-  errorResponse, 
-  apiErrorHandler 
+import {
+  successResponse,
+  errorResponse,
+  apiErrorHandler
 } from '@/lib/apiUtils';
+import { ObjectId } from 'mongodb';
 
 export class TourService {
 
   // Créer un nouveau tour
   static async createTour(data: TourCreateInput): Promise<{ [key: string]: any }> {
     try {
-      const newTour = await prisma.tour.create({
-        data: {
-          name: data.name,         
-          description: data.description,  
-          startDate: new Date(data.startDate),    
-          endDate: new Date(data?.endDate),       
-          status: data.status,
-        },
+      const now = new Date();
+      const db = await getDatabase();
+      const result = await db.collection('Tour').insertOne({
+        name: data.name,
+        description: data.description,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data?.endDate),
+        status: data.status,
+        createdAt: now,
       });
-      
+      const newTour = await db.collection('Tour').findOne({ _id: result.insertedId });
+
       return {
         ...newTour,
         message: 'Tournée créée avec succès'
@@ -41,17 +44,16 @@ export class TourService {
   // Gérer la création d'un nouveau tour
   static async handleCreateTour(request: NextRequest) {
     try {
-      await ensurePrismaConnected();
       const body = await request.json();
-      
+
       // Validation des champs requis
       const requiredFields: (keyof TourCreateInput)[] = ['name', 'description', 'startDate', 'endDate', 'status'];
       const missingFields = requiredFields.filter(field => !body[field]);
-      
+
       if (missingFields.length > 0) {
         return errorResponse(`Champs manquants : ${missingFields.join(', ')}`);
       }
-      
+
       const tourInput: TourCreateInput = {
         name: body.name,
         description: body.description,
@@ -59,9 +61,9 @@ export class TourService {
         endDate: body?.endDate,
         status: body?.status,
       };
-      
+
       const tour = await this.createTour(tourInput);
-      
+
       return successResponse(tour, undefined, 201);
     } catch (error) {
       return apiErrorHandler(error);
@@ -71,44 +73,46 @@ export class TourService {
   // Mettre à jour une tournée existante
   static async updateTour(id: string, data: TourUpdateInput): Promise<{ [key: string]: any }> {
     try {
-      await ensurePrismaConnected();
+      const db = await getDatabase();
       if (!isValidObjectId(id)) {
         throw Object.assign(new Error(`ID de la tournée invalide`), { statusCode: 400 });
       }
       // Vérifier si la tournée existe
-      const existingTour = await prisma.tour.findUnique({
-        where: { id }
-      });
-      
+      const existingTour = await db.collection('Tour').findOne({ _id: new ObjectId(id) });
+
       if (!existingTour) {
         throw new Error(`Tournée avec l'ID ${id} non trouvée`);
       }
-      
+
       // Préparer les données à mettre à jour
       const updateData: Prisma.TourUpdateInput = {};
-      
+
       // Ajouter uniquement les champs qui sont définis
       if (data.name !== undefined) updateData.name = data.name;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.status !== undefined) updateData.status = data.status;
       if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
       if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
-      
+
       // Mettre à jour la tournée
-      const updatedTour = await prisma.tour.update({
-        where: { id },
-        data: updateData,
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          startDate: true,
-          endDate: true,
-          status: true,
-          createdAt: true
+      const updatedTour = await db.collection("Tour").findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updateData },
+        {
+          returnDocument: "after",
+          projection: {
+            _id: 1,
+            id: "$_id",
+            name: 1,
+            description: 1,
+            startDate: 1,
+            endDate: 1,
+            status: 1,
+            createdAt: 1
+          }
         }
-      });
-      
+      );
+
       return {
         ...updatedTour,
         message: 'Tournée mise à jour avec succès'
@@ -118,41 +122,40 @@ export class TourService {
       throw error;
     }
   }
-  
+
   // Gérer la mise à jour d'une tournée
   static async handleUpdateTour(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-      await ensurePrismaConnected();
       const id = params.id;
-      
+
       if (!id) {
         return errorResponse('ID de la tournée manquant');
       }
       if (!isValidObjectId(id)) {
         return errorResponse('ID de la tournée invalide', 400);
       }
-      
+
       const body = await request.json();
-      
+
       // Validation de base - au moins un champ à mettre à jour doit être présent
       const updateFields = ['name', 'description', 'startDate', 'endDate', 'status'];
       const hasUpdateFields = updateFields.some(field => body[field] !== undefined);
-      
+
       if (!hasUpdateFields) {
         return errorResponse('Aucun champ à mettre à jour fourni');
       }
-      
+
       // Préparer les données de mise à jour
       const updateInput: TourUpdateInput = {};
-      
+
       if (body.name !== undefined) updateInput.name = body.name;
       if (body.description !== undefined) updateInput.description = body.description;
       if (body.startDate !== undefined) updateInput.startDate = body.startDate;
       if (body.endDate !== undefined) updateInput.endDate = body.endDate;
       if (body.status !== undefined) updateInput.status = body.status;
-      
+
       const updatedTour = await this.updateTour(id, updateInput);
-      
+
       return successResponse(updatedTour);
     } catch (error) {
       return apiErrorHandler(error);
@@ -162,49 +165,51 @@ export class TourService {
   // Récupérer une tournée par son ID
   static async getTourById(id: string): Promise<{ [key: string]: any }> {
     try {
-      await ensurePrismaConnected();
+      const db = await getDatabase();
       if (!isValidObjectId(id)) {
         throw Object.assign(new Error('ID de la tournée invalide'), { statusCode: 400 });
       }
-      const tour = await prisma.tour.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          startDate: true,
-          endDate: true,
-          status: true,
-          createdAt: true
+      const tour = await db.collection("Tour").findOne(
+        { _id: new ObjectId(id) },
+        {
+          projection: {
+            _id: 1,
+            id: "$_id",
+            name: 1,
+            description: 1,
+            startDate: 1,
+            endDate: 1,
+            status: 1,
+            createdAt: 1
+          }
         }
-      });
-      
+      );
+
       if (!tour) {
         throw new Error(`Tournée avec l'ID ${id} non trouvée`);
       }
-      
+
       return tour;
     } catch (error) {
       console.error('Erreur lors de la récupération de la tournée:', error);
       throw error;
     }
   }
-  
+
   // Gérer la récupération d'une tournée par ID
   static async handleGetTourById(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-      await ensurePrismaConnected();
       const id = params.id;
-      
+
       if (!id) {
         return errorResponse('ID de la tournée manquant');
       }
       if (!isValidObjectId(id)) {
         return errorResponse('ID de la tournée invalide', 400);
       }
-      
+
       const tour = await this.getTourById(id);
-      
+
       return successResponse(tour);
     } catch (error) {
       return apiErrorHandler(error);
@@ -213,48 +218,48 @@ export class TourService {
 
   static async getToursWithEvents() {
     try {
-      await ensurePrismaConnected();
-      const tours = await prisma.tour.findMany({
-        orderBy: {
-          startDate: 'desc'
-        },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          startDate: true,
-          endDate: true,
-          status: true
-        }
-      });
+      const db = await getDatabase();
+      const tours = await db.collection("Tour")
+        .find({})
+        .project({
+          _id: 1,
+          id: "$_id",
+          name: 1,
+          description: 1,
+          startDate: 1,
+          endDate: 1,
+          status: 1
+        })
+        .sort({ startDate: -1 })
+        .toArray();
 
       // Get events for each tour and sort them
       const toursWithEvents = await Promise.all(
         tours.map(async (tour) => {
           // Get the first event that is ongoing or upcoming (endDate not passed)
           const now = new Date();
-          const event = await prisma.event.findFirst({
-            where: {
-              tourId: tour.id,
-              endDate: { gte: now },
+          const event = await db.collection("Event").findOne(
+            {
+              tourId: tour._id.toString(),
+              endDate: { $gte: now }
             },
-            orderBy: {
-              endDate: 'asc', // Trier par endDate pour avoir la date de fin la plus proche
-            },
-            select: {
-              id: true,
-              city: true,
-              venue: true,
-              placement: true,
-              eventDate: true,
-              endDate: true,
-              status: true,
-            },
-          });
+            {
+              projection: {
+                _id: 1,
+                city: 1,
+                venue: 1,
+                placement: 1,
+                eventDate: 1,
+                endDate: 1,
+                status: 1
+              },
+              sort: { endDate: 1 }
+            }
+          );
 
           return {
             ...tour,
-            nextEvent: event // Renamed to nextEvent for clarity
+            nextEvent: event,
           };
         })
       );
@@ -292,11 +297,11 @@ export class TourService {
       limit = 10,
       search = '',
     } = options;
-    
+
     const skip = (page - 1) * limit;
-    
+
     try {
-      await ensurePrismaConnected();
+      const db = await getDatabase();
       // Construire la condition de recherche
       const whereCondition: Prisma.TourWhereInput = search
         ? {
@@ -307,31 +312,29 @@ export class TourService {
             ],
           }
         : {};
-      
+
       // Récupérer les tournées avec pagination
       const [tours, total] = await Promise.all([
-        prisma.tour.findMany({
-          where: whereCondition,
-          skip,
-          take: limit,
-          orderBy: {
-            startDate: 'desc',
-          },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            status: true,
-            createdAt: true
-          }
-        }),
-        prisma.tour.count({
-          where: whereCondition,
-        }),
+        db.collection("Tour")
+          .find(whereCondition)
+          .project({
+            _id: 1,
+            id: "$_id",
+            name: 1,
+            description: 1,
+            startDate: 1,
+            endDate: 1,
+            status: 1,
+            createdAt: 1
+          })
+          .sort({ startDate: -1 })  // 'desc' → -1
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
+
+        db.collection("Tour").countDocuments(whereCondition)
       ]);
-      
+
       return {
         tours,
         pagination: {
@@ -350,14 +353,13 @@ export class TourService {
   // Récupérer toutes les tournées
   static async handleGetAllTour(request: NextRequest) {
     try {
-      await ensurePrismaConnected();
       const { searchParams } = new URL(request.url);
       const limit = parseInt(searchParams.get('limit') || '10');
       const page = parseInt(searchParams.get('page') || '1');
       const search = searchParams.get('search') || '';
-      
+
       const result = await this.getTours({ page, limit, search });
-      
+
       return successResponse(result.tours, result.pagination);
     } catch (error) {
       return apiErrorHandler(error);
