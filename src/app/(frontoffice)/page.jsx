@@ -156,7 +156,7 @@ export default function HomePage() {
       <div className="content-overlay">
         <div className="min-h-screen flex flex-col">
 
-          {false ? (
+          { false ? (
             <div className="flex items-center justify-center h-screen p-4">
               <Login handle={setIsLoggedIn} />
             </div>
