@@ -246,6 +246,7 @@ export class TourService {
             {
               projection: {
                 _id: 1,
+                id: "$_id",
                 city: 1,
                 venue: 1,
                 placement: 1,
