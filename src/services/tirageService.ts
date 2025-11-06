@@ -167,7 +167,8 @@ export class TirageService {
               phone: "$participant.phone",
               dateNaissance: "$participant.dateNaissance",
               placement: "$participant.placement",
-              textInfo: "$participant.textInfo"
+              textInfo: "$participant.textInfo",
+              accepteInfos: "$participant.accepteInfos",
             }
           }
         }
