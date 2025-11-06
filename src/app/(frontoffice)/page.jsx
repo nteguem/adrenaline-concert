@@ -167,7 +167,7 @@ export default function HomePage() {
       return;
     }
     setIsClicked(true);
-    router.push("/video");
+    router.push("/registration");
   };
 
   // Ne pas désactiver le bouton en temps réel; validation au clic uniquement
