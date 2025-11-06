@@ -69,7 +69,7 @@ export default function RegistrationPage() {
   const uploadAttemptsRef = useRef(0);
 
   const { data, error } = useTours();
-  const { isChecking, participantExists, participantData } = useEmailCheck(formData.email, data?.data?.tours[0]?.nextEvent?.id);
+  // const { isChecking, participantExists, participantData } = useEmailCheck(formData.email, data?.data?.tours[0]?.nextEvent?.id);
 
   // Fonction pour normaliser les noms de champs de l'API vers les clés utilisées dans le code
   const normalizePlacementFieldName = useCallback((fieldName) => {
@@ -313,10 +313,10 @@ export default function RegistrationPage() {
       return false;
     }
 
-    if (participantExists) {
-      setErrorModal({ isOpen: true, title: "Email déjà utilisé", message: "l'adresse email saisie a déjà été utilisée pour cet évènement", type: "error" });
-      return false;
-    }
+    // if (participantExists) {
+    //   setErrorModal({ isOpen: true, title: "Email déjà utilisé", message: "l'adresse email saisie a déjà été utilisée pour cet évènement", type: "error" });
+    //   return false;
+    // }
 
     // PAS de vérification des champs de placement au step 1
     // Ils seront validés au step 2 lors du submit final
