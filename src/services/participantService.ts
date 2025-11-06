@@ -48,7 +48,7 @@ export class ParticipantService {
         nom: data.nom,
         prenom: data.prenom,
         phone: data.phone ?? "",
-        eventId: data.eventId,
+        eventId: new ObjectId(data.eventId),
         email: data.email,
         dateNaissance: new Date(data.dateNaissance),
         placement: data.placementValues || null,
