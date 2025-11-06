@@ -32,7 +32,7 @@ export class EventService {
 
       // Utiliser l'ID de la tour récupérée
       const newEvent = await db.collection('Event').insertOne({
-        tourId: tour._id,
+        tourId: tour._id.toString(),
         city: data.city,
         venue: data.venue,
         eventDate: new Date(data.eventDate),
