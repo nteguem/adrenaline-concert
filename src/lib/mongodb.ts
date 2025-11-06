@@ -1,7 +1,9 @@
 import { MongoClient, Db } from "mongodb";
 
 const uri: string = process.env.DATABASE_URL!;
-const options = {};
+const options = {
+  minPoolSize: 5,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
