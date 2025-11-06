@@ -16,8 +16,7 @@ import {
 } from "@/lib/apiUtils";
 
 const client = new SQSClient({ region: "eu-west-3" });
-const queueUrl =
-  "https://sqs.eu-west-3.amazonaws.com/126591328691/staging-adrenaline-max-submissions";
+const queueUrl = process.env.SQS_QUEUE;
 
 export class ParticipantService {
   static async createParticipant(
@@ -26,38 +25,39 @@ export class ParticipantService {
     try {
       const db = await getDatabase();
       // TODO: This to be used in deployed environment.
-      // await client.send(
-      //   new SendMessageCommand({
-      //     QueueUrl: queueUrl,
-      //     MessageBody: JSON.stringify({
-      //       nom: data.nom,
-      //       prenom: data.prenom,
-      //       phone: data.phone ?? "",
-      //       eventId: data.eventId,
-      //       email: data.email,
-      //       dateNaissance: new Date(data.dateNaissance),
-      //       placement: data.placementValues || null,
-      //       ticketUrl: data.ticketUrl || "",
-      //       textInfo: data.textInfo || "",
-      //     }),
-      //   })
-      // );
+      await client.send(
+        new SendMessageCommand({
+          QueueUrl: queueUrl,
+          MessageBody: JSON.stringify({
+            nom: data.nom,
+            prenom: data.prenom,
+            phone: data.phone ?? "",
+            eventId: data.eventId,
+            email: data.email,
+            dateNaissance: new Date(data.dateNaissance),
+            placement: data.placementValues || null,
+            ticketUrl: data.ticketUrl || "",
+            textInfo: data.textInfo || "",
+            accepteInfos: data.accepteInfos ?? false,
+          }),
+        })
+      );
       // TODO: This to be used in local environment.
-      const now = new Date();
-      await db.collection('participant').insertOne({
-        nom: data.nom,
-        prenom: data.prenom,
-        phone: data.phone ?? "",
-        eventId: new ObjectId(data.eventId),
-        email: data.email,
-        dateNaissance: new Date(data.dateNaissance),
-        placement: data.placementValues || null,
-        ticketUrl: data.ticketUrl || "",
-        textInfo: data.textInfo || "",
-        accepteInfos: data.accepteInfos ?? false,
-        createdAt: now,
-        updatedAt: now,
-      });
+      // const now = new Date();
+      // await db.collection('participant').insertOne({
+      //   nom: data.nom,
+      //   prenom: data.prenom,
+      //   phone: data.phone ?? "",
+      //   eventId: new ObjectId(data.eventId),
+      //   email: data.email,
+      //   dateNaissance: new Date(data.dateNaissance),
+      //   placement: data.placementValues || null,
+      //   ticketUrl: data.ticketUrl || "",
+      //   textInfo: data.textInfo || "",
+      //   accepteInfos: data.accepteInfos ?? false,
+      //   createdAt: now,
+      //   updatedAt: now,
+      // });
 
       return {
         ...data,

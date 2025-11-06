@@ -3,7 +3,6 @@ import { MongoClient, Db } from "mongodb";
 const uri = process.env.DATABASE_URL!;
 const options = {
   minPoolSize: 5,
-  maxPoolSize: 30,
 };
 
 if (!uri) {
