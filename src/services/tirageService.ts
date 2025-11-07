@@ -89,7 +89,7 @@ export class TirageService {
         // Si un tirage existe, supprimer d'abord les anciens vainqueurs
         await db.collection('vainqueur').deleteMany({ tirageid: existingTirage._id.toString() });
         // Mettre à jour le tirage existant
-        nouveauTirage = (await db.collection('tirage').findOneAndUpdate(
+        await db.collection('tirage').updateOne(
           { _id: existingTirage._id },
           {
             $set: {
@@ -97,8 +97,9 @@ export class TirageService {
               dateTirage: data.dateTirage
             }
           },
-          { returnDocument: 'after' },
-        ))?.value;
+        );
+
+        nouveauTirage = await db.collection('tirage').findOne({ _id: existingTirage._id });
       } else {
         // Créer un nouveau tirage
         const result = await db.collection('tirage').insertOne({
@@ -118,7 +119,7 @@ export class TirageService {
         email: participant.email,
         prenom_participant: participant.prenom,
         nom_participant: participant.nom,
-        tirageid: nouveauTirage._id.toString(),
+        tirageid: nouveauTirage?._id.toString(),
         rang: index + 1,
         porte: participant.porte ?? '',
         place: participant.place ?? '',

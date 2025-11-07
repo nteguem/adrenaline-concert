@@ -161,18 +161,17 @@ export class UserService {
     }
 
     // Mise à jour de l'utilisateur
-    const updatedUser = (await db.collection("User").findOneAndUpdate(
+    await db.collection("User").updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData },
-      {
-        returnDocument: "after"
-      }
-    ))?.value;
+    );
+
+    const updatedUser = await db.collection("User").findOne({ _id: new ObjectId(id) } );
 
     return {
       ...updatedUser,
-      fullName: `${updatedUser.prenom} ${updatedUser.nom}`,
-      age: this.calculateAge(updatedUser.dateNaissance)
+      fullName: `${updatedUser?.prenom} ${updatedUser?.nom}`,
+      age: this.calculateAge(updatedUser?.dateNaissance)
     };
   }
 
