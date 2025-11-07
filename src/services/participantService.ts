@@ -23,41 +23,41 @@ export class ParticipantService {
     data: ParticipantCreateInput
   ): Promise<{ [key: string]: any }> {
     try {
-      const db = await getDatabase();
       // TODO: This to be used in deployed environment.
-      await client.send(
-        new SendMessageCommand({
-          QueueUrl: queueUrl,
-          MessageBody: JSON.stringify({
-            nom: data.nom,
-            prenom: data.prenom,
-            phone: data.phone ?? "",
-            eventId: data.eventId,
-            email: data.email,
-            dateNaissance: new Date(data.dateNaissance),
-            placement: data.placementValues || null,
-            ticketUrl: data.ticketUrl || "",
-            textInfo: data.textInfo || "",
-            accepteInfos: data.accepteInfos ?? false,
-          }),
-        })
-      );
+      // await client.send(
+      //   new SendMessageCommand({
+      //     QueueUrl: queueUrl,
+      //     MessageBody: JSON.stringify({
+      //       nom: data.nom,
+      //       prenom: data.prenom,
+      //       phone: data.phone ?? "",
+      //       eventId: data.eventId,
+      //       email: data.email,
+      //       dateNaissance: new Date(data.dateNaissance),
+      //       placement: data.placementValues || null,
+      //       ticketUrl: data.ticketUrl || "",
+      //       textInfo: data.textInfo || "",
+      //       accepteInfos: data.accepteInfos ?? false,
+      //     }),
+      //   })
+      // );
       // TODO: This to be used in local environment.
-      // const now = new Date();
-      // await db.collection('participant').insertOne({
-      //   nom: data.nom,
-      //   prenom: data.prenom,
-      //   phone: data.phone ?? "",
-      //   eventId: new ObjectId(data.eventId),
-      //   email: data.email,
-      //   dateNaissance: new Date(data.dateNaissance),
-      //   placement: data.placementValues || null,
-      //   ticketUrl: data.ticketUrl || "",
-      //   textInfo: data.textInfo || "",
-      //   accepteInfos: data.accepteInfos ?? false,
-      //   createdAt: now,
-      //   updatedAt: now,
-      // });
+      const db = await getDatabase();
+      const now = new Date();
+      await db.collection('participant').insertOne({
+        nom: data.nom,
+        prenom: data.prenom,
+        phone: data.phone ?? "",
+        eventId: new ObjectId(data.eventId),
+        email: data.email,
+        dateNaissance: new Date(data.dateNaissance),
+        placement: data.placementValues || null,
+        ticketUrl: data.ticketUrl || "",
+        textInfo: data.textInfo || "",
+        accepteInfos: data.accepteInfos ?? false,
+        createdAt: now,
+        updatedAt: now,
+      });
 
       return {
         ...data,
@@ -72,7 +72,6 @@ export class ParticipantService {
 
   static async handleCreateParticipant(request: NextRequest) {
     try {
-      const db = await getDatabase();
       const body = await request.json();
 
       const requiredFields: (keyof ParticipantCreateInput)[] = [
@@ -92,16 +91,17 @@ export class ParticipantService {
         return errorResponse("ID de l'événement invalide", 400);
       }
 
-      const existingParticipant = await db.collection('participant').findOne({
-        email: body.email,
-        eventId: new ObjectId(body.eventId)
-      });
+      // const db = await getDatabase();
+      // const existingParticipant = await db.collection('participant').findOne({
+      //   email: body.email,
+      //   eventId: new ObjectId(body.eventId)
+      // });
 
-      if (existingParticipant) {
-        return errorResponse(
-          "Un participant avec cet email est déjà enregistré pour cet événement"
-        );
-      }
+      // if (existingParticipant) {
+      //   return errorResponse(
+      //     "Un participant avec cet email est déjà enregistré pour cet événement"
+      //   );
+      // }
 
       const participantInput: ParticipantCreateInput = {
         nom: body.nom,
