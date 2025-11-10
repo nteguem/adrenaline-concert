@@ -92,25 +92,25 @@ export default function ConfirmationPage() {
     >
       {/* HEADER EN HAUT */}
       <div className="flex justify-center pt-8">
-        <LogoHeader 
-          date={formattedDate} 
-          venue={data?.data?.tours[0].nextEvent.venue} 
-          city={data?.data?.tours[0].nextEvent.city} 
+        <LogoHeader
+          date={formattedDate}
+          venue={data?.data?.tours[0].nextEvent.venue}
+          city={data?.data?.tours[0].nextEvent.city}
         />
       </div>
 
       {/* BLOC CENTRÉ : Message confirmation */}
       <div className="flex flex-col items-center text-center px-4 mt-16">
         <h2 className={`font-din text-2xl font-bold text-white`}>
-          VOTRE PARTICIPATION A BIEN <br/>ÉTÉ PRISE EN COMPTE
+          VOTRE PARTICIPATION A BIEN <br />ÉTÉ PRISE EN COMPTE
         </h2>
       </div>
 
       {/* BLOC EN BAS : Tirage au sort */}
       <div className="text-center text-lg text-white px-6 pb-24">
         <p>
-          TIRAGE AU SORT CE SOIR UNE HEURE AVANT LE DEBUT DU CONCERT, LES
-          GAGNANTS SERONT DIRECTEMENT CONTACTES PAR MAIL ET SMS
+          TIRAGE AU SORT UNE HEURE AVANT LE DÉBUT DU CONCERT
+          LES GAGNANTS SERONT CONTACTÉS PAR MAIL ET SMS
         </p>
         <p className="text-blue-400 mt-2">Bonne chance!</p>
       </div>

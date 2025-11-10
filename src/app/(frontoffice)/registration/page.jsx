@@ -806,11 +806,7 @@ export default function RegistrationPage() {
                         type="text"
                         value={field.value}
                         onChange={(e) => setGradinNumber(e.target.value)}
-                        disabled={!isStep3Editable}
-                        className={`!h-16 !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0  ${isStep3Editable
-                          ? '!bg-white !text-black focus:!bg-white focus:!text-black cursor-text'
-                          : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
-                          }`}
+                        className="!h-16 !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0 !bg-white !text-black focus:!bg-white focus:!text-black cursor-text"
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
                         autoComplete="off"
                       />
@@ -819,11 +815,7 @@ export default function RegistrationPage() {
                         name={field.key}
                         value={field.value}
                         onChange={handlePlacementChange}
-                        disabled={!isStep3Editable}
-                        className={`!h-16  !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0  ${isStep3Editable
-                          ? '!bg-white !text-black focus:!bg-white focus:!text-black cursor-text'
-                          : '!bg-gray-800 !text-gray-300 cursor-not-allowed opacity-75'
-                          }`}
+                        className="!h-16 !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0 !bg-white !text-black focus:!bg-white focus:!text-black cursor-text"
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
                         autoComplete="off"
                       />
