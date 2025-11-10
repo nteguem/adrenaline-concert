@@ -63,9 +63,11 @@ export default function RegistrationPage() {
   const [ocrStatusMessage, setOcrStatusMessage] = useState("");
   const [isPlacementEditable, setIsPlacementEditable] = useState(false);
   const [certifiePresent, setCertifiePresent] = useState(false);
-  const [typePlacement, setTypePlacement] = useState("GRADIN"); // "GRADIN" ou "PARTERRE" - GRADIN par défaut
-  const [gradinNumber, setGradinNumber] = useState("");
+  const [typePlacement, setTypePlacement] = useState("GRADIN"); // "GRADIN" ou "PARTERRE" - GRADIN par défaut (déprécié, gardé pour compatibilité)
+  const [gradinNumber, setGradinNumber] = useState(""); // Déprécié, gardé pour compatibilité
   const [isStep3Editable, setIsStep3Editable] = useState(false); // État pour activer/désactiver l'édition au step 3
+  const [radioFields, setRadioFields] = useState({}); // Pour stocker les valeurs des champs radio dynamiques
+  const [radioTextFields, setRadioTextFields] = useState({}); // Pour stocker les valeurs des inputs associés
   const uploadAttemptsRef = useRef(0);
 
   const { data, error } = useTours();
@@ -77,7 +79,7 @@ export default function RegistrationPage() {
     const normalized = fieldName.toLowerCase().replace(/\s+/g, '_');
     // Mapping spécial pour certains champs
     const mappings = {
-      'gradin_ou_parterre': 'typePlacement', // Géré séparément
+      'gradin_ou_parterre': 'typePlacement', // Géré séparément (déprécié)
       'categorie': 'categorie',
       'rang': 'rang',
       'place': 'place',
@@ -85,20 +87,47 @@ export default function RegistrationPage() {
     return mappings[normalized] || normalized;
   }, []);
 
+  // Fonction pour détecter si un champ contient " OU " et extraire les options
+  const parseRadioField = useCallback((fieldName) => {
+    const upperField = fieldName.toUpperCase();
+    if (upperField.includes(" OU ")) {
+      const parts = upperField.split(" OU ");
+      if (parts.length === 2) {
+        return {
+          isRadio: true,
+          option1: parts[0].trim(),
+          option2: parts[1].trim(),
+          originalField: fieldName
+        };
+      }
+    }
+    return { isRadio: false };
+  }, []);
+
   // Initialiser les champs de placement depuis l'API
   useEffect(() => {
     if (data?.data?.tours[0]?.nextEvent?.placement) {
       const initialPlacementData = {};
+      const initialRadioFields = {};
+      const initialRadioTextFields = {};
+      
       data.data.tours[0].nextEvent.placement.forEach((field) => {
-        // Ignorer "GRADIN OU PARTERRE" car c'est géré par typePlacement et gradinNumber
-        if (field.toUpperCase() !== "GRADIN OU PARTERRE") {
+        const parsed = parseRadioField(field);
+        if (parsed.isRadio) {
+          // Initialiser avec la première option par défaut
+          initialRadioFields[field] = parsed.option1;
+          initialRadioTextFields[field] = "";
+        } else {
           const normalizedName = normalizePlacementFieldName(field);
           initialPlacementData[normalizedName] = "";
         }
       });
+      
       setPlacementData(initialPlacementData);
+      setRadioFields(initialRadioFields);
+      setRadioTextFields(initialRadioTextFields);
     }
-  }, [data]);
+  }, [data, parseRadioField, normalizePlacementFieldName]);
 
   // Réinitialiser FORCÉMENT le modal d'erreur de placement au step 1
   useEffect(() => {
@@ -132,17 +161,16 @@ export default function RegistrationPage() {
       return true; // Ne JAMAIS bloquer au step 1
     }
 
-    // Vérifier si le champ textfield partagé (gradinNumber) est rempli
-    // Seulement si "GRADIN OU PARTERRE" est présent dans l'API
-    const hasGradinParterre = placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE");
-    if (hasGradinParterre && gradinNumber && gradinNumber.trim() !== "") {
-      return true;
+    // Vérifier les champs radio dynamiques
+    const radioFieldNames = placementFields.filter(field => parseRadioField(field).isRadio);
+    for (const fieldName of radioFieldNames) {
+      if (radioTextFields[fieldName] && radioTextFields[fieldName].trim() !== "") {
+        return true;
+      }
     }
 
-    // Vérifier UNIQUEMENT les champs dynamiques depuis l'API
-    // Ignorer "GRADIN OU PARTERRE" car il est géré séparément ci-dessus
-    const otherFields = placementFields.filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE");
-
+    // Vérifier les autres champs dynamiques
+    const otherFields = placementFields.filter(field => !parseRadioField(field).isRadio);
     if (otherFields.length > 0) {
       // Vérifier qu'AU MOINS UN champ dynamique est rempli
       const hasDynamicFields = otherFields.some(field => {
@@ -258,16 +286,49 @@ export default function RegistrationPage() {
 
       // OCR réussi
       const ocrPlacementData = {};
+      const ocrRadioFields = {};
+      const ocrRadioTextFields = {};
+      const currentPlacementFields = data?.data?.tours[0]?.nextEvent?.placement || [];
+      
       if (result?.data) {
         Object.keys(result.data).forEach((key) => {
           if (key !== "ticketUrl" && key !== "date") {
-            ocrPlacementData[key] = result.data[key];
+            // Vérifier si cette clé correspond à un champ radio
+            const matchingField = currentPlacementFields.find(field => {
+              const parsed = parseRadioField(field);
+              if (parsed.isRadio) {
+                // Vérifier si la clé correspond au champ original ou normalisé
+                const normalized = normalizePlacementFieldName(field);
+                return key === field || key === normalized || key.toLowerCase() === field.toLowerCase();
+              }
+              return false;
+            });
+            
+            if (matchingField) {
+              const parsed = parseRadioField(matchingField);
+              // Si c'est un champ radio, extraire le type et la valeur
+              // On suppose que l'OCR retourne un objet avec type et value, ou juste la valeur
+              if (typeof result.data[key] === 'object' && result.data[key].type) {
+                ocrRadioFields[matchingField] = result.data[key].type;
+                ocrRadioTextFields[matchingField] = result.data[key].value || "";
+              } else {
+                // Sinon, on met la valeur dans le textField et on garde l'option par défaut
+                ocrRadioTextFields[matchingField] = result.data[key];
+                if (!ocrRadioFields[matchingField]) {
+                  ocrRadioFields[matchingField] = parsed.option1;
+                }
+              }
+            } else {
+              ocrPlacementData[key] = result.data[key];
+            }
           }
         });
       }
 
       setOcrData(result?.data);
       setPlacementData(ocrPlacementData);
+      setRadioFields(prev => ({ ...prev, ...ocrRadioFields }));
+      setRadioTextFields(prev => ({ ...prev, ...ocrRadioTextFields }));
       setOcrLoad(false);
       setOcrStatus("success");
       setOcrStatusMessage("");
@@ -371,12 +432,23 @@ export default function RegistrationPage() {
       return;
     }
 
+    // Construire les valeurs de placement avec les champs radio dynamiques
+    const radioPlacementValues = {};
+    Object.keys(radioFields).forEach((fieldName) => {
+      radioPlacementValues[fieldName] = {
+        type: radioFields[fieldName],
+        value: radioTextFields[fieldName] || ""
+      };
+    });
+
     const postBody = {
       nom: formData.nom, prenom: formData.prenom, dateNaissance: formatDate(formData.dateNaissance),
       email: formData.email, phone: formData.phone, eventId: data?.data?.tours[0]?.nextEvent.id,
       accepteInfos: formData.confirmePresence,
       placementValues: {
         ...placementData,
+        ...radioPlacementValues,
+        // Garder pour compatibilité avec l'ancien système
         typePlacement: typePlacement,
         gradinNumber: gradinNumber,
       },
@@ -652,68 +724,82 @@ export default function RegistrationPage() {
                   JE REMPLIE LES INFORMATIONS DE PLACEMENT MENTIONNÉES SUR MON BILLET
                 </h6>
 
-                {/* Sélection type de placement : GRADIN / PARTERRE - Affichée seulement si présent dans l'API */}
-                {placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE") && (
-                  <div className="flex items-center gap-4 mb-6">
-                    {/* Colonne gauche : Radio buttons et labels */}
-                    <div className="flex flex-col space-y-4">
-                      {/* GRADIN */}
-                      <div className="flex items-center gap-3 mr-2">
-                        <input
-                          type="radio"
-                          id="gradin"
-                          name="typePlacement"
-                          value="GRADIN"
-                          checked={typePlacement === "GRADIN"}
-                          onChange={(e) => setTypePlacement(e.target.value)}
-                          disabled={!certifiePresent}
-                          className="w-5 h-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        <label htmlFor="gradin" className="text-white font-bold text-base uppercase cursor-pointer whitespace-nowrap">
-                          GRADIN
-                        </label>
+                {/* Champs radio dynamiques (détection automatique des champs contenant " OU ") */}
+                {placementFields
+                  .filter(field => parseRadioField(field).isRadio)
+                  .map((field) => {
+                    const parsed = parseRadioField(field);
+                    const fieldKey = field;
+                    const currentValue = radioFields[fieldKey] || parsed.option1;
+                    
+                    return (
+                      <div key={fieldKey} className="flex items-center gap-4 mb-6">
+                        {/* Colonne gauche : Radio buttons et labels */}
+                        <div className="flex flex-col space-y-4">
+                          {/* Option 1 */}
+                          <div className="flex items-center gap-3 mr-2">
+                            <input
+                              type="radio"
+                              id={`${fieldKey}-option1`}
+                              name={`radio-${fieldKey}`}
+                              value={parsed.option1}
+                              checked={currentValue === parsed.option1}
+                              onChange={(e) => {
+                                setRadioFields(prev => ({ ...prev, [fieldKey]: e.target.value }));
+                              }}
+                              disabled={!certifiePresent}
+                              className="w-5 h-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <label htmlFor={`${fieldKey}-option1`} className="text-white font-bold text-base uppercase cursor-pointer whitespace-nowrap">
+                              {parsed.option1}
+                            </label>
+                          </div>
+
+                          {/* Option 2 */}
+                          <div className="flex items-center gap-3 mr-2">
+                            <input
+                              type="radio"
+                              id={`${fieldKey}-option2`}
+                              name={`radio-${fieldKey}`}
+                              value={parsed.option2}
+                              checked={currentValue === parsed.option2}
+                              onChange={(e) => {
+                                setRadioFields(prev => ({ ...prev, [fieldKey]: e.target.value }));
+                              }}
+                              disabled={!certifiePresent}
+                              className="w-5 h-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <label htmlFor={`${fieldKey}-option2`} className="text-white font-bold text-base uppercase cursor-pointer whitespace-nowrap">
+                              {parsed.option2}
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Champ input partagé au milieu */}
+                        <div className="flex-1 flex items-center">
+                          <Input
+                            type="text"
+                            value={radioTextFields[fieldKey] || ""}
+                            onChange={(e) => {
+                              setRadioTextFields(prev => ({ ...prev, [fieldKey]: e.target.value }));
+                            }}
+                            disabled={!certifiePresent}
+                            placeholder=""
+                            className={`w-full h-10 rounded ${certifiePresent
+                              ? "bg-white text-black border-gray-300"
+                              : "bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed"
+                              }`}
+                          />
+                        </div>
                       </div>
+                    );
+                  })}
 
-                      {/* PARTERRE */}
-                      <div className="flex items-center gap-3 mr-2">
-                        <input
-                          type="radio"
-                          id="parterre"
-                          name="typePlacement"
-                          value="PARTERRE"
-                          checked={typePlacement === "PARTERRE"}
-                          onChange={(e) => setTypePlacement(e.target.value)}
-                          disabled={!certifiePresent}
-                          className="w-5 h-5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        <label htmlFor="parterre" className="text-white font-bold text-base uppercase cursor-pointer whitespace-nowrap">
-                          PARTERRE
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Champ input partagé au milieu */}
-                    <div className="flex-1 flex items-center">
-                      <Input
-                        type="text"
-                        value={gradinNumber}
-                        onChange={(e) => setGradinNumber(e.target.value)}
-                        disabled={!certifiePresent}
-                        placeholder=""
-                        className={`w-full h-10 rounded ${certifiePresent
-                          ? "bg-white text-black border-gray-300"
-                          : "bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed"
-                          }`}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Champs dynamiques depuis l'API (sauf GRADIN OU PARTERRE qui est géré au-dessus) */}
-                {placementFields.filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE").length > 0 && (
-                  <div className={`grid gap-4 ${placementFields.filter(f => f.toUpperCase() !== "GRADIN OU PARTERRE").length === 1 ? 'grid-cols-1' : placementFields.filter(f => f.toUpperCase() !== "GRADIN OU PARTERRE").length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {/* Champs dynamiques depuis l'API (sauf les champs "OU" qui sont gérés au-dessus) */}
+                {placementFields.filter(field => !parseRadioField(field).isRadio).length > 0 && (
+                  <div className={`grid gap-4 ${placementFields.filter(f => !parseRadioField(f).isRadio).length === 1 ? 'grid-cols-1' : placementFields.filter(f => !parseRadioField(f).isRadio).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                     {placementFields
-                      .filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE")
+                      .filter(field => !parseRadioField(field).isRadio)
                       .map((field) => {
                         const normalizedName = normalizePlacementFieldName(field);
                         return (
@@ -761,19 +847,22 @@ export default function RegistrationPage() {
         // Collecter tous les champs de placement à afficher
         const allPlacementFields = [];
 
-        // Ajouter GRADIN OU PARTERRE si présent
-        if (placementFields.some(field => field.toUpperCase() === "GRADIN OU PARTERRE")) {
-          allPlacementFields.push({
-            label: "GRADIN OU PARTERRE",
-            value: gradinNumber || "",
-            key: "gradinNumber",
-            isSpecial: true
+        // Ajouter les champs radio dynamiques
+        placementFields
+          .filter(field => parseRadioField(field).isRadio)
+          .forEach((field) => {
+            allPlacementFields.push({
+              label: field.toUpperCase(),
+              value: radioTextFields[field] || "",
+              key: field,
+              isRadio: true,
+              radioValue: radioFields[field]
+            });
           });
-        }
 
         // Ajouter les autres champs dynamiques
         placementFields
-          .filter(field => field.toUpperCase() !== "GRADIN OU PARTERRE")
+          .filter(field => !parseRadioField(field).isRadio)
           .forEach((field) => {
             const normalizedName = normalizePlacementFieldName(field);
             allPlacementFields.push({
@@ -801,11 +890,13 @@ export default function RegistrationPage() {
                     <label className="text-white font-bold text-xs uppercase mb-2">
                       {field.label}
                     </label>
-                    {field.isSpecial ? (
+                    {field.isRadio ? (
                       <Input
                         type="text"
                         value={field.value}
-                        onChange={(e) => setGradinNumber(e.target.value)}
+                        onChange={(e) => {
+                          setRadioTextFields(prev => ({ ...prev, [field.key]: e.target.value }));
+                        }}
                         className="!h-16 !rounded-lg !font-bold !border-0 !mb-0 !pl-3 focus:!outline-none focus:!ring-0 !bg-white !text-black focus:!bg-white focus:!text-black cursor-text"
                         style={{ padding: '12px 16px', fontSize: '2rem', lineHeight: '2rem', fontWeight: '700' }}
                         autoComplete="off"
