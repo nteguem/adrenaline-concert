@@ -6,6 +6,7 @@ import HeartbeatButton from "@/components/common/HeartbeatButton";
 import { evangelion, din } from "@/styles/fonts";
 import LoadingObject from "@/components/common/CentralLoadingObject";
 import Countdown from "@/components/common/CountDown";
+import SevenSegmentCountdown from "@/components/common/SevenSegmentCountdown";
 import Login from "../../components/common/Login";
 import Checkbox from "@/components/common/Checkbox";
 import PopupModal from "@/components/common/PopupModal";
@@ -20,6 +21,7 @@ export default function HomePage() {
     confirmePresence: false,
     age: false,
     santéOk: false,
+    imageAuth: false,
     cgu: false,
     acc: false,
   });
@@ -56,26 +58,6 @@ export default function HomePage() {
     return returnDate;
   };
 
-  const formatEndTime = (endDate) => {
-    if (!endDate) return null;
-    try {
-      const date = new Date(endDate);
-      if (isNaN(date.getTime())) return null;
-
-      const options = {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: 'Europe/Paris'
-      };
-      const timeString = date.toLocaleTimeString('fr-FR', options);
-
-      const [hours, minutes] = timeString.split(':');
-      return `${hours}h${minutes !== '00' ? minutes : ''}`;
-    } catch (error) {
-      return null;
-    }
-  };
 
   // Fonction pour trouver l'événement avec la endDate la plus proche (mais pas encore passée)
   const getClosestEvent = (tours) => {
@@ -106,7 +88,7 @@ export default function HomePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.age || !formData.santéOk || !formData.cgu) {
+    if (!formData.age || !formData.santéOk || !formData.imageAuth || !formData.cgu) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
@@ -150,14 +132,9 @@ export default function HomePage() {
 
   formattedDate = customdateFormat(closestEvent);
 
-  // Récupérer l'heure de fin de l'événement
-  const endTime = closestEvent?.endDate
-    ? formatEndTime(closestEvent.endDate)
-    : null;
-
   const handleClick = () => {
     // Valider uniquement au clic
-    if (!formData.age || !formData.santéOk || !formData.cgu) {
+    if (!formData.age || !formData.santéOk || !formData.imageAuth || !formData.cgu) {
       setErrorModal({
         isOpen: true,
         title: "Conditions non acceptées",
@@ -170,8 +147,8 @@ export default function HomePage() {
     router.push("/registration");
   };
 
-  // Ne pas désactiver le bouton en temps réel; validation au clic uniquement
-  const isButtonDisabled = false;
+  // Désactiver le bouton si toutes les checkboxes ne sont pas cochées
+  const isButtonDisabled = !formData.age || !formData.santéOk || !formData.imageAuth || !formData.cgu;
 
   return (
     <main className={`${din.variable} min-h-screen bg-black dnb-bg`}>
@@ -179,7 +156,7 @@ export default function HomePage() {
       <div className="content-overlay">
         <div className="min-h-screen flex flex-col">
 
-          {!isLoggedIn ? (
+          {false ? (
             <div className="flex items-center justify-center h-screen p-4">
               <Login handle={setIsLoggedIn} />
             </div>
@@ -192,11 +169,12 @@ export default function HomePage() {
                   venue={closestEvent.venue}
                   city={closestEvent.city}
                 />
-                {endTime && (
-                  <div className="flex justify-center mb-8 sm:mb-12 md:mb-16 px-4">
-                    <h1 className="text-white text-sm sm:text-base md:text-lg leading-tight block">
-                    Heure limite de participation <span className="text-blue-400 font-bold">{endTime}</span>
+                {closestEvent?.endDate && (
+                  <div className="flex flex-col items-center justify-center mb-8 sm:mb-12 md:mb-16 px-4">
+                    <h1 className="text-white text-sm sm:text-base md:text-lg leading-tight block mb-4">
+                      CLÔTURE DES INSCRIPTIONS DANS : <span className="text-blue-400 font-bold"></span>
                     </h1>
+                    <SevenSegmentCountdown endDate={closestEvent.endDate} />
                   </div>
                 )}
                 {/* Espace pour compenser le header fixe */}
@@ -260,6 +238,25 @@ export default function HomePage() {
                             voir les conditions
                           </a>
                         </div> */}
+                      </div>
+                    </div>
+
+                    {/* Checkbox - Autorisation image */}
+                    <div className="flex gap-3 w-full">
+                      <input
+                        type="checkbox"
+                        name="imageAuth"
+                        checked={formData.imageAuth || false}
+                        onChange={handleInputChange}
+                        className="mt-0.5 flex-shrink-0 w-4 h-4"
+                      />
+                      <div className="flex-1 text-left">
+                        <label className="text-white text-xs sm:text-sm leading-tight block">
+                          J'AUTORISE L'UTILISATION DE MON IMAGE DANS LE CADRE DE LA
+                        </label>
+                        <label className="text-white text-xs sm:text-sm leading-tight block">
+                          COMMUNICATION LIÉE À ADRENALINE MAX.
+                        </label>
                       </div>
                     </div>
 
