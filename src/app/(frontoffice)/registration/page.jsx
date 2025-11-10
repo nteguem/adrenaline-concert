@@ -606,7 +606,7 @@ export default function RegistrationPage() {
               {/* {ticketImage && <TicketPreview />} */}
 
               {/* Checkbox "JE CERTIFIE ÊTRE BIEN PRÉSENT..." */}
-              <div className="flex items-center justify-center mb-4 ">
+              <div className="bg-black flex items-center px-4 py-3 mb-4">
                 <input
                   type="checkbox"
                   id="certifiePresent"
@@ -615,14 +615,14 @@ export default function RegistrationPage() {
                     setCertifiePresent(e.target.checked);
                     setIsPlacementEditable(e.target.checked);
                   }}
-                  className="mr-3 flex-shrink-0 cursor-pointer"
+                  className="mr-3 flex-shrink-0 cursor-pointer w-4 h-4"
                 />
-                <h5
+                <label
                   htmlFor="certifiePresent"
-                  className="text-red-500 font-bold text-sm uppercase leading-tight cursor-pointer text-center"
+                  className="text-white font-bold text-xs uppercase leading-tight cursor-pointer flex-1"
                 >
-                  JE CERTIFIE ÊTRE BIEN PRÉSENT DANS LA SALLE AU CONCERT DE CE JOUR
-                </h5>
+                  JE CERTIFIE ÊTRE BIEN PRESENT AU CONCERT DE CE JOUR
+                </label>
               </div>
 
               {/* Zone avec nom de l'événement et date */}
@@ -787,60 +787,11 @@ export default function RegistrationPage() {
         return (
           <form onSubmit={handleFinalSubmit}>
             <div className="mb-8">
-              {/* Header avec icônes et titre cliquable */}
+              {/* Header avec titre */}
               <div className="flex items-center mb-6">
-                {/* Icône triangle d'avertissement orange */}
-                <svg
-                  className="w-5 h-5 text-orange-500 mr-2 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-
-                {/* Icône cadenas blanc */}
-                {isStep3Editable ? (
-                  <svg
-                    className="w-4 h-4 text-white mr-2 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-4 h-4 text-white mr-2 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
-                  </svg>
-                )}
-
-                {/* Titre cliquable */}
-                <button
-                  type="button"
-                  onClick={() => setIsStep3Editable(!isStep3Editable)}
-                  className="text-white text-sm font-bold uppercase hover:opacity-80 transition-opacity cursor-pointer"
-                >
-                  JE MODIFIE MES INFORMATIONS SI BESOIN
-                </button>
+                <p className="text-white text-sm font-bold uppercase">
+                  JE VERIFIE ET MODIFIE MES INFORMATIONS SI BESOIN
+                </p>
               </div>
 
               {/* Grille des champs de placement (2x2) */}
