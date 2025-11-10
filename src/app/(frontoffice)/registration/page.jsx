@@ -482,7 +482,12 @@ export default function RegistrationPage() {
     return output;
   };
 
-  const years = range(1950, getYear(new Date()) + 1, 1);
+  // Calculer la date maximale (il y a 18 ans à partir d'aujourd'hui)
+  const today = new Date();
+  const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+  const maxYear = getYear(maxDate);
+  
+  const years = range(1950, maxYear + 1, 1);
   const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
   const renderFormStep = () => {
@@ -495,11 +500,35 @@ export default function RegistrationPage() {
 
             <div className="w-full">
               <DatePicker
-                autoComplete="off" selected={formData.dateNaissance}
+                autoComplete="off" 
+                selected={formData.dateNaissance}
                 onChange={(date) => {
                   setFormData({ ...formData, dateNaissance: date });
                 }}
-                placeholderText="DATE DE NAISSANCE" name="dateNaissance" dateFormat={"dd/MM/yyyy"}
+                placeholderText="DATE DE NAISSANCE" 
+                name="dateNaissance" 
+                dateFormat={"dd/MM/yyyy"}
+                maxDate={maxDate}
+                inputProps={{ readOnly: true }}
+                onFocus={(e) => e.target.blur()}
+                withPortal
+                popperPlacement="bottom-start"
+                popperModifiers={[
+                  {
+                    name: "offset",
+                    options: {
+                      offset: [0, 8],
+                    },
+                  },
+                  {
+                    name: "preventOverflow",
+                    options: {
+                      rootBoundary: "viewport",
+                      tether: false,
+                      altAxis: true,
+                    },
+                  },
+                ]}
                 renderCustomHeader={({ date, changeYear, changeMonth, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }) => (
                   <div style={{ margin: 10, display: "flex", justifyContent: "center" }}>
                     <button type="button" className="mr-10" onClick={decreaseMonth} disabled={prevMonthButtonDisabled}>{"<"}</button>
