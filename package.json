@@ -12,6 +12,7 @@
     "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.929.0",
     "@aws-sdk/client-sqs": "^3.922.0",
     "@hookform/resolvers": "^4.1.2",
     "@prisma/client": "^6.6.0",

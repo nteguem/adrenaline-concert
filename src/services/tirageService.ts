@@ -12,6 +12,9 @@ import {
     VainqCreateInput
 } from '@/models/vainqueurModel';
 import { NextRequest } from 'next/server';
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+
+const ses = new SESClient({ region: "eu-west-3" });
 
 export class TirageService {
   static async handleCreateTirage(request: NextRequest) {
@@ -505,6 +508,151 @@ export class TirageService {
 
     } catch (error) {
       console.error("Erreur lors de la récupération des tirages:", error);
+      return apiErrorHandler(error);
+    }
+  }
+
+  static sendEmail(toEmail: string, date: Date, place: string): Promise<any> {
+    const options: Intl.DateTimeFormatOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Paris'
+    };
+    const timeString = date.toLocaleTimeString('fr-FR', options);
+    const [hours, minutes] = timeString.split(':');
+    const meetTime = `${hours}H${minutes !== '00' ? minutes : ''}`;
+    const command = new SendEmailCommand({
+      Source: "adrenaline@adrenalinemax.fr",
+      Destination: {
+        ToAddresses: [toEmail],
+      },
+      Message: {
+        Subject: { Data: "ADRENALINE MAX: FELICITATIONS, VOUS AVEZ GAGNÉ!" },
+        Body: {
+          Html: { Data: `
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td align="center" style="padding: 20px; font-family: 'Verdana', sans-serif; background-color: #ffffff;">
+                        <!-- Container table -->
+                        <table width="600" cellpadding="0" cellspacing="0" border="0">
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 20px;">
+                              <p style="font-size: 32px; font-weight: bold; margin: 0; font-family: 'Impact', sans-serif;">ADRENALINE MAX</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 15px;">
+                              <p style="font-size: 24px; font-weight: bold; margin: 0;">FELICITATIONS</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 20px;">
+                              <p style="font-size: 18px; font-weight: bold; margin: 0;">VOUS AVEZ GAGNÉ!</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 15px;">
+                              <p style="margin: 0;">La montée d'adrénaline n'attend que vous.</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 20px;">
+                              <p style="margin: 0;">Vous faites partie des 4 gagnants qui auront la chance de partager la scène<br/>avec Matt ce soir le temps d'une chanson.</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 15px;">
+                              <p style="margin: 0;"><span style="font-size: 18px; font-weight: bold; margin: 0;">Rendez-vous à ${meetTime}</span> - ${place}</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-bottom: 20px;">
+                              <p style="margin: 0;">avec votre billet et votre carte d'identité afin que nos équipes vous identifie<br/>et puisse vous briefer</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td align="center" style="text-align: center; padding-top: 20px;">
+                              <p style="font-size: 18px; font-weight: bold; margin: 0;">
+                                !!! ATTENTION !!!<br/>
+                                SI VOUS NE VOUS PRESENTEZ PAS A L'HEURE AU POINT DE RENDEZ-VOUS,
+                                NOUS SERONS DANS L'OBLIGATION DE TIRER AU SORT UN AUTRE GAGNANT
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                ` },
+          Text: { Data: `
+                  ADRENALINE MAX
+                  FELICITATIONS
+
+                  VOUS AVEZ GAGNÉ!
+
+                  La montée d'adrénaline n'attend que vous.
+                  Vous faites partie des 4 gagnants qui auront la chance de partager la scène avec Matt ce soir le temps d'une chanson.
+
+                  Rendez-vous à ${meetTime} - ${place}
+                  avec votre billet et votre carte d'identité afin que nos équipes vous identifie et puisse vous briefer
+
+                  !!! ATTENTION !!!
+                  SI VOUS NE VOUS PRESENTEZ PAS A L'HEURE AU POINT DE RENDEZ-VOUS, NOUS SERONS DANS L'OBLIGATION DE TIRER AU SORT UN AUTRE GAGNANT
+                ` }
+        }
+      }
+    });
+
+    return ses.send(command);
+  }
+
+  static async sendWinnersNotificationByTirageId(tirageId: string) {
+    try {
+      const db = await getDatabase();
+      if (!isValidObjectId(tirageId)) {
+        return errorResponse('ID du tirage invalide', 400);
+      }
+      // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
+      const vainqueurs = await db.collection("vainqueur").aggregate([
+        { $match: { tirageid: tirageId } },
+        { $sort: { rang: 1 } },
+        {
+          $addFields: {
+            participantObjId: { $toObjectId: "$participantId" }
+          }
+        },
+        {
+          $lookup: {
+            from: "participant",
+            localField: "participantObjId",
+            foreignField: "_id",
+            as: "participant"
+          }
+        },
+        { $unwind: "$participant" },
+        {
+          $project: {
+            email: 1,
+          }
+        }
+      ]).toArray();
+
+      if (!vainqueurs.length) {
+        return errorResponse('Aucun vainqueur trouvé pour ce tirage', 404);
+      }
+
+      await Promise.all(vainqueurs.map((vainqueur) => (
+        TirageService.sendEmail(vainqueur.email, new Date(), "à côté du stand Merchandising")
+      )));
+
+      return successResponse({
+        message: `${vainqueurs.length} notifications envoyées`,
+        vainqueurs: vainqueurs
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de l'envoie des notifications: ", error);
       return apiErrorHandler(error);
     }
   }
