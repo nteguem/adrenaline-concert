@@ -40,6 +40,8 @@ export class EventService {
         status: data.status || "en_attente",
         placement: data.placement || [],
         createdAt: new Date(),
+        meetTime: data.meetTime ?? "",
+        meetInstructions: data.meetInstructions ?? "",
       });
 
       return {
@@ -75,6 +77,8 @@ export class EventService {
         endDate: body?.endDate,
         status: body.status, // Optionnel
         placement: body.placement, // Optionnel
+        meetTime: body.meetTime,
+        meetInstructions: body.meetInstructions,
       };
 
       // Le tourId sera récupéré automatiquement dans createEvent
@@ -125,6 +129,8 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
               endDate: 1,
               status: 1,
               placement: 1,
+              meetTime: 1,
+              meetInstructions: 1,
             }
           })
           .sort({ eventDate: 1 })
@@ -260,6 +266,8 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
             endDate: 1,
             status: 1,
             placement: 1,
+            meetTime: 1,
+            meetInstructions: 1,
           }
         }
       );
@@ -329,6 +337,8 @@ static async getEvents(options: PaginationOptions = {}): Promise<{
           endDate: 1,
           status: 1,
           placement: 1,
+          meetTime: 1,
+          meetInstructions: 1,
         }
       }
     );
@@ -480,7 +490,9 @@ static async getEventsWithParticipants(options: PaginationOptions = {}): Promise
             endDate: 1,
             status: 1,
             placement: 1,
-            createdAt: 1
+            createdAt: 1,
+            meetTime: 1,
+            meetInstructions: 1,
           }
         })
         .sort({ eventDate: 1 })  // ascending

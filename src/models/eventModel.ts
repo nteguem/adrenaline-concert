@@ -7,6 +7,8 @@ export interface EventCreateInput {
     endDate: Date;
     status?: string;
     placement?: string[];
+    meetTime: string;
+    meetInstructions: string;
 }
 
 // Interface pour la mise à jour
@@ -17,6 +19,8 @@ export interface EventUpdateInput {
     endDate?: Date;
     status?: string;
     placement?: string[];
+    meetTime: string;
+    meetInstructions: string;
 }
 
 // Interface pour la pagination
@@ -53,6 +57,8 @@ export interface Event {
     status: string;
     placement: string[];
     createdAt: Date;
+    meetTime: string;
+    meetInstructions: string;
 }
 
 // Interface pour un événement avec participants

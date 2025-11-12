@@ -512,16 +512,7 @@ export class TirageService {
     }
   }
 
-  static sendEmail(toEmail: string, date: Date, place: string): Promise<any> {
-    const options: Intl.DateTimeFormatOptions = {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Europe/Paris'
-    };
-    const timeString = date.toLocaleTimeString('fr-FR', options);
-    const [hours, minutes] = timeString.split(':');
-    const meetTime = `${hours}H${minutes !== '00' ? minutes : ''}`;
+  static sendEmail(toEmail: string, meetTime: string, place: string): Promise<any> {
     const command = new SendEmailCommand({
       Source: "adrenaline@adrenalinemax.fr",
       Destination: {
@@ -563,7 +554,7 @@ export class TirageService {
                           </tr>
                           <tr>
                             <td align="center" style="text-align: center; padding-bottom: 15px;">
-                              <p style="margin: 0;"><span style="font-size: 18px; font-weight: bold; margin: 0;">Rendez-vous à ${meetTime}</span> - ${place}</p>
+                              <p style="margin: 0;"><span style="font-size: 18px; font-weight: bold; margin: 0;">Rendez-vous à ${meetTime.replace(':', 'H')}</span> - ${place}</p>
                             </td>
                           </tr>
                           <tr>
@@ -594,7 +585,7 @@ export class TirageService {
                   La montée d'adrénaline n'attend que vous.
                   Vous faites partie des 4 gagnants qui auront la chance de partager la scène avec Matt ce soir le temps d'une chanson.
 
-                  Rendez-vous à ${meetTime} - ${place}
+                  Rendez-vous à ${meetTime.replace(':', 'H')} - ${place}
                   avec votre billet et votre carte d'identité afin que nos équipes vous identifie et puisse vous briefer
 
                   !!! ATTENTION !!!
@@ -610,7 +601,9 @@ export class TirageService {
   static async sendWinnersNotificationByTirageId(tirageId: string) {
     try {
       const db = await getDatabase();
-      if (!isValidObjectId(tirageId)) {
+      const tirage = await db.collection('tirage').findOne({ _id: new ObjectId(tirageId) });
+
+      if (!isValidObjectId(tirageId) || !tirage) {
         return errorResponse('ID du tirage invalide', 400);
       }
       // ← JOINTURE : Récupérer les vainqueurs avec toutes les données des participants
@@ -642,8 +635,10 @@ export class TirageService {
         return errorResponse('Aucun vainqueur trouvé pour ce tirage', 404);
       }
 
+      const event = await db.collection('Event').findOne({ _id: new ObjectId(tirage.eventId) });
+
       await Promise.all(vainqueurs.map((vainqueur) => (
-        TirageService.sendEmail(vainqueur.email, new Date(), "à côté du stand Merchandising")
+        TirageService.sendEmail(vainqueur.email, event?.meetTime ?? "", event?.meetInstructions ?? "")
       )));
 
       return successResponse({
