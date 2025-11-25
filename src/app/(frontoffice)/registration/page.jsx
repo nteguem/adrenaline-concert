@@ -110,7 +110,7 @@ export default function RegistrationPage() {
       const initialPlacementData = {};
       const initialRadioFields = {};
       const initialRadioTextFields = {};
-      
+
       data.data.tours[0].nextEvent.placement.forEach((field) => {
         const parsed = parseRadioField(field);
         if (parsed.isRadio) {
@@ -122,7 +122,7 @@ export default function RegistrationPage() {
           initialPlacementData[normalizedName] = "";
         }
       });
-      
+
       setPlacementData(initialPlacementData);
       setRadioFields(initialRadioFields);
       setRadioTextFields(initialRadioTextFields);
@@ -289,7 +289,7 @@ export default function RegistrationPage() {
       const ocrRadioFields = {};
       const ocrRadioTextFields = {};
       const currentPlacementFields = data?.data?.tours[0]?.nextEvent?.placement || [];
-      
+
       if (result?.data) {
         Object.keys(result.data).forEach((key) => {
           if (key !== "ticketUrl" && key !== "date") {
@@ -303,7 +303,7 @@ export default function RegistrationPage() {
               }
               return false;
             });
-            
+
             if (matchingField) {
               const parsed = parseRadioField(matchingField);
               // Si c'est un champ radio, extraire le type et la valeur
@@ -409,6 +409,11 @@ export default function RegistrationPage() {
       if (errorModal.message.includes("placement")) {
         setErrorModal({ isOpen: false, title: "", message: "", type: "error" });
       }
+      return;
+    }
+
+    if (!certifiePresent) {
+      setErrorModal({ isOpen: true, title: "Vous devez être présent", message: "Votre présence au concert de ce jour est obligatoire.", type: "error" });
       return;
     }
 
@@ -558,7 +563,7 @@ export default function RegistrationPage() {
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
   const maxYear = getYear(maxDate);
-  
+
   const years = range(1950, maxYear + 1, 1);
   const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
@@ -572,13 +577,13 @@ export default function RegistrationPage() {
 
             <div className="w-full">
               <DatePicker
-                autoComplete="off" 
+                autoComplete="off"
                 selected={formData.dateNaissance}
                 onChange={(date) => {
                   setFormData({ ...formData, dateNaissance: date });
                 }}
-                placeholderText="DATE DE NAISSANCE" 
-                name="dateNaissance" 
+                placeholderText="DATE DE NAISSANCE"
+                name="dateNaissance"
                 dateFormat={"dd/MM/yyyy"}
                 maxDate={maxDate}
                 inputProps={{ readOnly: true }}
@@ -731,7 +736,7 @@ export default function RegistrationPage() {
                     const parsed = parseRadioField(field);
                     const fieldKey = field;
                     const currentValue = radioFields[fieldKey] || parsed.option1;
-                    
+
                     return (
                       <div key={fieldKey} className="flex items-center gap-4 mb-6">
                         {/* Colonne gauche : Radio buttons et labels */}
